@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QA Tools — Cart</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="cart-page">
+<header class="site-header">
+  <a class="brand" href="index.html"><img src="assets/qatools_logo.png" alt="qatools"></a>
+  <nav class="main-nav">
+    <a class="active" href="index.html">products</a>
+    <a href="install.html">how to install</a>
+    <a href="whatsnew.html">what's new</a>
+  </nav>
+  <nav class="icon-nav">
+    <a class="icon-link liked-nav-link" href="liked.html" aria-label="Liked products" title="Liked products"><span class="liked-icon">♡</span><span class="liked-count"></span></a>
+    <a class="icon-link" href="user.html" aria-label="Account" title="Account">○</a>
+    <button id="cartButton" aria-label="Cart" title="Cart">□<span id="cartCount" class="cart-count"></span></button>
+  </nav>
+</header>
+
+<main class="cart-page-main">
+  <section class="cart-page-heading">
+    <div>
+      <span class="eyebrow">CART</span>
+      <h1>Your cart</h1>
+    </div>
+    <span class="cart-page-count" id="cartPageCount">0 products</span>
+  </section>
+
+  <section class="cart-page-layout">
+    <div class="cart-page-list-wrap">
+      <div class="cart-page-columns">
+        <span>ITEM</span>
+        <span>DETAILS</span>
+        <span>PRICE</span>
+        <span></span>
+      </div>
+      <div class="cart-page-list" id="cartPageList"></div>
+
+      <div class="cart-page-empty" id="cartPageEmpty">
+        <span>□</span>
+        <h2>Your cart is empty</h2>
+        <p>Browse the products page and add an item to continue.</p>
+        <a href="index.html">BROWSE PRODUCTS</a>
+      </div>
+    </div>
+
+    <aside class="cart-page-summary">
+      <span class="eyebrow">SUMMARY</span>
+
+      <div class="summary-row">
+        <span>items</span>
+        <strong id="cartPageItemCount">0</strong>
+      </div>
+
+      <div class="summary-row">
+        <span>subtotal</span>
+        <strong id="cartPageSubtotal">€0</strong>
+      </div>
+
+      <div class="summary-row muted-summary">
+        <span>tax</span>
+        <strong>calculated at checkout</strong>
+      </div>
+
+      <div class="summary-total">
+        <span>total</span>
+        <strong id="cartPageTotal">€0</strong>
+      </div>
+
+      <button class="cart-page-checkout" id="cartPageCheckout">CHECKOUT</button>
+
+      <div class="cart-page-notes">
+        <div><span>account</span><strong>required</strong></div>
+        <div><span>license</span><strong>permanent</strong></div>
+        <div><span>downloads</span><strong>available after purchase</strong></div>
+      </div>
+    </aside>
+  </section>
+</main>
+<div class="cart-overlay" id="cartOverlay"></div>
+<aside class="cart-drawer" id="cartDrawer" aria-hidden="true">
+  <div class="cart-drawer-head">
+    <div>
+      <span class="eyebrow">CART</span>
+      <strong id="cartDrawerCount">0 products</strong>
+    </div>
+    <button id="cartClose" aria-label="Close cart">×</button>
+  </div>
+  <a class="check-cart-button cart-page-link" href="cart.html">GO TO CART</a>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-empty" id="cartEmpty"><span>□</span><p>your cart is empty</p></div>
+  <div class="cart-summary">
+    <div><span>total</span><strong id="cartTotal">€0</strong></div>
+    <button class="checkout-button" id="checkoutButton">CHECKOUT</button>
+  </div>
+</aside>
+
+<footer><span>qatools.studio</span><span>cart</span></footer>
+
+<script src="catalog.js"></script>
+<script src="cart_page.js"></script>
+<script src="cart.js"></script>
+<script src="global.js"></script>
+</body>
+</html>

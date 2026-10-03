@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QA Tools — How to Install</title><link rel="stylesheet" href="styles.css"></head>
+<body class="content-page">
+<header class="site-header">
+  <a class="brand" href="index.html"><img src="assets/qatools_logo.png" alt="qatools"></a>
+  <nav class="main-nav">
+    <a href="index.html">products</a>
+    <a class="active" href="install.html">how to install</a>
+    <a href="whatsnew.html">what's new</a>
+  </nav>
+  <nav class="icon-nav">
+    <a class="icon-link liked-nav-link" href="liked.html" aria-label="Liked products" title="Liked products"><span class="liked-icon">♡</span><span class="liked-count"></span></a>
+    <a class="icon-link" href="user.html" aria-label="Account" title="Account">○</a>
+    <button id="cartButton" aria-label="Cart" title="Cart">□<span id="cartCount" class="cart-count"></span></button>
+  </nav>
+</header>
+<main class="standalone-page">
+  <span class="eyebrow">HOW TO INSTALL</span>
+  <h1>Install once. Activate once. Work offline.</h1>
+  <p>This page will contain the installation video and concise written instructions.</p>
+  <div class="standalone-placeholder">installation video / visual guide</div>
+</main>
+
+<div class="cart-overlay" id="cartOverlay"></div>
+<aside class="cart-drawer" id="cartDrawer" aria-hidden="true">
+  <div class="cart-drawer-head">
+    <div>
+      <span class="eyebrow">CART</span>
+      <strong id="cartDrawerCount">0 products</strong>
+    </div>
+    <button id="cartClose" aria-label="Close cart">×</button>
+  </div>
+  <a class="check-cart-button cart-page-link" href="cart.html">GO TO CART</a>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-empty" id="cartEmpty"><span>□</span><p>your cart is empty</p></div>
+  <div class="cart-summary">
+    <div><span>total</span><strong id="cartTotal">€0</strong></div>
+    <button class="checkout-button" id="checkoutButton">CHECKOUT</button>
+  </div>
+</aside>
+
+<footer><span>qatools.studio</span><span>how to install</span></footer>
+<script src="catalog.js"></script><script src="interactions.js"></script>
+<script src="cart.js"></script>
+<script src="global.js"></script>
+</body></html>

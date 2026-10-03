@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QA Tools — Liked Products</title><link rel="stylesheet" href="styles.css"></head>
+<body class="liked-page">
+<header class="site-header">
+  <a class="brand" href="index.html"><img src="assets/qatools_logo.png" alt="qatools"></a>
+  <nav class="main-nav">
+    <a href="index.html">products</a>
+    <a href="install.html">how to install</a>
+    <a href="whatsnew.html">what's new</a>
+  </nav>
+  <nav class="icon-nav">
+    <a class="icon-link liked-nav-link" href="liked.html" aria-label="Liked products" title="Liked products"><span class="liked-icon">♡</span><span class="liked-count"></span></a>
+    <a class="icon-link" href="user.html" aria-label="Account" title="Account">○</a>
+    <button id="cartButton" aria-label="Cart" title="Cart">□<span id="cartCount" class="cart-count"></span></button>
+  </nav>
+</header>
+<main>
+<section class="liked-page-head">
+  <span class="eyebrow">LIKED PRODUCTS</span>
+  <h1>Saved for later.</h1>
+</section>
+<section class="product-grid" id="likedGrid">
+    <article class="product-card"
+      data-id="qafit01" data-category="SOP" data-complexity="SIMPLE"
+      data-price="5" data-popularity="95" data-relevance="100" data-date="2026-09-30">
+      <a class="card-open" href="product.html?id=qafit01">
+        <div class="media-frame">
+          <img src="assets/product_01.png" alt="qafit01 preview">
+          <span class="media-badge">SOP</span>
+        </div>
+      </a>
+      <div class="card-copy">
+        <div class="title-line">
+          <h2><a href="product.html?id=qafit01">qafit01</a></h2>
+          <div class="state-icons">
+            <span class="purchase-state" data-purchased-state="qafit01" title="Purchased">✓</span>
+            <span class="cart-state" data-cart-state="qafit01" title="In cart">▣</span>
+            <button class="heart" data-like="qafit01" aria-label="Like qafit01">♡</button>
+          </div>
+        </div>
+        <p>fits values to 0–1</p>
+        <div class="card-footer">
+          <div class="tags">
+            <button class="card-tag" data-card-filter="SOP">SOP</button>
+            <button class="card-tag" data-card-filter="SIMPLE">SIMPLE</button>
+          </div>
+          <div class="price-date"><strong>€5</strong><span>2026-09-30</span></div>
+        </div>
+        <button class="card-add-cart" data-add-cart="qafit01">ADD TO CART</button>
+      </div>
+    </article>
+    
+    <article class="product-card"
+      data-id="qasim02" data-category="DOP" data-complexity="MEDIUM"
+      data-price="10" data-popularity="62" data-relevance="75" data-date="2026-05-18">
+      <a class="card-open" href="product.html?id=qasim02">
+        <div class="media-frame">
+          <img src="assets/product_02.png" alt="qasim02 preview">
+          <span class="media-badge">DOP</span>
+        </div>
+      </a>
+      <div class="card-copy">
+        <div class="title-line">
+          <h2><a href="product.html?id=qasim02">qasim02</a></h2>
+          <div class="state-icons">
+            <span class="purchase-state" data-purchased-state="qasim02" title="Purchased">✓</span>
+            <span class="cart-state" data-cart-state="qasim02" title="In cart">▣</span>
+            <button class="heart" data-like="qasim02" aria-label="Like qasim02">♡</button>
+          </div>
+        </div>
+        <p>quick simulation setup</p>
+        <div class="card-footer">
+          <div class="tags">
+            <button class="card-tag" data-card-filter="DOP">DOP</button>
+            <button class="card-tag" data-card-filter="MEDIUM">MEDIUM</button>
+          </div>
+          <div class="price-date"><strong>€10</strong><span>2026-05-18</span></div>
+        </div>
+        <button class="card-add-cart" data-add-cart="qasim02">ADD TO CART</button>
+      </div>
+    </article>
+    
+    <article class="product-card"
+      data-id="qacomplex03" data-category="SOP" data-complexity="COMPLEX"
+      data-price="30" data-popularity="80" data-relevance="58" data-date="2025-12-02">
+      <a class="card-open" href="product.html?id=qacomplex03">
+        <div class="media-frame">
+          <img src="assets/product_03.png" alt="qacomplex03 preview">
+          <span class="media-badge">SOP</span>
+        </div>
+      </a>
+      <div class="card-copy">
+        <div class="title-line">
+          <h2><a href="product.html?id=qacomplex03">qacomplex03</a></h2>
+          <div class="state-icons">
+            <span class="purchase-state" data-purchased-state="qacomplex03" title="Purchased">✓</span>
+            <span class="cart-state" data-cart-state="qacomplex03" title="In cart">▣</span>
+            <button class="heart" data-like="qacomplex03" aria-label="Like qacomplex03">♡</button>
+          </div>
+        </div>
+        <p>advanced attribute workflow</p>
+        <div class="card-footer">
+          <div class="tags">
+            <button class="card-tag" data-card-filter="SOP">SOP</button>
+            <button class="card-tag" data-card-filter="COMPLEX">COMPLEX</button>
+          </div>
+          <div class="price-date"><strong>€30</strong><span>2025-12-02</span></div>
+        </div>
+        <button class="card-add-cart" data-add-cart="qacomplex03">ADD TO CART</button>
+      </div>
+    </article>
+    
+    <article class="product-card"
+      data-id="qarender04" data-category="ROP" data-complexity="SIMPLE"
+      data-price="20" data-popularity="73" data-relevance="66" data-date="2026-02-11">
+      <a class="card-open" href="product.html?id=qarender04">
+        <div class="media-frame">
+          <img src="assets/product_04.png" alt="qarender04 preview">
+          <span class="media-badge">ROP</span>
+        </div>
+      </a>
+      <div class="card-copy">
+        <div class="title-line">
+          <h2><a href="product.html?id=qarender04">qarender04</a></h2>
+          <div class="state-icons">
+            <span class="purchase-state" data-purchased-state="qarender04" title="Purchased">✓</span>
+            <span class="cart-state" data-cart-state="qarender04" title="In cart">▣</span>
+            <button class="heart" data-like="qarender04" aria-label="Like qarender04">♡</button>
+          </div>
+        </div>
+        <p>compact render output helper</p>
+        <div class="card-footer">
+          <div class="tags">
+            <button class="card-tag" data-card-filter="ROP">ROP</button>
+            <button class="card-tag" data-card-filter="SIMPLE">SIMPLE</button>
+          </div>
+          <div class="price-date"><strong>€20</strong><span>2026-02-11</span></div>
+        </div>
+        <button class="card-add-cart" data-add-cart="qarender04">ADD TO CART</button>
+      </div>
+    </article>
+    
+    <article class="product-card"
+      data-id="qashelf05" data-category="SHELF TOOL" data-complexity="SIMPLE"
+      data-price="5" data-popularity="48" data-relevance="52" data-date="2025-08-27">
+      <a class="card-open" href="product.html?id=qashelf05">
+        <div class="media-frame">
+          <img src="assets/product_05.png" alt="qashelf05 preview">
+          <span class="media-badge">SHELF TOOL</span>
+        </div>
+      </a>
+      <div class="card-copy">
+        <div class="title-line">
+          <h2><a href="product.html?id=qashelf05">qashelf05</a></h2>
+          <div class="state-icons">
+            <span class="purchase-state" data-purchased-state="qashelf05" title="Purchased">✓</span>
+            <span class="cart-state" data-cart-state="qashelf05" title="In cart">▣</span>
+            <button class="heart" data-like="qashelf05" aria-label="Like qashelf05">♡</button>
+          </div>
+        </div>
+        <p>one-click shelf utility</p>
+        <div class="card-footer">
+          <div class="tags">
+            <button class="card-tag" data-card-filter="SHELF TOOL">SHELF TOOL</button>
+            <button class="card-tag" data-card-filter="SIMPLE">SIMPLE</button>
+          </div>
+          <div class="price-date"><strong>€5</strong><span>2025-08-27</span></div>
+        </div>
+        <button class="card-add-cart" data-add-cart="qashelf05">ADD TO CART</button>
+      </div>
+    </article>
+    
+    <article class="product-card"
+      data-id="qadynamics06" data-category="DOP" data-complexity="COMPLEX"
+      data-price="30" data-popularity="88" data-relevance="82" data-date="2026-07-07">
+      <a class="card-open" href="product.html?id=qadynamics06">
+        <div class="media-frame">
+          <img src="assets/product_06.png" alt="qadynamics06 preview">
+          <span class="media-badge">DOP</span>
+        </div>
+      </a>
+      <div class="card-copy">
+        <div class="title-line">
+          <h2><a href="product.html?id=qadynamics06">qadynamics06</a></h2>
+          <div class="state-icons">
+            <span class="purchase-state" data-purchased-state="qadynamics06" title="Purchased">✓</span>
+            <span class="cart-state" data-cart-state="qadynamics06" title="In cart">▣</span>
+            <button class="heart" data-like="qadynamics06" aria-label="Like qadynamics06">♡</button>
+          </div>
+        </div>
+        <p>faster dynamics preparation</p>
+        <div class="card-footer">
+          <div class="tags">
+            <button class="card-tag" data-card-filter="DOP">DOP</button>
+            <button class="card-tag" data-card-filter="COMPLEX">COMPLEX</button>
+          </div>
+          <div class="price-date"><strong>€30</strong><span>2026-07-07</span></div>
+        </div>
+        <button class="card-add-cart" data-add-cart="qadynamics06">ADD TO CART</button>
+      </div>
+    </article>
+    </section>
+<div class="empty-liked-page" id="emptyLikedPage">no liked products yet</div>
+</main>
+
+<div class="cart-overlay" id="cartOverlay"></div>
+<aside class="cart-drawer" id="cartDrawer" aria-hidden="true">
+  <div class="cart-drawer-head">
+    <div>
+      <span class="eyebrow">CART</span>
+      <strong id="cartDrawerCount">0 products</strong>
+    </div>
+    <button id="cartClose" aria-label="Close cart">×</button>
+  </div>
+  <a class="check-cart-button cart-page-link" href="cart.html">GO TO CART</a>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-empty" id="cartEmpty"><span>□</span><p>your cart is empty</p></div>
+  <div class="cart-summary">
+    <div><span>total</span><strong id="cartTotal">€0</strong></div>
+    <button class="checkout-button" id="checkoutButton">CHECKOUT</button>
+  </div>
+</aside>
+
+<footer><span>qatools.studio</span><span>liked products</span></footer>
+<script src="catalog.js"></script>
+<script src="liked.js"></script>
+<script src="interactions.js"></script>
+<script src="cart.js"></script>
+<script src="global.js"></script>
+</body></html>

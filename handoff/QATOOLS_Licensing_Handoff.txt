@@ -1,0 +1,1103 @@
+QATOOLS — HOUDINI ONLINE LICENSING SYSTEM
+==========================================
+Project handoff / technical summary
+Updated: 2026-09-30
+
+PURPOSE
+-------
+This document summarizes the working QATOOLS Houdini licensing prototype, the code used, the problems encountered, and the next planned steps. It is intended to be uploaded into another ChatGPT conversation so development can continue with the same technical context.
+
+IMPORTANT STATUS
+----------------
+The LOCAL licensing system works.
+
+Current state:
+- Houdini HDA license guard: WORKING
+- Stable machine ID: WORKING
+- Ed25519 signed licenses: WORKING
+- FastAPI activation server on local PC: WORKING
+- Online activation from Houdini to localhost: WORKING
+- Local license cache: WORKING
+- Cloud deployment: NOT DONE YET
+- Real payment verification (Gumroad/other): NOT DONE YET
+- Multiple separately sold products: NOT DONE YET
+
+The next major task is to deploy the FastAPI license server to a cloud service, then replace the temporary purchase-token allowlist with automatic payment/purchase verification.
+
+
+1. ARCHITECTURE
+===============
+
+The working prototype follows this flow:
+
+Customer / Houdini HDA
+        |
+        | machine_id + email + purchase_token
+        v
+FastAPI /activate endpoint
+        |
+        | validate purchase token
+        | build license payload
+        | sign payload using PRIVATE KEY
+        v
+Signed license returned to Houdini
+        |
+        | save locally
+        v
+$QATOOLS_SOURCE/qatools_license.txt
+        |
+        | verify signature using PUBLIC KEY embedded in HDA
+        v
+HDA allowed to cook
+
+The private key MUST remain on the server.
+The HDA only receives/contains the public key.
+
+
+2. LICENSE FORMAT
+=================
+
+The license format is:
+
+qatools|<MACHINE_ID>|PERPETUAL|ALL|1|<BASE64_ED25519_SIGNATURE>
+
+Example structure:
+
+qatools|C8024F075D26B5C8|PERPETUAL|ALL|1|SIGNATURE_HERE
+
+Fields:
+1. Vendor: qatools
+2. Machine ID
+3. License type: PERPETUAL
+4. Product scope: currently ALL
+5. License version: 1
+6. Ed25519 signature encoded as Base64
+
+The server signs everything before the signature:
+
+qatools|MACHINE_ID|PERPETUAL|ALL|1
+
+Houdini reconstructs that payload and verifies the signature with the public key.
+
+
+3. SERVER FOLDER STRUCTURE
+==========================
+
+Current local server folder:
+
+C:\qatools_server\
+|
+|-- server.py
+|-- venv\
+|-- keys\
+    |-- private_key.pem
+    |-- public_key.pem
+
+The server currently runs on the user's Windows PC.
+
+Local activation URL:
+
+http://127.0.0.1:8000/activate
+
+
+4. PYTHON VIRTUAL ENVIRONMENT / SERVER START
+============================================
+
+Typical commands:
+
+cd C:\qatools_server
+venv\Scripts\activate
+python -m uvicorn server:app --reload
+
+The FastAPI server then listens locally, normally at:
+
+http://127.0.0.1:8000
+
+
+5. REQUIRED SERVER PACKAGES
+===========================
+
+requirements.txt can contain:
+
+fastapi
+uvicorn
+cryptography
+
+
+6. GENERATING THE ED25519 KEY PAIR
+==================================
+
+A fresh Ed25519 key pair was generated during debugging.
+
+Conceptual generate_keys.py:
+
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives import serialization
+
+private_key = Ed25519PrivateKey.generate()
+public_key = private_key.public_key()
+
+private_pem = private_key.private_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PrivateFormat.PKCS8,
+    encryption_algorithm=serialization.NoEncryption(),
+)
+
+public_pem = public_key.public_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PublicFormat.SubjectPublicKeyInfo,
+)
+
+with open("private_key.pem", "wb") as f:
+    f.write(private_pem)
+
+with open("public_key.pem", "wb") as f:
+    f.write(public_pem)
+
+print("Generated private_key.pem and public_key.pem")
+
+IMPORTANT:
+The production private key must never be distributed with the Houdini tool or committed to a public repository.
+
+Because private key material was exposed during development/debugging, a NEW production key pair should be generated before the commercial release. After that, the production private key should be kept secret and backed up securely.
+
+Do not casually regenerate the production key pair after licenses have been issued. Existing licenses depend on the corresponding public/private pair.
+
+
+7. FINAL LOCAL FASTAPI SERVER
+=============================
+
+The working server design was:
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+import base64
+import os
+
+from cryptography.hazmat.primitives import serialization
+
+# ======================================================
+# PATHS & KEY LOADING
+# ======================================================
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PRIVATE_KEY_PATH = os.path.join(BASE_DIR, "keys", "private_key.pem")
+
+with open(PRIVATE_KEY_PATH, "rb") as f:
+    PRIVATE_KEY = serialization.load_pem_private_key(
+        f.read(),
+        password=None,
+    )
+
+# ======================================================
+# CONFIG
+# ======================================================
+
+VENDOR_ID = "qatools"
+LICENSE_VERSION = 1
+
+# TEMPORARY DEVELOPMENT ALLOWLIST.
+# This must eventually be replaced by automatic purchase verification.
+VALID_PURCHASE_TOKENS = {
+    "TEST-TOKEN-123",
+    "QATOOLS-DEMO-001",
+}
+
+# ======================================================
+# FASTAPI SETUP
+# ======================================================
+
+app = FastAPI()
+
+
+class ActivateRequest(BaseModel):
+    machine_id: str
+    email: str
+    purchase_token: str
+
+
+# ======================================================
+# LICENSE HELPERS
+# ======================================================
+
+def build_license_payload(machine_id: str) -> str:
+    return "|".join([
+        VENDOR_ID,
+        machine_id,
+        "PERPETUAL",
+        "ALL",
+        str(LICENSE_VERSION),
+    ])
+
+
+def sign_payload(payload: str) -> str:
+    signature = PRIVATE_KEY.sign(payload.encode())
+    return base64.b64encode(signature).decode()
+
+
+# ======================================================
+# ROUTES
+# ======================================================
+
+@app.get("/")
+def root():
+    return {"status": "qatools license server running"}
+
+
+@app.post("/activate")
+def activate(data: ActivateRequest):
+    # 1. Validate purchase token
+    if data.purchase_token not in VALID_PURCHASE_TOKENS:
+        return {"error": "invalid_purchase_token"}
+
+    # 2. Build and sign license
+    payload = build_license_payload(data.machine_id)
+    signature = sign_payload(payload)
+    license_key = f"{payload}|{signature}"
+
+    # 3. Return license key
+    return {"license_key": license_key}
+
+
+8. IMPORTANT SERVER BUG WE FIXED
+================================
+
+An earlier server.py loaded the private key correctly using an absolute path, but later overwrote the path with:
+
+PRIVATE_KEY_PATH = "private_key.pem"
+
+This caused:
+
+FileNotFoundError: [Errno 2] No such file or directory: 'private_key.pem'
+
+The fix was to load it once using:
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PRIVATE_KEY_PATH = os.path.join(BASE_DIR, "keys", "private_key.pem")
+
+
+9. HOUDINI PACKAGE / LICENSE PATH
+=================================
+
+The QATOOLS installation uses the Houdini package environment variable:
+
+QATOOLS_SOURCE
+
+Instead of hard-coding a personal Windows path, the PythonModule resolves:
+
+$QATOOLS_SOURCE/qatools_license.txt
+
+Code:
+
+QATOOLS_SOURCE = hou.expandString("$QATOOLS_SOURCE")
+
+if not QATOOLS_SOURCE or QATOOLS_SOURCE.startswith("$"):
+    raise hou.Error(
+        "QATOOLS_SOURCE is not defined.\n"
+        "Please install qatools via its Houdini package."
+    )
+
+LICENSE_FILE = os.path.normpath(
+    os.path.join(QATOOLS_SOURCE, "qatools_license.txt")
+)
+
+This makes the HDA portable across users/installations.
+
+
+10. STABLE MACHINE ID
+=====================
+
+The final machine-ID approach was:
+
+def get_machine_id():
+    import platform
+    raw = (
+        platform.node()
+        + platform.system()
+        + platform.machine()
+    )
+    return hashlib.sha256(raw.encode()).hexdigest()[:16].upper()
+
+One machine ID observed during debugging was:
+
+C8024F075D26B5C8
+
+That value is only an example from the development machine. Never hard-code it.
+
+IMPORTANT:
+Once the production machine-ID algorithm is chosen, avoid changing it. Changing the algorithm can make previously generated machine-bound licenses invalid.
+
+
+11. HOUDINI PYTHONMODULE
+========================
+
+The following is the final working architecture used in the HDA PythonModule.
+
+IMPORTANT:
+Replace PUBLIC_KEY_PEM below with the EXACT public key matching the server's production private key. Do not copy an old development public key by mistake.
+
+import hou
+import os
+import json
+import base64
+import hashlib
+import urllib.request
+import urllib.error
+
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
+
+# ======================================================
+# CONFIG
+# ======================================================
+
+VENDOR_ID = "qatools"
+LICENSE_VERSION = "1"
+
+SERVER_URL = "http://127.0.0.1:8000/activate"
+
+QATOOLS_SOURCE = hou.expandString("$QATOOLS_SOURCE")
+if not QATOOLS_SOURCE or QATOOLS_SOURCE.startswith("$"):
+    raise hou.Error(
+        "QATOOLS_SOURCE is not defined.\n"
+        "Please install qatools via its Houdini package."
+    )
+
+LICENSE_FILE = os.path.normpath(
+    os.path.join(QATOOLS_SOURCE, "qatools_license.txt")
+)
+
+PUBLIC_KEY_PEM = b"""
+-----BEGIN PUBLIC KEY-----
+PASTE_THE_PUBLIC_KEY_MATCHING_THE_SERVER_PRIVATE_KEY_HERE
+-----END PUBLIC KEY-----
+"""
+
+# ======================================================
+# MACHINE ID
+# ======================================================
+
+def get_machine_id():
+    import platform
+    raw = (
+        platform.node()
+        + platform.system()
+        + platform.machine()
+    )
+    return hashlib.sha256(raw.encode()).hexdigest()[:16].upper()
+
+# ======================================================
+# LICENSE FILE IO
+# ======================================================
+
+def _load_license():
+    if not os.path.exists(LICENSE_FILE):
+        return None
+
+    with open(LICENSE_FILE, "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+
+def _save_license(license_key: str):
+    os.makedirs(os.path.dirname(LICENSE_FILE), exist_ok=True)
+
+    with open(LICENSE_FILE, "w", encoding="utf-8") as f:
+        f.write(license_key.strip())
+
+# ======================================================
+# LICENSE VERIFICATION
+# ======================================================
+
+def _verify_license(license_key: str) -> bool:
+    try:
+        parts = license_key.split("|")
+
+        if len(parts) != 6:
+            return False
+
+        vendor, machine_id, scope, products, version, signature_b64 = parts
+
+        if vendor != VENDOR_ID:
+            return False
+
+        if version != LICENSE_VERSION:
+            return False
+
+        if machine_id != get_machine_id():
+            return False
+
+        payload = "|".join(parts[:-1])
+        signature = base64.b64decode(signature_b64)
+
+        public_key = serialization.load_pem_public_key(
+            PUBLIC_KEY_PEM,
+            backend=default_backend()
+        )
+
+        public_key.verify(
+            signature,
+            payload.encode("utf-8")
+        )
+
+        return True
+
+    except Exception:
+        return False
+
+
+def is_license_valid() -> bool:
+    key = _load_license()
+
+    if not key:
+        return False
+
+    return _verify_license(key)
+
+# ======================================================
+# SOP ENFORCEMENT
+# ======================================================
+
+def require_license_or_fail():
+    if not is_license_valid():
+        raise hou.NodeError(
+            "qatools license not activated.\n"
+            "Please activate the tool."
+        )
+
+# ======================================================
+# ONLINE ACTIVATION
+# ======================================================
+
+def activate_online(node):
+    email_parm = node.parm("email")
+    token_parm = node.parm("purchase_token")
+
+    if email_parm is None or token_parm is None:
+        hou.ui.displayMessage(
+            "Activation parameters not found on this node.",
+            severity=hou.severityType.Error
+        )
+        return
+
+    email = email_parm.eval().strip()
+    token = token_parm.eval().strip()
+
+    if not email or not token:
+        hou.ui.displayMessage(
+            "Please enter Email and Purchase Token.",
+            severity=hou.severityType.Error
+        )
+        return
+
+    payload = {
+        "machine_id": get_machine_id(),
+        "email": email,
+        "purchase_token": token,
+    }
+
+    try:
+        req = urllib.request.Request(
+            SERVER_URL,
+            data=json.dumps(payload).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+
+    except urllib.error.URLError as e:
+        hou.ui.displayMessage(
+            f"License server unreachable:\n{e}",
+            severity=hou.severityType.Error
+        )
+        return
+
+    if "error" in data:
+        hou.ui.displayMessage(
+            f"Activation failed:\n{data['error']}",
+            severity=hou.severityType.Error
+        )
+        return
+
+    license_key = data.get("license_key")
+
+    if not license_key:
+        hou.ui.displayMessage(
+            "Invalid response from license server.",
+            severity=hou.severityType.Error
+        )
+        return
+
+    _save_license(license_key)
+
+    hou.ui.displayMessage(
+        "qatools activated successfully.\n"
+        "Please recook or re-place the node.",
+        severity=hou.severityType.Message
+    )
+
+
+12. PYTHON SOP LICENSE GUARD
+============================
+
+A Python SOP is placed at the beginning of the internal SOP network.
+
+Its code is:
+
+hou.pwd().parent().hdaModule().require_license_or_fail()
+
+Behavior:
+- No valid license -> raises hou.NodeError and stops the HDA from cooking.
+- Valid license -> code returns normally and the rest of the SOP network can cook.
+
+We deliberately did NOT use hou.time() as a dependency because we did not want the licensing mechanism to force time-dependent cooking/evaluation.
+
+The HDA UI/parameters should remain accessible so the user can enter activation information even when the internal SOP network is blocked.
+
+
+13. ACTIVATE BUTTON CALLBACK
+============================
+
+The HDA's activation button can call:
+
+hou.pwd().hdaModule().activate_online(hou.pwd())
+
+Expected HDA parameter internal names:
+
+email
+purchase_token
+
+The activate_online() function checks whether these parameters exist before evaluating them.
+
+
+14. THE CRITICAL HOUDINI CRYPTOGRAPHY BUG
+=========================================
+
+During debugging, everything appeared correct:
+- License file existed
+- Payload parsed correctly
+- Vendor matched
+- Version matched
+- Machine ID matched
+- Base64 signature decoded correctly
+
+But is_license_valid() still returned False.
+
+A verbose verifier revealed:
+
+TypeError("load_pem_public_key() missing 1 required positional argument: 'backend'")
+
+Houdini's bundled Python/cryptography environment required an explicit backend.
+
+The fix was:
+
+from cryptography.hazmat.backends import default_backend
+
+public_key = serialization.load_pem_public_key(
+    PUBLIC_KEY_PEM,
+    backend=default_backend()
+)
+
+This was an important compatibility difference between the normal server Python environment and Houdini's embedded Python environment.
+
+
+15. KEY-PAIR MISMATCH PROBLEM
+=============================
+
+Another major debugging issue was key drift.
+
+During development, new Ed25519 key pairs were generated. This meant that at various points:
+
+- server private key = NEW key
+- HDA public key = OLD key
+- cached license = signed with another/older key
+
+Even if every other license field is correct, signature verification MUST fail when the public and private keys are not from the same key pair.
+
+The final successful state required:
+
+1. One matching Ed25519 key pair.
+2. Server using that private_key.pem.
+3. HDA embedding that pair's exact public_key.pem.
+4. Old cached licenses deleted.
+5. Server restarted.
+6. HDA updated/saved.
+7. Activation performed again.
+
+Then verification succeeded.
+
+
+16. DEBUG VERIFIER USED TO FIND THE PROBLEM
+===========================================
+
+A verbose version of _verify_license() was useful:
+
+def _verify_license(license_key: str) -> bool:
+    try:
+        parts = license_key.split("|")
+        print("DEBUG parts:", parts)
+
+        if len(parts) != 6:
+            print("DEBUG fail: wrong part count")
+            return False
+
+        vendor, machine_id, scope, products, version, signature_b64 = parts
+
+        print("DEBUG vendor:", vendor, "expected:", VENDOR_ID)
+        print("DEBUG machine_id:", machine_id)
+        print("DEBUG expected machine_id:", get_machine_id())
+        print("DEBUG version:", version, "expected:", LICENSE_VERSION)
+
+        if vendor != VENDOR_ID:
+            print("DEBUG fail: vendor mismatch")
+            return False
+
+        if version != LICENSE_VERSION:
+            print("DEBUG fail: version mismatch")
+            return False
+
+        if machine_id != get_machine_id():
+            print("DEBUG fail: machine mismatch")
+            return False
+
+        payload = "|".join(parts[:-1])
+        signature = base64.b64decode(signature_b64)
+
+        print("DEBUG payload:", payload)
+        print("DEBUG signature len:", len(signature))
+
+        public_key = serialization.load_pem_public_key(
+            PUBLIC_KEY_PEM,
+            backend=default_backend()
+        )
+
+        print("DEBUG public key loaded:", type(public_key))
+
+        public_key.verify(
+            signature,
+            payload.encode("utf-8")
+        )
+
+        print("DEBUG verify: SUCCESS")
+        return True
+
+    except Exception as e:
+        print("DEBUG verify FAILED:", type(e).__name__, repr(e))
+        return False
+
+To test from Houdini's Python shell, use the actual HDA node path, for example:
+
+node = hou.node("/obj/geo1/qafit01_online1")
+mod = node.hdaModule()
+print("VALID:", mod.is_license_valid())
+
+Using an explicit node path is more robust than:
+
+hou.selectedNodes()[0]
+
+because the latter raises IndexError if no node is selected.
+
+
+17. CHECKING THE STORED LICENSE PAYLOAD
+=======================================
+
+To inspect the license saved by the server:
+
+node = hou.node("/obj/geo1/qafit01_online1")
+key = node.hdaModule()._load_license()
+payload = "|".join(key.split("|")[:-1])
+print(payload)
+
+The online HDA does NOT need its own build_license_payload() helper. The server is responsible for building and signing the authoritative payload.
+
+An earlier AttributeError for build_license_payload was therefore expected after moving that responsibility to the server.
+
+
+18. WHAT THE SUCCESSFUL ACTIVATION PROVED
+=========================================
+
+Once everything matched, the working sequence proved that:
+
+1. Houdini generated a machine ID.
+2. Houdini contacted the FastAPI server.
+3. Server accepted the temporary purchase token.
+4. Server constructed the license payload.
+5. Server signed it using Ed25519 private key.
+6. Server returned the signed license.
+7. Houdini wrote qatools_license.txt.
+8. Houdini reconstructed the signed payload.
+9. Houdini loaded the matching public key.
+10. Ed25519 verification succeeded.
+11. is_license_valid() returned True.
+12. Python SOP stopped raising the licensing error.
+13. HDA cooked normally.
+
+
+19. WHY PREVIOUS ATTEMPTS FAILED
+================================
+
+There was not just one issue.
+
+The main problems encountered were:
+
+A. SERVER PRIVATE KEY PATH
+--------------------------
+The server attempted to load private_key.pem from the wrong working directory.
+
+Fixed by constructing the absolute path relative to server.py.
+
+B. HOUDINI CRYPTOGRAPHY COMPATIBILITY
+-------------------------------------
+Houdini required backend=default_backend() when loading the PEM public key.
+
+Without debug output, this exception was swallowed and simply appeared as is_license_valid() == False.
+
+C. KEY PAIR DRIFT
+-----------------
+At some stages, the server's private key and Houdini's embedded public key did not correspond to the same generated pair.
+
+Any license signed under an old/different private key also became invalid against the current public key.
+
+D. CACHED OLD LICENSES
+----------------------
+After changing keys or machine-ID behavior, an old qatools_license.txt could remain on disk. It needed to be deleted and generated again through activation.
+
+E. DEBUGGING HIDING EXCEPTIONS
+------------------------------
+The production verifier intentionally did:
+
+except Exception:
+    return False
+
+This is fine for end users, but terrible for development because it hides the actual reason verification failed.
+
+The verbose debug verifier exposed the real exception.
+
+
+20. SECURITY MODEL
+==================
+
+SERVER:
+- Contains PRIVATE KEY.
+- Validates proof of purchase.
+- Signs licenses.
+
+HDA / CUSTOMER MACHINE:
+- Contains PUBLIC KEY only.
+- Cannot legitimately generate new signed licenses without the server private key.
+- Verifies locally cached licenses.
+
+This means activation requires the server, but after successful activation the current PERPETUAL license can be validated locally without contacting the server every time the tool cooks.
+
+This is intentional: do NOT make a network request every time the HDA cooks.
+
+
+21. CURRENT PURCHASE TOKEN SYSTEM IS TEMPORARY
+==============================================
+
+The development server currently contains something like:
+
+VALID_PURCHASE_TOKENS = {
+    "TEST-TOKEN-123",
+    "QATOOLS-DEMO-001",
+}
+
+This is ONLY a test mechanism.
+
+It does NOT mean the final system should require the developer to manually add every customer's token.
+
+The commercial system should replace this with automatic verification against the payment/store provider.
+
+
+22. DESIRED COMMERCIAL PURCHASE FLOW
+====================================
+
+The desired final flow is:
+
+Customer buys Tool A
+        |
+        v
+Payment / marketplace provider confirms purchase
+        |
+        v
+Customer receives proof of purchase / license token
+        |
+        v
+Customer enters activation data in Houdini
+        |
+        v
+Houdini contacts cloud /activate
+        |
+        v
+Cloud server automatically verifies purchase
+        |
+        v
+Cloud server checks which QATOOLS product was purchased
+        |
+        v
+Cloud server signs machine-bound QATOOLS license
+        |
+        v
+Houdini caches signed license
+        |
+        v
+Purchased tool works
+
+There should be no developer intervention for normal customer activations.
+
+
+23. MARKETPLACE GOAL
+====================
+
+The larger goal is a QATOOLS website/marketplace where tools can be sold separately.
+
+Example:
+
+QAFit          -> separate product
+Tool B         -> separate product
+Tool C         -> separate product
+Bundle         -> potentially grants multiple product IDs
+
+The current license uses:
+
+ALL
+
+as the product field during development.
+
+For commercial use this should eventually evolve into product-aware licensing, for example:
+
+qatools|MACHINE_ID|PERPETUAL|QAFIT|1|SIGNATURE
+
+or another design supporting multiple purchased tools/bundles.
+
+This product model should be designed before shipping many separate tools.
+
+
+24. CLOUD SERVER — NEXT MAJOR STEP
+==================================
+
+Currently the activation server is the developer's PC:
+
+http://127.0.0.1:8000/activate
+
+That obviously cannot be used by customers.
+
+The next planned step is to deploy the same FastAPI application to a low-maintenance cloud service.
+
+Railway was discussed as a simple candidate because the application is tiny:
+- FastAPI
+- one/few endpoints
+- very low CPU requirements
+- no GPU
+- low activation traffic
+- HTTPS required
+
+Once deployed, Houdini changes from:
+
+SERVER_URL = "http://127.0.0.1:8000/activate"
+
+to something like:
+
+SERVER_URL = "https://YOUR-LICENSE-SERVER/activate"
+
+The exact provider/domain should be chosen based on current pricing and requirements rather than assuming Railway is permanently the best option.
+
+
+25. PAYMENT PROVIDER DISCUSSION
+===============================
+
+Gumroad was discussed because a merchant-of-record/storefront style service can reduce maintenance around:
+- payments
+- VAT/sales tax handling (depending on provider/terms)
+- receipts
+- refunds
+- checkout
+
+However, Gumroad is NOT technically required by the licensing system.
+
+The important architectural requirement is simply:
+
+SERVER MUST HAVE A RELIABLE WAY TO VERIFY THAT A CUSTOMER PURCHASED PRODUCT X.
+
+Possible payment/store approaches can include:
+- Gumroad
+- Lemon Squeezy
+- Paddle
+- Stripe + own tax/business infrastructure
+- another marketplace/payment provider
+
+The licensing server should ideally keep the purchase-provider logic separated from the cryptographic license-signing logic so providers can be changed later without rewriting the HDA license verification system.
+
+
+26. WHAT “AUTOMATIC” MEANS
+===========================
+
+The final system should NOT require manually entering each customer's token into server.py.
+
+Instead:
+
+Customer purchases
+    -> provider creates purchase record/token
+    -> customer activates
+    -> QATOOLS server asks provider whether purchase is valid
+    -> if valid, QATOOLS server signs license automatically
+
+The developer does nothing for a normal activation.
+
+The current VALID_PURCHASE_TOKENS set is only a development stand-in for that future API/database check.
+
+
+27. RECOMMENDED SEPARATION OF RESPONSIBILITIES
+==============================================
+
+For the next version, keep these layers separate:
+
+A. PAYMENT LAYER
+- Determines whether customer owns Tool A / Tool B / etc.
+
+B. LICENSE SERVER
+- Receives activation request.
+- Calls/verifies payment layer.
+- Applies activation rules.
+- Builds payload.
+- Signs payload.
+
+C. HOUDINI CLIENT
+- Sends activation request.
+- Saves returned signed license.
+- Verifies signature locally.
+- Checks machine/product/version.
+- Enables or blocks the tool.
+
+This separation will make changing Gumroad/Stripe/etc. much easier later.
+
+
+28. THINGS TO HARDEN BEFORE PRODUCTION
+======================================
+
+Before selling publicly, review at least:
+
+- Generate a NEW production Ed25519 key pair because development private-key material was exposed during debugging.
+- Store production private key as a secure cloud secret/environment secret rather than in a public Git repository.
+- Add HTTPS (normally handled by cloud host/reverse proxy).
+- Do not expose debug exceptions/private data to customers.
+- Add product IDs instead of relying on ALL.
+- Decide activation limits / machine replacement policy.
+- Decide refund/revocation behavior.
+- Decide whether perpetual licenses remain valid after refunds (normally they should not, but local perpetual caching complicates revocation).
+- Add rate limiting/basic abuse protection if necessary.
+- Validate server responses carefully.
+- Consider logging activation events without storing unnecessary personal information.
+- Decide whether email is truly required by the licensing protocol or only used for purchase matching/support.
+- Back up the production private key securely.
+- Have a recovery/key-rotation strategy before release.
+
+
+29. IMPORTANT DESIGN TRADEOFF: PERPETUAL OFFLINE CACHE
+======================================================
+
+The current architecture intentionally allows this:
+
+Online activation once
+        -> signed license cached locally
+        -> future verification happens locally
+        -> cloud server can be temporarily unavailable
+        -> tool still works
+
+This is excellent for customer reliability and low server load.
+
+But it also means the server cannot instantly revoke an already issued perpetual license unless the HDA periodically contacts the server or the license has an expiry/revalidation mechanism.
+
+This should be consciously decided before commercial release, especially for refunds/chargebacks.
+
+
+30. CURRENT EXACT PROJECT STATUS
+================================
+
+DONE:
+
+[YES] Houdini Python SOP protection
+[YES] HDA PythonModule licensing functions
+[YES] Stable machine ID
+[YES] License file under $QATOOLS_SOURCE
+[YES] Ed25519 signature generation
+[YES] Ed25519 verification inside Houdini
+[YES] Houdini cryptography backend compatibility fix
+[YES] FastAPI local activation endpoint
+[YES] Online request from Houdini to FastAPI
+[YES] Signed license returned and stored
+[YES] Successful local activation
+[YES] HDA cooks after valid activation
+
+NOT DONE:
+
+[NO] Cloud deployment
+[NO] Production domain/server URL
+[NO] Secure cloud private-key secret
+[NO] Real automatic purchase verification
+[NO] Final payment/store provider decision
+[NO] Product-specific licenses for separately sold tools
+[NO] Bundles/upgrades model
+[NO] Activation-limit database/policy
+[NO] Refund/revocation strategy
+[NO] Production hardening
+
+
+31. RECOMMENDED NEXT STEPS
+==========================
+
+Recommended sequence:
+
+STEP 1
+Choose/deploy the FastAPI license server to a cloud host.
+
+STEP 2
+Move the production private key into the cloud provider's secure secret storage.
+
+STEP 3
+Test the exact existing activation system over HTTPS from Houdini, without adding payments yet.
+
+STEP 4
+Design product IDs for individual QATOOLS tools.
+
+STEP 5
+Choose payment/store provider based on current fees, merchant-of-record/tax requirements, API/webhook support, and desired storefront control.
+
+STEP 6
+Replace VALID_PURCHASE_TOKENS with automatic purchase verification.
+
+STEP 7
+Add any database needed for activations, products, machine limits, and purchase mappings.
+
+STEP 8
+Test fresh purchase -> Houdini activation -> restart Houdini -> offline/local verification.
+
+STEP 9
+Harden error handling/security and prepare production installer/documentation.
+
+
+32. HANDOFF PROMPT FOR ANOTHER CHAT
+===================================
+
+Suggested message when uploading this document to another ChatGPT conversation:
+
+"This document contains the technical context for my QATOOLS Houdini licensing project. The local FastAPI + Ed25519 activation system is already working. Please use this as the source of truth for what has been implemented. I want to continue from the cloud deployment/payment integration stage. I prefer beginner-friendly, step-by-step instructions, one thing at a time. When modifying code, give me the complete final file rather than isolated snippets. Do not regenerate or change cryptographic keys/machine-ID logic casually, and explain changes before we make them."
+
+
+33. FINAL NOTE
+==============
+
+The most important lesson from the debugging session was that a generic:
+
+except Exception:
+    return False
+
+made several fundamentally different problems all look like the same symptom:
+
+is_license_valid() == False
+
+During future development, keep a DEBUG mode or verbose verifier available so cryptographic/path/network failures can be distinguished quickly, while keeping production customer-facing errors clean.
+
+END OF HANDOFF

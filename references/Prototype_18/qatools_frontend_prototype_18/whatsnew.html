@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QA Tools — What's New</title><link rel="stylesheet" href="styles.css"></head>
+<body class="content-page">
+<header class="site-header">
+  <a class="brand" href="index.html"><img src="assets/qatools_logo.png" alt="qatools"></a>
+  <nav class="main-nav">
+    <a href="index.html">products</a>
+    <a href="install.html">how to install</a>
+    <a class="active" href="whatsnew.html">what's new</a>
+  </nav>
+  <nav class="icon-nav">
+    <a class="icon-link liked-nav-link" href="liked.html" aria-label="Liked products" title="Liked products"><span class="liked-icon">♡</span><span class="liked-count"></span></a>
+    <a class="icon-link" href="user.html" aria-label="Account" title="Account">○</a>
+    <button id="cartButton" aria-label="Cart" title="Cart">□<span id="cartCount" class="cart-count"></span></button>
+  </nav>
+</header>
+<main class="standalone-page">
+  <span class="eyebrow">WHAT'S NEW</span>
+  <h1>Releases, updates and new tools.</h1>
+  <div class="news-list"><a class="news-entry" href="product.html?id=qafit01">
+    <span>2026-09-30</span><strong>qafit01</strong><span>fits values to 0–1</span><b>→</b>
+  </a><a class="news-entry" href="product.html?id=qadynamics06">
+    <span>2026-07-07</span><strong>qadynamics06</strong><span>faster dynamics preparation</span><b>→</b>
+  </a><a class="news-entry" href="product.html?id=qasim02">
+    <span>2026-05-18</span><strong>qasim02</strong><span>quick simulation setup</span><b>→</b>
+  </a><a class="news-entry" href="product.html?id=qarender04">
+    <span>2026-02-11</span><strong>qarender04</strong><span>compact render output helper</span><b>→</b>
+  </a><a class="news-entry" href="product.html?id=qacomplex03">
+    <span>2025-12-02</span><strong>qacomplex03</strong><span>advanced attribute workflow</span><b>→</b>
+  </a><a class="news-entry" href="product.html?id=qashelf05">
+    <span>2025-08-27</span><strong>qashelf05</strong><span>one-click shelf utility</span><b>→</b>
+  </a></div>
+</main>
+
+<div class="cart-overlay" id="cartOverlay"></div>
+<aside class="cart-drawer" id="cartDrawer" aria-hidden="true">
+  <div class="cart-drawer-head">
+    <div>
+      <span class="eyebrow">CART</span>
+      <strong id="cartDrawerCount">0 products</strong>
+    </div>
+    <button id="cartClose" aria-label="Close cart">×</button>
+  </div>
+  <a class="check-cart-button cart-page-link" href="cart.html">GO TO CART</a>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-empty" id="cartEmpty"><span>□</span><p>your cart is empty</p></div>
+  <div class="cart-summary">
+    <div><span>total</span><strong id="cartTotal">€0</strong></div>
+    <button class="checkout-button" id="checkoutButton">CHECKOUT</button>
+  </div>
+</aside>
+
+<footer><span>qatools.studio</span><span>what's new</span></footer>
+<script src="catalog.js"></script><script src="interactions.js"></script>
+<script src="cart.js"></script>
+<script src="global.js"></script>
+</body></html>

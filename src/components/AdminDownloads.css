@@ -1,0 +1,7 @@
+.admin-downloads .admin-orders-controls { margin-top:20px; }
+.admin-download-details { margin-top:20px; padding:20px; background:#101010; border:1px solid #242424; }
+.admin-download-details p { line-height:1.8; overflow-wrap:anywhere; }
+.admin-download-file { display:block; margin-top:24px; }
+.admin-download-file input { display:block; max-width:100%; margin-top:10px; color:#999; font:10px monospace; }
+.admin-download-file input::file-selector-button { border:1px solid #333; background:#151515; color:#aaa; padding:8px; margin-right:10px; font:9px monospace; }
+@media(max-width:480px) { .admin-downloads select { display:block; margin:8px 0 0; max-width:100%; } .admin-download-details { padding:12px; } }

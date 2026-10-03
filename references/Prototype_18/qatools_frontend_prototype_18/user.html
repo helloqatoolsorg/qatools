@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QA Tools — Account</title><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html"><img src="assets/qatools_logo.png" alt="qatools"></a>
+  <nav class="main-nav">
+    <a href="index.html">products</a>
+    <a href="install.html">how to install</a>
+    <a href="whatsnew.html">what's new</a>
+  </nav>
+  <nav class="icon-nav">
+    <a class="icon-link liked-nav-link" href="liked.html" aria-label="Liked products" title="Liked products"><span class="liked-icon">♡</span><span class="liked-count"></span></a>
+    <a class="icon-link" href="user.html" aria-label="Account" title="Account">○</a>
+    <button id="cartButton" aria-label="Cart" title="Cart">□<span id="cartCount" class="cart-count"></span></button>
+  </nav>
+</header>
+
+<main class="user-page">
+  <aside class="user-sidebar">
+    <div class="user-title">MY QA TOOLS</div>
+    <nav>
+      <button class="user-nav active" data-user-section="purchased">✓ Purchased Products</button>
+      <button class="user-nav" data-user-section="license">License Data</button>
+      <button class="user-nav" data-user-section="orders">Orders & Receipts</button>
+      <button class="user-nav" data-user-section="payment">Payment Method</button>
+      <button class="user-nav" data-user-section="general">General / Personal Information</button>
+    </nav>
+  </aside>
+
+  <section class="user-content">
+    <section class="user-section active" id="user-purchased">
+      <div class="user-section-head"><div><span class="eyebrow">ACCOUNT</span><h1>Purchased Products</h1></div><span class="muted-count">3 products</span></div>
+      <div class="purchase-list">
+        <button class="purchase-row">
+          <span class="owned-mark">✓</span><strong>qafit01</strong><span>SOP</span><span>30.09.2026</span><span>v1.0</span><span class="status-ok">ACTIVE</span><span>⌄</span>
+        </button>
+        <div class="purchase-detail">
+          <div><span>PC ID</span><strong>PC-A4F1-82C0</strong></div>
+          <div><span>Activation key</span><strong>QA-5K7P-91XZ-22AM</strong></div>
+          <div class="purchase-actions"><button>DOWNLOAD LATEST</button><button>OLDER VERSIONS</button><a href="product.html?id=qafit01">VIEW PRODUCT</a></div>
+        </div>
+
+        <button class="purchase-row">
+          <span class="owned-mark">✓</span><strong>qasim02</strong><span>DOP</span><span>18.05.2026</span><span>v1.0</span><span class="status-ok">ACTIVE</span><span>⌄</span>
+        </button>
+        <div class="purchase-detail">
+          <div><span>PC ID</span><strong>PC-A4F1-82C0</strong></div>
+          <div><span>Activation key</span><strong>QA-8Q4N-33BT-0M2P</strong></div>
+          <div class="purchase-actions"><button>DOWNLOAD LATEST</button><button>OLDER VERSIONS</button><a href="product.html?id=qasim02">VIEW PRODUCT</a></div>
+        </div>
+
+        <button class="purchase-row">
+          <span class="owned-mark">✓</span><strong>qarender04</strong><span>ROP</span><span>11.02.2026</span><span>v1.0</span><span class="status-ok">ACTIVE</span><span>⌄</span>
+        </button>
+        <div class="purchase-detail">
+          <div><span>PC ID</span><strong>PC-A4F1-82C0</strong></div>
+          <div><span>Activation key</span><strong>QA-1L7K-55QR-91CE</strong></div>
+          <div class="purchase-actions"><button>DOWNLOAD LATEST</button><button>OLDER VERSIONS</button><a href="product.html?id=qarender04">VIEW PRODUCT</a></div>
+        </div>
+      </div>
+    </section>
+
+    
+
+    <section class="user-section" id="user-license">
+      <div class="user-section-head"><div><span class="eyebrow">ACCOUNT</span><h1>License Data</h1></div></div>
+      <div class="license-card">
+        <div><span>Activation key</span><strong>QA-ACCOUNT-7K8M-22PX</strong></div>
+        <div><span>Machine</span><strong>PC-A4F1-82C0</strong></div>
+        <div><span>Status</span><strong>ACTIVE</strong></div>
+        <button>RESET MACHINE ACTIVATION</button>
+      </div>
+    </section>
+
+    <section class="user-section" id="user-orders">
+      <div class="user-section-head"><div><span class="eyebrow">ACCOUNT</span><h1>Orders & Receipts</h1></div></div>
+      <div class="order-row order-head"><strong>TOOL</strong><span>DATE</span><span>ORDER</span><span>AMOUNT</span></div>
+      <div class="order-row"><strong>qafit01</strong><span>30.09.2026</span><span>#1042</span><span>€5</span></div>
+      <div class="order-row"><strong>qasim02</strong><span>18.05.2026</span><span>#0981</span><span>€10</span></div>
+    </section>
+
+    <section class="user-section" id="user-payment">
+      <div class="user-section-head"><div><span class="eyebrow">ACCOUNT</span><h1>Payment Method</h1></div></div>
+      <p class="user-muted">Payment details would be handled by the payment provider rather than stored directly by QA Tools.</p>
+    </section>
+
+    <section class="user-section" id="user-general">
+      <div class="user-section-head"><div><span class="eyebrow">ACCOUNT</span><h1>General / Personal Information</h1></div></div>
+      <div class="profile-form">
+        <label>Email<input value="demo@qatools.studio"></label>
+        <label>Name<input value="Demo User"></label>
+        <label>Invoice details<textarea placeholder="Optional invoice data"></textarea></label>
+        <button>SAVE CHANGES</button>
+      </div>
+    </section>
+  </section>
+</main>
+
+<div class="cart-overlay" id="cartOverlay"></div>
+<aside class="cart-drawer" id="cartDrawer" aria-hidden="true">
+  <div class="cart-drawer-head">
+    <div>
+      <span class="eyebrow">CART</span>
+      <strong id="cartDrawerCount">0 products</strong>
+    </div>
+    <button id="cartClose" aria-label="Close cart">×</button>
+  </div>
+
+  <a class="check-cart-button cart-page-link" href="cart.html">GO TO CART</a>
+
+  <div class="cart-items" id="cartItems"></div>
+
+  <div class="cart-empty" id="cartEmpty">
+    <span>□</span>
+    <p>your cart is empty</p>
+  </div>
+
+  <div class="cart-summary">
+    <div><span>total</span><strong id="cartTotal">€0</strong></div>
+    <button class="checkout-button" id="checkoutButton">CHECKOUT</button>
+  </div>
+</aside>
+
+<script>
+function openUserSection(name){
+  document.querySelectorAll('.user-nav').forEach(x=>x.classList.toggle('active', x.dataset.userSection===name));
+  document.querySelectorAll('.user-section').forEach(s=>s.classList.remove('active'));
+  const target=document.getElementById('user-'+name);
+  if(target) target.classList.add('active');
+}
+document.querySelectorAll('.user-nav').forEach(btn=>{
+  btn.addEventListener('click',()=>openUserSection(btn.dataset.userSection));
+});
+document.querySelectorAll('.purchase-row').forEach(row=>{
+  row.addEventListener('click',()=>{
+    const detail=row.nextElementSibling;
+    detail.classList.toggle('open');
+    row.classList.toggle('open');
+  });
+});
+const sectionParam=new URLSearchParams(location.search).get('section');
+if(sectionParam) openUserSection(sectionParam);
+</script>
+<script src="catalog.js"></script>
+<script src="interactions.js"></script>
+<script src="cart.js"></script>
+<script src="global.js"></script>
+</body></html>

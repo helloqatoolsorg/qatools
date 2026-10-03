@@ -1,0 +1,65 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),crypto=require('node:crypto');
+const intentId='00000000-0000-4000-8000-000000000001',txn='txn_'+'a'.repeat(26),pid='pri_01m41bkp4f0fxgb9cfm37n5p4b',pro='pro_01m41bf7cprd18e5aebzyp1rzw';
+const eid=n=>'evt_'+String(n).padStart(26,'0');
+const fixture=()=>({event_id:eid(1),event_type:'transaction.completed',occurred_at:'2026-10-03T17:00:00Z',data:{id:txn,status:'completed',collection_mode:'automatic',currency_code:'EUR',subscription_id:null,discount_id:null,custom_data:{qatools_checkout_id:intentId,qatools_environment:'sandbox'},items:[{quantity:1,price:{id:pid,product_id:pro,billing_cycle:null,trial_period:null,tax_mode:'internal',unit_price:{amount:'500',currency_code:'EUR'}}}],details:{totals:{subtotal:'417',tax:'83',total:'500',grand_total:'500',currency_code:'EUR',discount:'0',credit:'0',credit_to_balance:'0',balance:'0'},line_items:[{price_id:pid,quantity:1,product:{id:pro},totals:{total:'500',discount:'0'}}]}}});
+function setup(options={}){
+ const calls=[],cache=new Map();
+ function load(file){if(cache.has(file))return cache.get(file);const mod={exports:{}};
+ vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{
+  exports:mod.exports,Buffer,Date,process:{env:{}},require(name){
+   if(name==='server-only')return {};if(name==='node:crypto')return crypto;
+   if(name==='next/server')return {NextResponse:{json:Response.json}};
+   if(name==='@/lib/activationHttp')return load('src/lib/activationHttp.ts');
+   if(name==='@/lib/paddleSandbox')return {paddleSandboxConfig(){if(options.noConfig)throw Error('private');return {webhookSecret:'synthetic-secret'};}};
+   if(name==='@/lib/paddleWebhook')return load('src/lib/paddleWebhook.ts');
+   if(name==='@/lib/paddleFulfillment')return load('src/lib/paddleFulfillment.ts');
+   if(name==='@/lib/paddleWebhookDatabase')return {paddleWebhookDatabase:{rpc:async(name,args)=>{calls.push({name,args});return {data:{ok:!options.retry},error:options.dbError?{}:null};}}};
+   throw Error(name);
+  }
+ });cache.set(file,mod.exports);return mod.exports;}
+ return {calls,load,post(event=fixture(),invalid=false){const raw=JSON.stringify(event),time=Math.floor(Date.now()/1000),hash=crypto.createHmac('sha256','synthetic-secret').update(time+':'+raw).digest('hex');return load('src/app/api/paddle/webhook/route.ts').POST(new Request('http://localhost/api/paddle/webhook',{method:'POST',body:raw,headers:{'paddle-signature':`ts=${time};h1=${invalid?'0'.repeat(64):hash}`}}));}};
+}
+test('completed event normalization requires approved item, exact totals and account attribution',()=>{
+ const normalize=setup().load('src/lib/paddleFulfillment.ts').normalizePaddleEvent;
+ assert.equal(normalize(fixture()).valid,true);
+ const changes=[e=>e.data.currency_code='USD',e=>e.data.custom_data.qatools_environment='live',e=>e.data.custom_data.qatools_checkout_id='bad',e=>e.data.status='paid',e=>e.data.items[0].quantity=2,e=>e.data.items[0].price.tax_mode='external',e=>e.data.items[0].price.billing_cycle={},e=>e.data.items[0].price.id='other',e=>e.data.details.totals.total='499',e=>e.data.details.totals.discount='1',e=>e.data.details.totals.credit='1',e=>e.data.details.totals.tax='82',e=>e.data.details.line_items[0].quantity=2,e=>e.data.details.line_items.push({}),e=>e.data.subscription_id='sub_other'];
+ for(const change of changes){const e=fixture();change(e);assert.equal(normalize(e).valid,false);}
+ assert.throws(()=>normalize({...fixture(),event_id:'bad'}));assert.throws(()=>normalize({...fixture(),occurred_at:'bad'}));
+});
+test('unsigned or tampered events cannot reach SQL',async()=>{const s=setup(),r=await s.post(fixture(),true);assert.equal(r.status,400);assert.equal(s.calls.length,0);assert.equal(r.headers.get('cache-control'),'no-store');});
+test('verified event reaches SQL with normalized fields and exact body digest only',async()=>{const s=setup(),e=fixture();e.data.email='private@example.invalid';const r=await s.post(e);assert.equal(r.status,200);assert.equal(s.calls.length,1);assert.equal(s.calls[0].args.p_body_hash,crypto.createHash('sha256').update(JSON.stringify(e)).digest('hex'));assert.equal(JSON.stringify(s.calls).includes('private@'),false);});
+test('config/database/binding failures return retryable responses without provider payload',async()=>{for(const option of ['noConfig','dbError','retry']){const s=setup({[option]:true}),r=await s.post();assert.equal(r.status,503);assert.equal((await r.text()).includes('private'),false);}});
+test('refund and cancellation identifiers are normalized without granting ownership',()=>{const norm=setup().load('src/lib/paddleFulfillment.ts').normalizePaddleEvent,e=fixture();e.event_type='adjustment.updated';e.data.transaction_id=txn;assert.equal(norm(e).txnId,txn);assert.equal(norm(e).valid,false);});
+test('actual SQL fulfillment is atomic, idempotent, bound to intent and blocks out-of-order review events',{skip:!process.env.PGLITE_TEST_MODULE},async()=>{
+ const {PGlite}=require(process.env.PGLITE_TEST_MODULE),db=new PGlite(),user='00000000-0000-0000-0000-000000000001';
+ const normalize=setup().load('src/lib/paddleFulfillment.ts').normalizePaddleEvent;
+ try{
+  await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role BYPASSRLS;CREATE SCHEMA auth;
+   CREATE TABLE auth.users(id uuid PRIMARY KEY,email_confirmed_at timestamptz,banned_until timestamptz);
+   INSERT INTO auth.users VALUES('${user}',now(),null);
+   CREATE TABLE public.products(id bigint PRIMARY KEY,slug text,published boolean,price_eur numeric);INSERT INTO public.products VALUES(1,'qafit01',true,5);
+   CREATE TABLE public.orders(id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,user_id uuid REFERENCES auth.users,provider text,provider_transaction_id text UNIQUE,status text CHECK(status IN ('pending','paid','refunded','partially_refunded','cancelled')),currency text,subtotal numeric(12,2),total numeric(12,2),provider_created_at timestamptz);
+   CREATE TABLE public.order_items(id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,order_id bigint REFERENCES public.orders,product_id bigint REFERENCES public.products,quantity int CHECK(quantity>0),unit_price numeric(12,2));
+   CREATE TABLE public.entitlements(id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,user_id uuid REFERENCES auth.users,product_id bigint REFERENCES public.products,order_item_id bigint REFERENCES public.order_items,source text CHECK(source IN ('purchase','free','admin')),status text CHECK(status IN ('active','refunded','revoked')),UNIQUE(user_id,product_id));`);
+  await db.exec(fs.readFileSync('supabase/migrations/20261003080000_sandbox_checkout_intents.sql','utf8'));
+  await db.exec(fs.readFileSync('supabase/migrations/20261003090000_sandbox_payment_fulfillment.sql','utf8'));
+  await db.query(`INSERT INTO public.sandbox_checkout_intents(id,user_id,product_id,price_id,amount_cents,currency,status,transaction_id) VALUES($1,$2,1,$3,500,'EUR','ready',$4)`,[intentId,user,pid,txn]);
+  for(const role of ['anon','authenticated','service_role']){const p=(await db.query("SELECT has_function_privilege($1,'public.process_sandbox_payment_event(jsonb,text)','EXECUTE') AS execute,has_table_privilege($1,'public.sandbox_payment_events','INSERT,UPDATE,DELETE,TRUNCATE') AS write",[role])).rows[0];assert.equal(p.execute,role==='service_role');assert.equal(p.write,false);}
+  async function process(event=fixture(),bodyHash){const n=normalize(event);return (await db.query('SELECT public.process_sandbox_payment_event($1::jsonb,$2) AS result',[JSON.stringify(n),bodyHash??crypto.createHash('sha256').update(JSON.stringify(event)).digest('hex')])).rows[0].result;}
+  async function reset(){await db.exec("TRUNCATE public.sandbox_payment_events,public.entitlements,public.order_items,public.orders;UPDATE public.sandbox_checkout_intents SET status='ready'");}
+  const first=await process();assert.equal(first.outcome,'fulfilled');assert.equal((await process()).outcome,'fulfilled');
+  assert.equal((await process(fixture(),'0'.repeat(64))).ok,false);
+  let e=fixture();e.event_id=eid(2);assert.equal((await process(e)).outcome,'duplicate');
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM public.orders')).rows[0].n,1);
+  const ownership=(await db.query('SELECT * FROM public.entitlements')).rows[0];assert.equal(ownership.user_id,user);assert.equal(ownership.status,'active');assert.equal(ownership.source,'purchase');
+  assert.equal(Number((await db.query('SELECT total FROM public.orders')).rows[0].total),5);
+  await reset();e=fixture();e.event_id=eid(3);e.event_type='adjustment.updated';e.data.transaction_id=txn;assert.equal((await process(e)).outcome,'review');assert.equal((await process()).outcome,'review');assert.equal((await db.query('SELECT count(*)::int AS n FROM public.entitlements')).rows[0].n,0);
+  await reset();await db.exec("UPDATE public.sandbox_checkout_intents SET status='creating',transaction_id=null");assert.equal((await process()).ok,false);assert.equal((await db.query('SELECT count(*)::int AS n FROM public.sandbox_payment_events')).rows[0].n,0);await db.query("UPDATE public.sandbox_checkout_intents SET status='ready',transaction_id=$1",[txn]);assert.equal((await process()).outcome,'fulfilled');
+  await reset();e=fixture();e.data.details.totals.total='499';assert.equal((await process(e)).outcome,'review');assert.equal((await db.query('SELECT count(*)::int AS n FROM public.orders')).rows[0].n,0);
+  await reset();e=fixture();e.data.id='txn_'+'b'.repeat(26);assert.equal((await process(e)).outcome,'review');assert.equal((await db.query('SELECT count(*)::int AS n FROM public.orders')).rows[0].n,0);
+  await reset();await db.exec("UPDATE auth.users SET banned_until=now()+interval '1 day'");assert.equal((await process()).outcome,'review');assert.equal((await db.query('SELECT count(*)::int AS n FROM public.entitlements')).rows[0].n,0);await db.exec('UPDATE auth.users SET banned_until=null');
+  await reset();await db.exec(`INSERT INTO public.entitlements(user_id,product_id,source,status) VALUES('${user}',1,'admin','revoked')`);assert.equal((await process()).outcome,'review');assert.equal((await db.query('SELECT status FROM public.entitlements')).rows[0].status,'revoked');
+  await reset();await db.exec("CREATE FUNCTION public.fail_entitlement() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic failure'; END $$; CREATE TRIGGER fail_entitlement BEFORE INSERT ON public.entitlements FOR EACH ROW EXECUTE FUNCTION public.fail_entitlement();");await assert.rejects(process(),/synthetic failure/);assert.equal((await db.query('SELECT count(*)::int AS n FROM public.orders')).rows[0].n,0);assert.equal((await db.query('SELECT count(*)::int AS n FROM public.order_items')).rows[0].n,0);assert.equal((await db.query('SELECT count(*)::int AS n FROM public.sandbox_payment_events')).rows[0].n,0);await db.exec('DROP TRIGGER fail_entitlement ON public.entitlements');assert.equal((await process()).outcome,'fulfilled');
+  await db.exec('SET ROLE authenticated');await assert.rejects(process(),/permission denied/);await db.exec('RESET ROLE');
+ }finally{await db.close();}
+});
