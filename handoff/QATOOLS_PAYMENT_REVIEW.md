@@ -2,6 +2,8 @@
 
 ## Local implementation; deployment pending
 
+Owner confirmed the original hosted review section and shorter order displays work (2026-10-04). The additional transaction check below remains local until its next deployment.
+
 The next milestone adds a read-only Payment review section below admin orders. Each request independently verifies the bearer account and admin_users membership before server-only database access. All responses are no-store. Existing service SELECT grants from the applied sandbox migrations suffice; no migration or permission expansion is needed.
 
 Two views use separate bounded pages of 50 rows plus a sentinel:
@@ -16,6 +18,18 @@ The source schema extension is in `src/lib/paymentReviewDatabase.ts`, consistent
 The owner confirmed the existing sandbox purchase, installed download/activation and matching Paddle/admin order details. The owner also confirmed the order-number migration and hosted displays work. These observations do not establish production payment readiness.
 
 ## Rollout
+
+## Sandbox transaction status check — next local milestone
+
+Added CHECK PADDLE STATUS to saved sandbox order details and review entries containing a transaction reference. GET `/api/admin/payment-review/transaction?id=...` independently verifies admin authorization, validates the transaction ID, and requires a matching saved sandbox order, checkout or event before contacting Paddle. Unknown references return 404 without provider access. Database failures and provider/configuration/transport failures return safe errors with no raw diagnostics.
+
+The server uses a single GET to the fixed sandbox API, no-store, rejected redirects and a ten-second timeout. It returns an allowlisted status, currency, total/balance minor units, valid opaque checkout reference and sandbox attribution indicator alongside minimal saved order/checkout data and check time. Missing/malformed or currency-inconsistent totals display Unavailable rather than a fabricated zero. No customer identity/address, payment details, credentials, full custom_data or checkout links are returned. Account changes unmount this component and abort pending display updates.
+
+The comparison is informational. Transaction status is not a refund/dispute determination; adjustments still need review in Paddle. No automatic fulfillment, event resolution, ownership changes or checkout retries occur. Existing paid sandbox orders provide a way to verify the feature without creating another purchase. No SQL migration is needed.
+
+Primary API reference: https://developer.paddle.com/api-reference/transactions/get-transaction/ (GET requires transaction.read, already used by checkout revalidation).
+
+Local verification for the transaction-check milestone: all 17 targeted transaction/review tests passed, including unauthorized/non-admin rejection, reference validation, unknown-reference no-network behavior, allowlisted output, GET-only fixed destination, failure handling and malformed/missing totals. Production build, TypeScript compilation, scoped ESLint and `git diff --check` passed. Tests use synthetic provider responses; the owner should verify the existing completed sandbox order after deployment.
 
 Verification: all 18 targeted payment-review/order tests passed with PostgreSQL fixtures enabled and none skipped. Production build, TypeScript compilation, scoped ESLint and `git diff --check` passed. Hosted verification remains pending deployment.
 

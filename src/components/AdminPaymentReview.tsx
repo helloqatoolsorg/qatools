@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import AdminPaddleCheck from "./AdminPaddleCheck";
 import "./AdminOrders.css";
 
 type ReviewRecord = {
@@ -78,7 +79,7 @@ export default function AdminPaymentReview() {
             <dt>Customer ID</dt><dd>{record.user_id}</dd><dt>Item ID</dt><dd>{record.product_id}</dd>
             <dt>Created</dt><dd>{date(record.created_at)}</dd><dt>Updated</dt><dd>{date(record.updated_at)}</dd>
           </>}
-        </dl></div>
+        </dl>{record.transaction_id && <AdminPaddleCheck transactionId={record.transaction_id} />}</div>
       </details>)}</div>}
     <div className="admin-orders-paging">
       <button type="button" disabled={loading || page === 1} onClick={() => setPage(value => value - 1)}>PREVIOUS</button>

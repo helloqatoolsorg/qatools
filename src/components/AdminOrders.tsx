@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { formatOrderNumber } from "@/lib/orderNumber";
+import AdminPaddleCheck from "./AdminPaddleCheck";
 import "./AdminOrders.css";
 
 type Order = {
@@ -79,6 +80,8 @@ export default function AdminOrders() {
               <dt>Total</dt><dd>{money(order.total, order.currency)}</dd>
               {order.provider_created_at && <><dt>Provider date</dt><dd>{date(order.provider_created_at)}</dd></>}
             </dl>
+            {order.provider === "paddle_sandbox" && order.provider_transaction_id &&
+              <AdminPaddleCheck transactionId={order.provider_transaction_id} />}
             {order.items.length ? <div className="admin-order-items"><table>
               <thead><tr><th>Item</th><th>Quantity</th><th>Unit price</th><th>Line total</th></tr></thead>
               <tbody>{order.items.map(item => <tr key={item.id}><td>{item.product?.name ?? `Product #${item.product_id}`}</td>
