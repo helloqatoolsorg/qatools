@@ -29,8 +29,12 @@ export function normalizePaddleEvent(value: unknown) {
   const total = cents(totals.total);
   const refundTotals = record(data.totals);
   const refundTotal = cents(refundTotals.total);
+  // Dashboard item-based refunds can label the adjustment partial even when its
+  // only item is fully refunded. SQL still requires the exact entire order amount.
+  const wholeItemRefund = data.type === "partial" && items.length === 1 && item.type === "full" &&
+    paddleId(item.item_id, "txnitm") && refundTotal !== null && cents(record(item.totals).total) === refundTotal;
   const fullRefund = !simulation && ["adjustment.created", "adjustment.updated"].includes(type) &&
-    !!txnId && paddleId(data.id, "adj") && data.action === "refund" && data.type === "full" &&
+    !!txnId && paddleId(data.id, "adj") && data.action === "refund" && (data.type === "full" || wholeItemRefund) &&
     data.status === "approved" && data.currency_code === "EUR" && refundTotals.currency_code === "EUR" &&
     data.subscription_id === null && refundTotal !== null && refundTotal > 0;
   const valid = !simulation && type === "transaction.completed" && !!txnId && !!intentId &&

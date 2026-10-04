@@ -8,6 +8,8 @@ Status: decision record, NOT a published agreement or customer acceptance record
 
 Owner explicitly approved marking a fully refunded tool's ownership refunded after provider approval, blocking downloads and future license renewals for that tool. Existing offline proofs remain valid until a successful check removes that product or expiry. Other owned tools and account machine assignment remain intact. Local sandbox implementation is in `20261004130000_sandbox_full_refunds.sql`; migration/deployment and real sandbox refund verification remain pending. Partial/pending refunds and disputes remain manual review; no automatic reinstatement or general refund eligibility policy was approved. See `QATOOLS_PAYMENT_OPERATIONS.md` for the batch scope and remaining checks.
 
+Implementation clarification following the owner's sandbox test: Paddle may label a fully refunded single-item order's adjustment `partial`, with the item scope `full`. Exact entire-order amount and binding checks determine eligibility; the provider's adjustment label alone does not define the approved commercial policy. Correction and safe signed-replay support are in `20261004140000_recheck_approved_refund_events.sql`, pending rollout. Smaller refunds remain manual review.
+
 ## Working record instructions
 
 - Record each material decision with its date, source, implementation status and unresolved details.

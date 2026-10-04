@@ -27,4 +27,18 @@ Verification: 88 targeted checks passed with no skips across payment fulfillment
 
 No real refund or remote mutation has been performed by the agent. Automatic commercial handling remains sandbox-only. Public live launch still needs its separate configuration, real signer, customer terms, refund eligibility policy and remaining integration checks.
 
+## Hosted refund correction — 2026-10-04
+
+Owner requested the existing disposable sandbox purchase refund in Paddle. Read-only diagnostics confirmed API transaction.read succeeds but adjustment reads return 403 until Adjustments Read is added to the existing key. Owner added that permission; the approved adjustment then became visible. Add `adjustment.read` to the setup checklist (no adjustment.write is needed for the website's read-only check).
+
+Actual dashboard behavior: the adjustment is labeled `partial`, while its single item is labeled `full` and its EUR total equals the entire original order. The previous normalizer required adjustment-level `full` and left both notifications as review, preserving active access. This exposed a real integration gap not represented in the initial synthetic tests.
+
+The correction accepts an approved item-based refund only when it contains one valid transaction-item reference marked full with a matching item/refund total. The existing SQL must still prove exact coverage of the entire saved single-item order, matching owner, product, currency, amount and purchase entitlement. Refunds of smaller amounts and partially refunded item scopes remain review-only. This implements the original approved fully-refunded-tool policy without broadening it to partial monetary refunds.
+
+New append-only migration `20261004140000_recheck_approved_refund_events.sql` lets a signature-verified replay re-evaluate a previously reviewed approved-refund event only when the original body hash matches. Other outcomes remain idempotent, changed-body retries are denied, simulations stay ignored, and order/access/ledger updates remain atomic. Replay must come through the existing verified Paddle webhook; do not edit remote orders/entitlements manually or request a second refund.
+
+Correction rollout: apply migration, commit/push and wait for Ready, then replay the existing approved `adjustment.updated` notification in Paddle. Confirm the existing order is refunded with the same number, ownership/download/renewal access removed only for that tool, and Processed full refunds contains the event. The agent has not performed this replay or mutated remote records.
+
+Correction verification: all nine targeted fulfillment tests passed with actual PostgreSQL enabled and no skips, including the observed item-based refund shape, changed-hash rejection and reprocessing a previously reviewed same-body event without duplicate writes. Production build/TypeScript, scoped ESLint and `git diff --check` passed. Hosted correction/replay remains pending.
+
 References: https://developer.paddle.com/webhooks/adjustments/adjustment-updated/ and https://developer.paddle.com/webhooks/adjustments/adjustment-created/ . Subscribe to both because approval can exist at creation or arrive in a later update.

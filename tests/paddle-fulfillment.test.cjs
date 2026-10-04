@@ -45,6 +45,14 @@ test('only approved full refund events normalize as automatic refunds',()=>{
   const e=refund();change(e);assert.equal(normalize(e).fullRefund,false);
  }
 });
+test('dashboard item-based refunds qualify only for a single fully refunded item',()=>{
+ const normalize=setup().load('src/lib/paddleFulfillment.ts').normalizePaddleEvent;
+ const refund=()=>({event_id:eid(40),event_type:'adjustment.updated',occurred_at:'2026-10-04T12:00:00Z',data:{id:'adj_'+'a'.repeat(26),transaction_id:txn,action:'refund',status:'approved',type:'partial',currency_code:'EUR',subscription_id:null,totals:{total:'500',currency_code:'EUR'},items:[{item_id:'txnitm_'+'a'.repeat(26),type:'full',amount:'500',totals:{total:'500'}}]}});
+ assert.equal(normalize(refund()).fullRefund,true);
+ for(const change of [e=>e.data.items[0].type='partial',e=>e.data.items[0].totals.total='499',e=>e.data.items[0].item_id='bad',e=>e.data.items.push(e.data.items[0]),e=>e.data.status='pending_approval']){
+  const e=refund();change(e);assert.equal(normalize(e).fullRefund,false);
+ }
+});
 test('actual SQL fulfillment is atomic, idempotent, bound to intent and blocks out-of-order review events',{skip:!process.env.PGLITE_TEST_MODULE},async()=>{
  const {PGlite}=require(process.env.PGLITE_TEST_MODULE),db=new PGlite(),user='00000000-0000-0000-0000-000000000001';
  const normalize=setup().load('src/lib/paddleFulfillment.ts').normalizePaddleEvent;
@@ -60,6 +68,7 @@ test('actual SQL fulfillment is atomic, idempotent, bound to intent and blocks o
   await db.exec(fs.readFileSync('supabase/migrations/20261003090000_sandbox_payment_fulfillment.sql','utf8'));
   await db.exec(fs.readFileSync('supabase/migrations/20261004100000_paddle_simulation_isolation.sql','utf8'));
   await db.exec(fs.readFileSync('supabase/migrations/20261004130000_sandbox_full_refunds.sql','utf8'));
+  await db.exec(fs.readFileSync('supabase/migrations/20261004140000_recheck_approved_refund_events.sql','utf8'));
   await db.query(`INSERT INTO public.sandbox_checkout_intents(id,user_id,product_id,price_id,amount_cents,currency,status,transaction_id) VALUES($1,$2,1,$3,500,'EUR','ready',$4)`,[intentId,user,pid,txn]);
   for(const role of ['anon','authenticated','service_role']){const p=(await db.query("SELECT has_function_privilege($1,'public.process_sandbox_payment_event(jsonb,text)','EXECUTE') AS execute,has_table_privilege($1,'public.sandbox_payment_events','INSERT,UPDATE,DELETE,TRUNCATE') AS write",[role])).rows[0];assert.equal(p.execute,role==='service_role');assert.equal(p.write,false);}
   async function process(event=fixture(),bodyHash){const n=normalize(event);return (await db.query('SELECT public.process_sandbox_payment_event($1::jsonb,$2) AS result',[JSON.stringify(n),bodyHash??crypto.createHash('sha256').update(JSON.stringify(event)).digest('hex')])).rows[0].result;}
@@ -96,6 +105,11 @@ test('actual SQL fulfillment is atomic, idempotent, bound to intent and blocks o
   const invalid=[e=>e.data.status='pending_approval',e=>e.data.type='partial',e=>e.data.action='chargeback',e=>e.data.status='rejected',e=>e.data.totals.total='499',e=>e.data.currency_code='USD',e=>e.data.id='invalid',e=>e.data.transaction_id='txn_'+'z'.repeat(26)];
   for(let i=0;i<invalid.length;i++){const r=refund(10+i);invalid[i](r);assert.equal((await process(r)).outcome,'review');assert.equal(await status(),'active');}
   const sim=refund();sim.event_id='ntfsimevt_'+'z'.repeat(26);assert.equal((await process(sim)).outcome,'ignored');assert.equal(await status(),'active');
+  const itemRefund=refund(29);itemRefund.data.type='partial';itemRefund.data.items=[{item_id:'txnitm_'+'a'.repeat(26),type:'full',totals:{total:'500'}}];
+  const itemNormalized=normalize(itemRefund),itemHash=crypto.createHash('sha256').update(JSON.stringify(itemRefund)).digest('hex');
+  // Model the event recorded for review by the previous strict normalizer.
+  await db.query("INSERT INTO public.sandbox_payment_events(event_id,body_hash,event_type,transaction_id,outcome,occurred_at) VALUES($1,$2,'adjustment.updated',$3,'review',now())",[itemNormalized.eventId,itemHash,txn]);
+  assert.equal((await process(itemRefund,'0'.repeat(64))).ok,false);assert.equal(await status(),'active');
   await db.query('UPDATE public.entitlements SET order_item_id=null WHERE product_id=1');
   assert.equal((await process(refund(21))).outcome,'review');assert.equal(await status(),'active');
   await db.query('UPDATE public.entitlements SET order_item_id=$1 WHERE product_id=1',[purchased.order_item_id]);
@@ -110,6 +124,9 @@ test('actual SQL fulfillment is atomic, idempotent, bound to intent and blocks o
   assert.equal((await db.query('SELECT status FROM public.orders')).rows[0].status,'paid');
   assert.equal((await db.query('SELECT count(*)::int AS n FROM public.sandbox_payment_events WHERE event_id=$1',[eid(30)])).rows[0].n,0);
   await db.exec('DROP TRIGGER fail_refund ON public.entitlements');
+  assert.equal((await process(itemRefund)).outcome,'refunded');assert.equal(await status(),'refunded');
+  assert.equal((await db.query('SELECT outcome FROM public.sandbox_payment_events WHERE event_id=$1',[eid(29)])).rows[0].outcome,'refunded');
+  assert.equal((await process(itemRefund)).outcome,'refunded');
   assert.equal((await process(refund())).outcome,'refunded');assert.equal(await status(),'refunded');
   assert.equal((await process(refund())).outcome,'refunded');assert.equal((await process(refund(31))).outcome,'refunded');
   const retained=(await db.query('SELECT status,order_number FROM public.orders')).rows[0];assert.equal(retained.status,'refunded');assert.equal(retained.order_number,'sandbox-000001');
