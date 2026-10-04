@@ -8,7 +8,8 @@ const cents = (value: unknown): number | null => typeof value === "string" && /^
 // Called only after raw-byte signature verification. Store normalized fields, not customer payloads.
 export function normalizePaddleEvent(value: unknown) {
   const event = record(value), data = record(event.data);
-  if (!paddleId(event.event_id, "evt") || typeof event.event_type !== "string" ||
+  const simulation = paddleId(event.event_id, "ntfsimevt");
+  if ((!paddleId(event.event_id, "evt") && !simulation) || typeof event.event_type !== "string" ||
       !/^[a-z_]+\.[a-z_]+$/.test(event.event_type) || event.event_type.length > 80 ||
       typeof event.occurred_at !== "string" || !Number.isFinite(Date.parse(event.occurred_at))) {
     throw new Error("Invalid Paddle event.");
@@ -26,7 +27,7 @@ export function normalizePaddleEvent(value: unknown) {
     /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(custom.qatools_checkout_id) ? custom.qatools_checkout_id : null;
   const subtotal = cents(totals.subtotal), tax = cents(totals.tax);
   const total = cents(totals.total);
-  const valid = type === "transaction.completed" && !!txnId && !!intentId &&
+  const valid = !simulation && type === "transaction.completed" && !!txnId && !!intentId &&
     custom.qatools_environment === "sandbox" && data.status === "completed" &&
     data.collection_mode === "automatic" && data.currency_code === "EUR" && totals.currency_code === "EUR" &&
     data.subscription_id === null && data.discount_id === null && items.length === 1 && item.quantity === 1 &&
@@ -39,7 +40,7 @@ export function normalizePaddleEvent(value: unknown) {
     totals.grand_total === "500" && totals.discount === "0" && totals.credit === "0" &&
     totals.credit_to_balance === "0" && totals.balance === "0";
   return {
-    eventId: event.event_id, type, txnId, intentId, valid,
+    eventId: event.event_id as string, type, txnId: simulation ? null : txnId, intentId: simulation ? null : intentId, valid,
     priceId: typeof price.id === "string" ? price.id : null,
     subtotal, total, occurredAt: new Date(event.occurred_at).toISOString(),
   };

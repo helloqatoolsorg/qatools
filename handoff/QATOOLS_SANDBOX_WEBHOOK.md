@@ -26,3 +26,12 @@ Source: src/lib/paddleFulfillment.ts; src/lib/paddleWebhookDatabase.ts; src/app/
 Provider documentation checked: https://developer.paddle.com/webhooks/transactions/transaction-completed/ and the previously recorded signature-verification guide. SQL is trusted only through the signed server route; service-role credentials remain security-critical.
 
 Final verification: production build passed, including the new webhook route.
+
+## Hosted deployment and signed simulation — 2026-10-04
+
+- Owner deployed GitHub main to https://qatools-orpin.vercel.app and configured the Paddle destination secret privately in Vercel Production, then reported redeployment Ready. Actual unsigned hosted webhook POST now returns 400 Invalid webhook request instead of missing-config 503, without a login redirect.
+- Agent created sandbox simulation qatools signed webhook delivery test, ntfsim_01m42xer5a3q1gj7exzs60bndc, using destination ntfset_01m41fsa8qhp54chf160ftsgda. First actual signed delivery returned 400 Invalid event, proving signature verification passed but exposing an unsupported ntfsimevt_ simulation event ID prefix.
+- Added normalizer support and migration 20261004100000_paddle_simulation_isolation.sql. Signed simulation IDs are recorded as ignored and never fulfill, bind or block a real purchase, even when synthetic data contains real transaction/intent references. Regular evt_ fulfillment rules are unchanged. Historical applied 090000 migration was not edited.
+- Seven targeted tests passed, including applying the original migrations plus new migration in isolated SQL and checking simulation isolation against forged normalized matching purchase data. Production build result noted below. No order or entitlement was created by the real simulator attempt; it was rejected before SQL processing.
+- Remote new migration, deployment update and replay of actual signed delivery remain pending. The first screenshot is saved in chat workspace work/paddle-simulation-first-delivery.png. Paid checkout remains disabled.
+Final local verification: production build passed. Git staging was denied by filesystem permissions despite a repository-directory grant; owner must commit/push the four listed files. The unrelated untracked security directory was not read, changed or staged.
