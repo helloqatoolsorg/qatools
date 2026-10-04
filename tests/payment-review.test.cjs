@@ -55,3 +55,7 @@ test('payment review errors never reveal SQL diagnostics or records',async()=>{
   assert.equal(r.status,503);assert.equal(body.records,undefined);assert.ok(!JSON.stringify(body).includes('private'));
  }
 });
+test('processed refund history is a separate bounded view',async()=>{
+ const s=setup(),r=await s.get('?kind=refunds'),body=await r.json();assert.equal(r.status,200);assert.equal(body.kind,'refunds');
+ assert.ok(s.calls.some(c=>c.column==='outcome'&&c.value==='refunded'));assert.ok(s.calls.some(c=>c.start===0&&c.end===50));
+});

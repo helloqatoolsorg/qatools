@@ -10,7 +10,7 @@ type ReviewDatabase = Database & { public: Database["public"] & { Tables: {
     Insert: never; Update: never; Relationships: [];
   };
   sandbox_checkout_intents: {
-    Row: { id: string; user_id: string; product_id: number; status: string; transaction_id: string | null; created_at: string; updated_at: string };
+    Row: { id: string; user_id: string; product_id: number; status: string; currency: string; amount_cents: number; transaction_id: string | null; created_at: string; updated_at: string };
     Insert: never; Update: never; Relationships: [];
   };
 } } };

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { formatOrderNumber } from "@/lib/orderNumber";
+import type { PaymentComparison } from "@/lib/paymentComparison";
 
 type Check = {
   transaction: { status: string; currency: string; totalCents: string | null; balanceCents: string | null;
@@ -14,6 +15,7 @@ type Check = {
   order: { order_number: string | null; status: string; currency: string; total: number } | null;
   checkout: { id: string; status: string } | null;
   checkedAt: string;
+  comparison: PaymentComparison;
 };
 function amount(cents: string | null, currency: string) {
   if (cents === null) return "Unavailable";
@@ -62,6 +64,13 @@ export default function AdminPaddleCheck({ transactionId }: { transactionId: str
         <dt>Saved order total</dt><dd>{result.order ? `${Number(result.order.total).toFixed(2)} ${result.order.currency}` : "—"}</dd>
         <dt>Checked</dt><dd>{new Date(result.checkedAt).toLocaleString("en-GB")}</dd>
       </dl>
+      <h3>Saved record comparison</h3>
+      <dl>{result.comparison.map(check => <div key={check.label} style={{ display: "contents" }}>
+        <dt>{check.label}</dt><dd className={check.state === "mismatch" ? "admin-orders-error" : undefined}>
+          {check.state === "match" ? "Matches" : check.state === "mismatch" ? "Does not match — review required" : "Unavailable"}
+        </dd>
+      </div>)}</dl>
+      <p>These checks compare references and amounts. They do not resolve refunds or disputes.</p>
       <h3>Refunds and adjustments</h3>
       {!result.transaction.adjustments.available ? <p role="alert" className="admin-orders-error">
         Adjustment details are unavailable. Check the Paddle sandbox dashboard before taking action.

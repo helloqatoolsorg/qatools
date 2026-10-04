@@ -9,7 +9,7 @@ function setup(options={}) {
   async maybeSingle(){
    if(table==='admin_users')return {data:options.nonAdmin?null:{user_id:'admin'},error:options.membershipError?{}:null};
    if(options.dbError)return {data:null,error:{message:'private SQL'}};
-   return {data:options.unknown?null:table==='orders'?{order_number:'sandbox-000001',status:'paid',currency:'EUR',total:5}:table==='sandbox_checkout_intents'?{id:intent,status:'completed'}:null,error:null};
+   return {data:options.unknown?null:table==='orders'?{order_number:'sandbox-000001',status:'paid',currency:'EUR',total:5}:table==='sandbox_checkout_intents'?{id:intent,status:'completed',currency:'EUR',amount_cents:500}:null,error:null};
   }
  };return q;}};
  function load(file){if(cache.has(file))return cache.get(file);const mod={exports:{}};
@@ -19,6 +19,7 @@ function setup(options={}) {
    require(name){if(name==='server-only')return {};if(name==='next/server')return {NextResponse:{json:Response.json}};
     if(name==='@/lib/paymentReviewDatabase')return {paymentReviewDatabase:db};if(name==='@/lib/supabaseAdmin')return {supabaseAdmin:db};
     if(name==='@/lib/requireAdmin')return load('src/lib/requireAdmin.ts');
+    if(name==='@/lib/paymentComparison')return load('src/lib/paymentComparison.ts');
     if(name==='@/lib/paddleTransactionReview')return load('src/lib/paddleTransactionReview.ts');
     if(name==='./paddleSandbox')return {paddleSandboxApiConfig(){if(options.noConfig)throw Error('private configuration');return {apiBase:'https://sandbox-api.paddle.com',apiKey:'synthetic-server-secret'};}};
     if(name==='@supabase/supabase-js')return {createClient:()=>({auth:{getUser:async()=>({data:{user:options.invalidToken?null:{id:'admin'}},error:options.invalidToken?{}:null})}})};

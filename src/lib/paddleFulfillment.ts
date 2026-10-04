@@ -27,6 +27,12 @@ export function normalizePaddleEvent(value: unknown) {
     /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(custom.qatools_checkout_id) ? custom.qatools_checkout_id : null;
   const subtotal = cents(totals.subtotal), tax = cents(totals.tax);
   const total = cents(totals.total);
+  const refundTotals = record(data.totals);
+  const refundTotal = cents(refundTotals.total);
+  const fullRefund = !simulation && ["adjustment.created", "adjustment.updated"].includes(type) &&
+    !!txnId && paddleId(data.id, "adj") && data.action === "refund" && data.type === "full" &&
+    data.status === "approved" && data.currency_code === "EUR" && refundTotals.currency_code === "EUR" &&
+    data.subscription_id === null && refundTotal !== null && refundTotal > 0;
   const valid = !simulation && type === "transaction.completed" && !!txnId && !!intentId &&
     custom.qatools_environment === "sandbox" && data.status === "completed" &&
     data.collection_mode === "automatic" && data.currency_code === "EUR" && totals.currency_code === "EUR" &&
@@ -42,6 +48,7 @@ export function normalizePaddleEvent(value: unknown) {
   return {
     eventId: event.event_id as string, type, txnId: simulation ? null : txnId, intentId: simulation ? null : intentId, valid,
     priceId: typeof price.id === "string" ? price.id : null,
-    subtotal, total, occurredAt: new Date(event.occurred_at).toISOString(),
+    subtotal, total, fullRefund, refundId: fullRefund ? data.id as string : null,
+    refundTotal: fullRefund ? refundTotal : null, occurredAt: new Date(event.occurred_at).toISOString(),
   };
 }

@@ -2,6 +2,8 @@
 
 ## Local implementation; deployment pending
 
+The owner now authorizes coherent batches of routine related work with one rollout/checklist. The next batch adds comparisons and approved full-refund handling; see `QATOOLS_PAYMENT_OPERATIONS.md`. Its newly approved rule supersedes the earlier statements that all refund handling was undecided. Partial refunds and disputes remain manual review.
+
 Owner confirmed the hosted review section, shorter order displays and original transaction check work (2026-10-04). The adjustment display described below remains local until its next deployment.
 
 The next milestone adds a read-only Payment review section below admin orders. Each request independently verifies the bearer account and admin_users membership before server-only database access. All responses are no-store. Existing service SELECT grants from the applied sandbox migrations suffice; no migration or permission expansion is needed.

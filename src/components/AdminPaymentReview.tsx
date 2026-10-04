@@ -25,6 +25,7 @@ export default function AdminPaymentReview() {
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isEvent = kind !== "checkouts";
 
   useEffect(() => {
     const controller = new AbortController();
@@ -56,25 +57,26 @@ export default function AdminPaymentReview() {
         <label>Show <select value={kind} onChange={event => { setKind(event.target.value); setPage(1); }}>
           <option value="events">Payment events requiring review</option>
           <option value="checkouts">Unconfirmed checkout attempts</option>
+          <option value="refunds">Processed full refunds</option>
         </select></label>
         <button type="button" disabled={loading} onClick={() => setRefresh(value => value + 1)}>REFRESH REVIEW</button>
       </div>
     </div>
-    <p>{kind === "events"
+    <p>{kind === "refunds" ? "Approved full-refund events processed by qatools. Order numbers and purchase history are retained." : kind === "events"
       ? "Compare these events with the matching Paddle sandbox transaction and order before taking action."
       : "Shows creating or unknown attempts unchanged for at least five minutes. This does not confirm that payment failed. Check Paddle before retrying."}</p>
     <p>This view does not change payments, orders or ownership.</p>
     {loading ? <p role="status">Loading payment review…</p> : error ? <p role="alert" className="admin-orders-error">{error}</p> :
-      records.length === 0 ? <p>No {kind === "events" ? "payment events requiring review" : "unconfirmed checkout attempts"} found.</p> :
+      records.length === 0 ? <p>No {kind === "refunds" ? "processed full refunds" : isEvent ? "payment events requiring review" : "unconfirmed checkout attempts"} found.</p> :
       <div className="admin-orders-list">{records.map(record => <details key={record.event_id ?? record.id}>
         <summary><span>{record.event_type ?? record.status}</span>
           <span>{record.transaction_id ?? "No transaction recorded"}</span>
-          <span>{kind === "events" ? "review" : "unconfirmed"}</span><span>sandbox</span>
+          <span>{kind === "refunds" ? "refunded" : isEvent ? "review" : "unconfirmed"}</span><span>sandbox</span>
           <time>{date(record.received_at ?? record.updated_at)}</time></summary>
         <div className="admin-order-details"><dl>
-          <dt>{kind === "events" ? "Event ID" : "Checkout ID"}</dt><dd>{record.event_id ?? record.id}</dd>
+          <dt>{isEvent ? "Event ID" : "Checkout ID"}</dt><dd>{record.event_id ?? record.id}</dd>
           <dt>Paddle transaction</dt><dd>{record.transaction_id ?? "—"}</dd>
-          {kind === "events" ? <><dt>Event date</dt><dd>{date(record.occurred_at)}</dd>
+          {isEvent ? <><dt>Event date</dt><dd>{date(record.occurred_at)}</dd>
             <dt>Received</dt><dd>{date(record.received_at)}</dd></> : <>
             <dt>Customer ID</dt><dd>{record.user_id}</dd><dt>Item ID</dt><dd>{record.product_id}</dd>
             <dt>Created</dt><dd>{date(record.created_at)}</dd><dt>Updated</dt><dd>{date(record.updated_at)}</dd>
