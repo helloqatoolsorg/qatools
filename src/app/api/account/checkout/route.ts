@@ -4,7 +4,17 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { paddleCheckoutDatabase } from "@/lib/paddleCheckoutDatabase";
 import { fetchValidatedSandboxPrice } from "@/lib/paddleCatalog";
 import { paddleSandboxConfig } from "@/lib/paddleSandbox";
-import { createSandboxTransaction } from "@/lib/paddleTransaction";
+import { createSandboxTransaction, fetchPayableSandboxTransaction } from "@/lib/paddleTransaction";
+
+export async function GET(request: Request) {
+  try {
+    const auth = await requireAccount(request, "checkout");
+    if (auth.response) return auth.response;
+    if (process.env.PADDLE_SANDBOX_CHECKOUT_ENABLED !== "true") return privateJson({ enabled: false });
+    const config = paddleSandboxConfig();
+    return privateJson({ enabled: true, environment: "sandbox", clientToken: config.clientToken });
+  } catch { return privateJson({ enabled: false }); }
+}
 
 export async function POST(request: Request) {
   try {
@@ -28,8 +38,10 @@ export async function POST(request: Request) {
       return privateJson({ error: "This item cannot be purchased by this account." }, error ? 503 : 409);
     const intent = reservation.intent;
     if (!reservation.created) {
-      if (intent.status === "ready" && intent.transaction_id)
-        return privateJson({ transactionId: intent.transaction_id });
+      if (intent.status === "ready" && intent.transaction_id) {
+        const transactionId = await fetchPayableSandboxTransaction(intent.transaction_id, intent.id, mapping.paddlePriceId);
+        return privateJson({ transactionId });
+      }
       return privateJson({ error: "Checkout is being prepared or needs review. Please do not retry payment." }, 409);
     }
     try {
@@ -38,6 +50,7 @@ export async function POST(request: Request) {
         p_user_id: auth.user.id, p_intent_id: intent.id, p_transaction_id: transactionId,
       });
       if (saved.error || !saved.data) throw new Error("Checkout save failed.");
+      await fetchPayableSandboxTransaction(transactionId, intent.id, mapping.paddlePriceId);
       return privateJson({ transactionId });
     } catch {
       // Retain ambiguous attempts. Never create a second transaction by retrying POST.

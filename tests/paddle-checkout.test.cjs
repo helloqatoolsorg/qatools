@@ -11,10 +11,10 @@ function setup(options={}) {
    if(name==='@/lib/activationHttp')return load('src/lib/activationHttp.ts');
    if(name==='@/lib/requireAccount')return load('src/lib/requireAccount.ts');
    if(name==='@supabase/supabase-js')return {createClient:()=>({auth:{getUser:async()=>({data:{user:options.invalid?null:{id:'verified-user',email_confirmed_at:options.unconfirmed?null:'confirmed'}},error:null})}})};
-   if(name==='@/lib/paddleSandbox')return {paddleSandboxConfig:()=>{if(options.configFailure)throw Error('private');}};
+   if(name==='@/lib/paddleSandbox')return {paddleSandboxConfig:()=>{if(options.configFailure)throw Error('private');return {clientToken:'test_synthetic'};}};
    if(name==='./paddleSandbox')return {paddleSandboxApiConfig:()=>({apiBase:'https://sandbox-api.paddle.com',apiKey:'synthetic'})};
    if(name==='@/lib/paddleCatalog')return {fetchValidatedSandboxPrice:async()=>{calls.push({name:'price'});if(options.priceFailure)throw Error('private');return {paddlePriceId:priceId};}};
-   if(name==='@/lib/paddleTransaction')return {createSandboxTransaction:async(id,price)=>{calls.push({name:'create',id,price});if(options.createFailure)throw Error('secret');return txnId;}};
+   if(name==='@/lib/paddleTransaction')return {fetchPayableSandboxTransaction:async(id,intent,price)=>{calls.push({name:'revalidate',id,intent,price});if(options.revalidateFailure)throw Error('secret');return id;},createSandboxTransaction:async(id,price)=>{calls.push({name:'create',id,price});if(options.createFailure)throw Error('secret');return txnId;}};
    if(name==='@/lib/paddleCheckoutDatabase')return {paddleCheckoutDatabase:{rpc}};
    if(name==='@/lib/supabaseAdmin')return {supabaseAdmin:{from:()=>({select:()=>({eq:()=>({single:async()=>({data:{id:1,slug:'qafit01',price_eur:5,published:true},error:null})})})})}};
    throw Error(name);
@@ -70,4 +70,45 @@ test('SQL reserves once, protects ownership, forbids browser writes and binds by
   assert.equal((await db.query('SELECT count(*)::int AS count FROM public.entitlements')).rows[0].count,0);
   await db.exec('SET ROLE authenticated');await assert.rejects(reserve(),/permission denied/);await db.exec('RESET ROLE');
  }finally{await db.close();}
+});
+
+test('saved checkout is revalidated without creating or rebinding a transaction',async()=>{
+ const reservation={ok:true,created:false,intent:{id:intentId,status:'ready',transaction_id:txnId}};
+ const s=setup({reservation}),r=await s.post();assert.equal(r.status,200);
+ assert.equal(s.calls.at(-1).name,'revalidate');assert.equal(s.calls.at(-1).intent,intentId);
+ const denied=setup({reservation,revalidateFailure:true});assert.equal((await denied.post()).status,503);
+ assert.equal(denied.calls.some(c=>c.name==='create'||c.name==='finish_sandbox_checkout'),false);
+ const fresh=setup({revalidateFailure:true});assert.equal((await fresh.post()).status,503);
+ assert.equal(fresh.calls.filter(c=>c.name==='create').length,1);
+});
+const payable={...transaction,subscription_id:null,discount_id:null,
+ items:[{quantity:1,price:{id:priceId,product_id:'pro_01m41bf7cprd18e5aebzyp1rzw',tax_mode:'internal',billing_cycle:null,trial_period:null,unit_price:{amount:'500',currency_code:'EUR'}}}],
+ details:{totals:{subtotal:'420',tax:'80',total:'500',grand_total:'500',balance:'500',discount:'0',credit:'0',credit_to_balance:'0',currency_code:'EUR'},
+ line_items:[{price_id:priceId,quantity:1,product:{id:'pro_01m41bf7cprd18e5aebzyp1rzw'},totals:{total:'500',discount:'0'}}]}};
+test('payable transaction rejects completed, canceled, repriced, credited and misattributed checkouts',()=>{
+ const validate=setup().load('src/lib/paddleTransaction.ts').validatePayableSandboxTransaction;
+ assert.equal(validate(payable,txnId,intentId,priceId),txnId);
+ assert.equal(validate({...payable,status:'ready'},txnId,intentId,priceId),txnId);
+ for(const patch of [{id:'txn_'+'b'.repeat(26)},{status:'paid'},{status:'completed'},{status:'canceled'},{status:'past_due'},
+ {subscription_id:'sub_test'},{discount_id:'dsc_test'},{custom_data:{qatools_checkout_id:'other',qatools_environment:'sandbox'}},
+ {details:null},{items:[]}])assert.throws(()=>validate({...payable,...patch},txnId,intentId,priceId));
+ for(const [field,value] of [['subtotal','421'],['tax','-1'],['tax',80],['total','600'],['grand_total','600'],['balance','0'],['credit','1'],['credit_to_balance','1'],['discount','1'],['currency_code','USD']]){
+  assert.throws(()=>validate({...payable,details:{...payable.details,totals:{...payable.details.totals,[field]:value}}},txnId,intentId,priceId));
+ }
+ assert.throws(()=>validate({...payable,details:{...payable.details,line_items:[]}},txnId,intentId,priceId));
+ assert.throws(()=>validate({...payable,items:[{quantity:1,price:{...payable.items[0].price,tax_mode:'external'}}]},txnId,intentId,priceId));
+});
+test('revalidation reads the fixed sandbox host without caching or a provider POST',async()=>{
+ let reads=0;const s=setup({fetch:async(url,opts)=>{reads++;assert.equal(url,'https://sandbox-api.paddle.com/transactions/'+txnId);assert.equal(opts.cache,'no-store');assert.equal(opts.redirect,'error');assert.equal(opts.method,undefined);return {ok:true,json:async()=>({data:payable})};}});
+ assert.equal(await s.load('src/lib/paddleTransaction.ts').fetchPayableSandboxTransaction(txnId,intentId,priceId),txnId);assert.equal(reads,1);
+ await assert.rejects(s.load('src/lib/paddleTransaction.ts').fetchPayableSandboxTransaction('../escape',intentId,priceId));assert.equal(reads,1);
+ const fail=setup({fetch:async()=>({ok:false})});await assert.rejects(fail.load('src/lib/paddleTransaction.ts').fetchPayableSandboxTransaction(txnId,intentId,priceId));
+});
+
+test('browser configuration is authenticated, gated and exposes only the sandbox client token',async()=>{
+ for(const [options,status,enabled] of [[{noToken:true},401,undefined],[{invalid:true},401,undefined],[{unconfirmed:true},403,undefined],[{disabled:true},200,false],[{configFailure:true},200,false],[{},200,true]]){
+  const s=setup(options);const r=await s.load('src/app/api/account/checkout/route.ts').GET(new Request('http://localhost/api/account/checkout',{headers:options.noToken?{}:{Authorization:'Bearer synthetic'}}));
+  assert.equal(r.status,status);assert.equal(r.headers.get('cache-control'),'no-store');const body=await r.json();assert.equal(body.enabled,enabled);assert.equal(s.calls.length,0);
+  if(enabled)assert.deepEqual(body,{enabled:true,environment:'sandbox',clientToken:'test_synthetic'});
+ }
 });

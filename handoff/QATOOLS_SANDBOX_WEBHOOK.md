@@ -35,3 +35,7 @@ Final verification: production build passed, including the new webhook route.
 - Seven targeted tests passed, including applying the original migrations plus new migration in isolated SQL and checking simulation isolation against forged normalized matching purchase data. Production build result noted below. No order or entitlement was created by the real simulator attempt; it was rejected before SQL processing.
 - Remote new migration, deployment update and replay of actual signed delivery remain pending. The first screenshot is saved in chat workspace work/paddle-simulation-first-delivery.png. Paid checkout remains disabled.
 Final local verification: production build passed. Git staging was denied by filesystem permissions despite a repository-directory grant; owner must commit/push the four listed files. The unrelated untracked security directory was not read, changed or staged.
+
+## Hosted simulation verified — 2026-10-04
+
+Owner reported replay response {"received":true} after Vercel deployed ef28c7b. Direct read-only Supabase verification found ntfsimevt_01m42yjw5j21nabaqrzqc37zyk (transaction.completed), outcome ignored, transaction_id null, received 2026-10-04T07:55:48.889472Z. This verifies hosted signed delivery and simulation isolation; it is not a completed checkout/payment test. Owner reported 20261004100000 applied.

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import SandboxCheckout from "@/components/SandboxCheckout";
 
 import {
   formatCartPrice,
@@ -351,7 +352,7 @@ export default function CartPage() {
               <span>tax</span>
 
               <strong>
-                calculated at checkout
+                included
               </strong>
             </div>
 
@@ -365,18 +366,18 @@ export default function CartPage() {
               </strong>
             </div>
 
-            <button
+            {freeItems.length > 0 && <button
               className="cart-page-checkout"
               type="button"
               onClick={acquireFreeItems}
               disabled={loading || purchasedLoading || acquiring || freeItems.length === 0}
             >
               {acquiring ? "ADDING ITEMS..." : freeItems.length ? "GET FREE ITEMS" : "CHECKOUT"}
-            </button>
+            </button>}
 
             {acquisitionError && <p role="alert" style={{ color: "#e86565", font: "10px monospace" }}>{acquisitionError} <a href="/user">Account</a></p>}
             {acquisitionMessage && <p role="status" style={{ color: "#55b86d", font: "10px monospace" }}>{acquisitionMessage} <a href="/user?section=purchased">Your items</a></p>}
-            {products.some(product => Number(product.price_eur) > 0) && <p style={{ color: "#777", font: "10px monospace" }}>Paid checkout is not available yet. Paid items remain in your cart.</p>}
+            <SandboxCheckout products={products} disabled={loading || purchasedLoading || acquiring} />
             <div className="cart-page-notes">
               <div>
                 <span>
