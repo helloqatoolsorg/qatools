@@ -2,7 +2,7 @@
 
 Owner approved separate customer order numbers, retained internal IDs, separate sandbox numbering and retention of refunded/cancelled orders.
 
-## Implemented locally; remote migration and deployment pending
+## Hosted order numbering confirmed by owner
 
 `20261004120000_customer_order_numbers.sql` adds nullable unique `orders.order_number`. Confirmed orders (paid, refunded, partially_refunded) receive a number automatically. Pending or cancelled-before-confirmation records remain unnumbered. Once assigned, a number remains through later status changes, including cancellation. Existing confirmed history is backfilled chronologically without changing IDs, ownership, amounts or provider references.
 
@@ -21,14 +21,16 @@ Counter table has RLS and no browser/service-role grants. Trigger functions have
 
 ## Verification
 
+Owner reported applying the migration, deploying the order displays and confirming they work on 2026-10-04. A subsequent local display change pads references to five digits (`00001`, `sandbox-00001`, `development-00001`) without changing immutable stored references, counters or purchase history. This cosmetic update awaits deployment and requires no SQL migration.
+
 Production Next.js build and TypeScript compilation passed. All 18 targeted order/payment tests passed with PostgreSQL fixtures enabled; no tests were skipped. `git diff --check` passed.
 
 Isolated PostgreSQL tests cover backfill, separate series, pending confirmation, conflicting duplicate inserts, rollback, failure after allocation, refund/cancellation retention, immutable numbers, deletion/truncation guards, permissions and seven-digit padding. Existing trusted Paddle fulfillment tests also execute this migration and verify duplicate events preserve the assigned sandbox number. These tests do not perform a live purchase or simulate concurrent PostgreSQL connections.
 
-## Owner rollout
+## Original owner rollout (owner reports completed)
 
 1. Run `supabase db push` from `D:\qatools\qatools`; expected new migration is `20261004120000_customer_order_numbers.sql`.
 2. Commit/push the exact files for this change; Vercel deploys main.
 3. After Ready, check admin orders and the purchasing account history. Do not make another purchase merely to verify the backfill.
 
-No remote migration or deployment has been performed by the agent for this change.
+The owner reports the remote migration and original deployment completed successfully. The five-digit display update remains local. No remote migration or deployment has been performed by the agent for this change.

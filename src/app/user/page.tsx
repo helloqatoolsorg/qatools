@@ -1,4 +1,5 @@
 "use client";
+import { formatOrderNumber } from "@/lib/orderNumber";
 
 import {
   FormEvent,
@@ -1878,7 +1879,7 @@ export default function UserPage() {
                         "—";
 
                       const orderReference =
-                        order.order_number ? `#${order.order_number}` : 'Not numbered';
+                        formatOrderNumber(order.order_number);
 
                       return (
                         <div

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { formatOrderNumber } from "@/lib/orderNumber";
 import "./AdminOrders.css";
 
 type Order = {
@@ -67,7 +68,7 @@ export default function AdminOrders() {
     {loading ? <p role="status">Loading orders…</p> : error ? <p role="alert" className="admin-orders-error">{error}</p> : <>
       {orders.length === 0 ? <p>No orders found{status !== 'all' ? ' with this status' : ''}.</p> :
         <div className="admin-orders-list">{orders.map(order => <details key={order.id}>
-          <summary><span>{order.order_number ? `#${order.order_number}` : 'Not numbered'}</span><span>{order.customerName ?? 'Customer account'}</span>
+          <summary><span>{formatOrderNumber(order.order_number)}</span><span>{order.customerName ?? 'Customer account'}</span>
             <span>{order.status.replaceAll('_', ' ')}</span><span>{money(order.total, order.currency)}</span>
             <time dateTime={order.created_at}>{date(order.created_at)}</time></summary>
           <div className="admin-order-details">

@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useQAToolsState } from "@/context/QAToolsState";
 import { supabase } from "@/lib/supabase";
 import AdminOrders from "@/components/AdminOrders";
+import AdminPaymentReview from "@/components/AdminPaymentReview";
 import AdminDownloads from "@/components/AdminDownloads";
 import AdminActivationHistory, { type AdminActivation } from "@/components/AdminActivationHistory";
 
@@ -1307,6 +1308,7 @@ export default function AdminPage() {
             </div>
 
             <AdminOrders key={`orders-${user.id}`} />
+            <AdminPaymentReview key={`payment-review-${user.id}`} />
             <AdminDownloads key={`downloads-${user.id}`} products={products} />
 
             <section
