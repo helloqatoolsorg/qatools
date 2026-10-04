@@ -80,6 +80,7 @@ type OrderItem = {
 
 type Order = {
   id: number;
+  order_number: string | null;
   provider: string;
   provider_order_id: string | null;
   provider_transaction_id: string | null;
@@ -569,6 +570,7 @@ export default function UserPage() {
           .from("orders")
           .select(`
             id,
+            order_number,
             provider,
             provider_order_id,
             provider_transaction_id,
@@ -1876,9 +1878,7 @@ export default function UserPage() {
                         "—";
 
                       const orderReference =
-                        order.provider_order_id ||
-                        order.provider_transaction_id ||
-                        `#${order.id}`;
+                        order.order_number ? `#${order.order_number}` : 'Not numbered';
 
                       return (
                         <div

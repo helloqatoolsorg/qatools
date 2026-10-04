@@ -11,6 +11,10 @@ Status: decision record, NOT a published agreement or customer acceptance record
 - Preserve dated decisions when revising them; mark replacements explicitly. Do not silently turn proposals into contractual promises.
 - The repository remains the source of truth for actual behavior. Confirm implementation before drafting customer-facing promises.
 - Do not include passwords, account activation credentials, signing secrets, customer records or private reset links.
+
+## Order numbering — owner approval, 2026-10-04
+
+Separate customer-facing order numbers from internal database IDs. Assign numbers transactionally to confirmed orders so failed or rolled-back attempts do not consume them. Preserve numbers and records after refund or cancellation. Keep sandbox and development series separate from live purchases. Approved in project conversation; implemented locally in `20261004120000_customer_order_numbers.sql` and order displays, with remote migration/deployment pending. These are store order references, distinct from Paddle invoices. This does not establish a legal invoice numbering or personal-data retention policy.
 - When drafting the agreement, verify applicable requirements and obtain appropriate legal review for the seller and sales markets. This record does not determine enforceability or replace that review.
 - Future published terms should have their own version/date and an appropriate acceptance record; this internal file does not establish customer acceptance.
 

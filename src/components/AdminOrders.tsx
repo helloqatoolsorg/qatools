@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import "./AdminOrders.css";
 
 type Order = {
-  id: number; user_id: string; customerName: string | null;
+  id: number; order_number: string | null; user_id: string; customerName: string | null;
   provider: string; provider_order_id: string | null; provider_transaction_id: string | null;
   status: string; currency: string; subtotal: number; total: number;
   created_at: string; provider_created_at: string | null;
@@ -67,7 +67,7 @@ export default function AdminOrders() {
     {loading ? <p role="status">Loading orders…</p> : error ? <p role="alert" className="admin-orders-error">{error}</p> : <>
       {orders.length === 0 ? <p>No orders found{status !== 'all' ? ' with this status' : ''}.</p> :
         <div className="admin-orders-list">{orders.map(order => <details key={order.id}>
-          <summary><span>#{order.id}</span><span>{order.customerName ?? 'Customer account'}</span>
+          <summary><span>{order.order_number ? `#${order.order_number}` : 'Not numbered'}</span><span>{order.customerName ?? 'Customer account'}</span>
             <span>{order.status.replaceAll('_', ' ')}</span><span>{money(order.total, order.currency)}</span>
             <time dateTime={order.created_at}>{date(order.created_at)}</time></summary>
           <div className="admin-order-details">

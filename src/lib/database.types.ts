@@ -265,6 +265,7 @@ export type Database = {
       orders: {
         Row: {
           id: number;
+          order_number: string | null;
           user_id: string;
           provider: string;
           provider_order_id: string | null;

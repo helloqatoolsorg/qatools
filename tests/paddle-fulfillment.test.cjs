@@ -44,7 +44,7 @@ test('actual SQL fulfillment is atomic, idempotent, bound to intent and blocks o
    CREATE TABLE auth.users(id uuid PRIMARY KEY,email_confirmed_at timestamptz,banned_until timestamptz);
    INSERT INTO auth.users VALUES('${user}',now(),null);
    CREATE TABLE public.products(id bigint PRIMARY KEY,slug text,published boolean,price_eur numeric);INSERT INTO public.products VALUES(1,'qafit01',true,5);
-   CREATE TABLE public.orders(id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,user_id uuid REFERENCES auth.users,provider text,provider_transaction_id text UNIQUE,status text CHECK(status IN ('pending','paid','refunded','partially_refunded','cancelled')),currency text,subtotal numeric(12,2),total numeric(12,2),provider_created_at timestamptz);
+   CREATE TABLE public.orders(id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,user_id uuid REFERENCES auth.users,provider text,provider_transaction_id text UNIQUE,status text CHECK(status IN ('pending','paid','refunded','partially_refunded','cancelled')),currency text,subtotal numeric(12,2),total numeric(12,2),provider_created_at timestamptz,created_at timestamptz DEFAULT now());
    CREATE TABLE public.order_items(id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,order_id bigint REFERENCES public.orders,product_id bigint REFERENCES public.products,quantity int CHECK(quantity>0),unit_price numeric(12,2));
    CREATE TABLE public.entitlements(id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,user_id uuid REFERENCES auth.users,product_id bigint REFERENCES public.products,order_item_id bigint REFERENCES public.order_items,source text CHECK(source IN ('purchase','free','admin')),status text CHECK(status IN ('active','refunded','revoked')),UNIQUE(user_id,product_id));`);
   await db.exec(fs.readFileSync('supabase/migrations/20261003080000_sandbox_checkout_intents.sql','utf8'));
@@ -72,5 +72,10 @@ test('actual SQL fulfillment is atomic, idempotent, bound to intent and blocks o
   await reset();await db.exec(`INSERT INTO public.entitlements(user_id,product_id,source,status) VALUES('${user}',1,'admin','revoked')`);assert.equal((await process()).outcome,'review');assert.equal((await db.query('SELECT status FROM public.entitlements')).rows[0].status,'revoked');
   await reset();await db.exec("CREATE FUNCTION public.fail_entitlement() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic failure'; END $$; CREATE TRIGGER fail_entitlement BEFORE INSERT ON public.entitlements FOR EACH ROW EXECUTE FUNCTION public.fail_entitlement();");await assert.rejects(process(),/synthetic failure/);assert.equal((await db.query('SELECT count(*)::int AS n FROM public.orders')).rows[0].n,0);assert.equal((await db.query('SELECT count(*)::int AS n FROM public.order_items')).rows[0].n,0);assert.equal((await db.query('SELECT count(*)::int AS n FROM public.sandbox_payment_events')).rows[0].n,0);await db.exec('DROP TRIGGER fail_entitlement ON public.entitlements');assert.equal((await process()).outcome,'fulfilled');
   await db.exec('SET ROLE authenticated');await assert.rejects(process(),/permission denied/);await db.exec('RESET ROLE');
+  await db.exec(fs.readFileSync('supabase/migrations/20261004120000_customer_order_numbers.sql','utf8'));
+  assert.equal((await db.query('SELECT order_number FROM public.orders')).rows[0].order_number,'sandbox-000001');
+  e=fixture();e.event_id=eid(4);assert.equal((await process(e)).outcome,'duplicate');
+  assert.equal((await db.query("SELECT last_number::int AS n FROM public.order_number_counters WHERE scope='sandbox'")).rows[0].n,1);
+
  }finally{await db.close();}
 });

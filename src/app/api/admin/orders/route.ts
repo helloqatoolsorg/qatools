@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     }
     const page = Number(rawPage);
     let query = supabaseAdmin.from("orders").select(`
-      id, user_id, provider, provider_order_id, provider_transaction_id,
+      id, order_number, user_id, provider, provider_order_id, provider_transaction_id,
       status, currency, subtotal, total, created_at, provider_created_at,
       items:order_items(id, product_id, quantity, unit_price,
         product:products(id, name, slug))

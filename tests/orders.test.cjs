@@ -2,7 +2,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript');
 function setup(options={}) {
  const calls=[],modules=new Map();
- const rows=Array.from({length:options.count??1},(_,i)=>({id:100-i,user_id:'customer',status:'paid',items:[],total:5,currency:'EUR'}));
+ const rows=Array.from({length:options.count??1},(_,i)=>({id:100-i,order_number:`sandbox-${String(100-i).padStart(6,'0')}`,user_id:'customer',status:'paid',items:[],total:5,currency:'EUR'}));
  const db={from(table){calls.push({table});const q={select(columns){calls.push({columns});return q;},eq(column,value){calls.push({column,value});return q;},
   order(column,config){calls.push({order:column,...config});return q;},
   async maybeSingle(){return {data:options.nonAdmin?null:{user_id:'admin'},error:options.membershipError?{}:null};},
@@ -31,6 +31,8 @@ test('bounded newest-first paging uses one sentinel row and only shown customer 
  const s=setup({count:51});const response=await s.get('?page=2&status=paid');const data=await response.json();
  assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');
  assert.equal(data.orders.length,50);assert.equal(data.hasMore,true);assert.equal(data.page,2);assert.equal(data.orders[0].customerName,'Test customer');
+ assert.equal(data.orders[0].order_number,'sandbox-000100');
+ assert.ok(s.calls.some(c=>c.columns?.includes('order_number')));
  assert.ok(s.calls.some(c=>c.start===50&&c.end===100));assert.ok(s.calls.some(c=>c.column==='status'&&c.value==='paid'));
  assert.ok(s.calls.some(c=>c.order==='id'&&c.ascending===false));assert.deepEqual(Array.from(s.calls.find(c=>c.profileIds).profileIds),['customer']);
  assert.ok(s.calls.filter(c=>c.columns).every(c=>!c.columns.includes('invoice_details')&&!c.columns.includes('secret')&&!c.columns.includes('*')));
