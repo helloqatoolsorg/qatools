@@ -1,5 +1,5 @@
 import "server-only";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 export const MAX_PADDLE_WEBHOOK_BYTES = 1024 * 1024;
 export class PaddleWebhookError extends Error {}
@@ -44,4 +44,21 @@ export async function readPaddleBody(request: Request): Promise<Buffer> {
     if (!size) throw new PaddleWebhookError("Webhook body is required.");
     return Buffer.concat(chunks);
   } finally { reader.releaseLock(); }
+}
+
+// Delivery IDs and JSON key order can change when Paddle replays the same event.
+// Call only after signature verification; keep all event content in this digest.
+export function paddleEventHash(payload: unknown): string {
+  const source = payload as Record<string, unknown>;
+  function canonical(value: unknown): string {
+    if (Array.isArray(value)) return '[' + value.map(canonical).join(',') + ']';
+    if (value !== null && typeof value === 'object') {
+      const record = value as Record<string, unknown>;
+      return '{' + Object.keys(record).sort().map(key => JSON.stringify(key) + ':' + canonical(record[key])).join(',') + '}';
+    }
+    return JSON.stringify(value);
+  }
+  const { notification_id: deliveryId, ...event } = source;
+  void deliveryId;
+  return createHash('sha256').update(canonical(event)).digest('hex');
 }

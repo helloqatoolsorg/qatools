@@ -28,6 +28,16 @@ test('completed event normalization requires approved item, exact totals and acc
 });
 test('unsigned or tampered events cannot reach SQL',async()=>{const s=setup(),r=await s.post(fixture(),true);assert.equal(r.status,400);assert.equal(s.calls.length,0);assert.equal(r.headers.get('cache-control'),'no-store');});
 test('verified event reaches SQL with normalized fields and exact body digest only',async()=>{const s=setup(),e=fixture();e.data.email='private@example.invalid';const r=await s.post(e);assert.equal(r.status,200);assert.equal(s.calls.length,1);assert.equal(s.calls[0].args.p_body_hash,crypto.createHash('sha256').update(JSON.stringify(e)).digest('hex'));assert.equal(JSON.stringify(s.calls).includes('private@'),false);});
+test('signed replays keep event identity while changed content gets a different digest',async()=>{
+ const s=setup(),original=fixture();original.notification_id='ntf_'+'a'.repeat(26);
+ const replay=JSON.parse(JSON.stringify(original));replay.notification_id='ntf_'+'b'.repeat(26);
+ await s.post(original);await s.post(replay);
+ assert.notEqual(s.calls[0].args.p_body_hash,s.calls[1].args.p_body_hash);
+ assert.equal(s.calls[0].args.p_event.eventHash,s.calls[1].args.p_event.eventHash);
+ const hash=s.load('src/lib/paddleWebhook.ts').paddleEventHash;
+ assert.equal(hash(original),hash(Object.fromEntries(Object.entries(replay).reverse())));
+ replay.data.details.totals.total='499';assert.notEqual(hash(original),hash(replay));
+});
 test('config/database/binding failures return retryable responses without provider payload',async()=>{for(const option of ['noConfig','dbError','retry']){const s=setup({[option]:true}),r=await s.post();assert.equal(r.status,503);assert.equal((await r.text()).includes('private'),false);}});
 test('refund and cancellation identifiers are normalized without granting ownership',()=>{const norm=setup().load('src/lib/paddleFulfillment.ts').normalizePaddleEvent,e=fixture();e.event_type='adjustment.updated';e.data.transaction_id=txn;assert.equal(norm(e).txnId,txn);assert.equal(norm(e).valid,false);});
 test('simulation IDs are accepted but matching real purchase fields cannot grant or block ownership',()=>{
@@ -69,16 +79,18 @@ test('actual SQL fulfillment is atomic, idempotent, bound to intent and blocks o
   await db.exec(fs.readFileSync('supabase/migrations/20261004100000_paddle_simulation_isolation.sql','utf8'));
   await db.exec(fs.readFileSync('supabase/migrations/20261004130000_sandbox_full_refunds.sql','utf8'));
   await db.exec(fs.readFileSync('supabase/migrations/20261004140000_recheck_approved_refund_events.sql','utf8'));
+  await db.exec(fs.readFileSync('supabase/migrations/20261004150000_paddle_replay_event_identity.sql','utf8'));
   await db.query(`INSERT INTO public.sandbox_checkout_intents(id,user_id,product_id,price_id,amount_cents,currency,status,transaction_id) VALUES($1,$2,1,$3,500,'EUR','ready',$4)`,[intentId,user,pid,txn]);
   for(const role of ['anon','authenticated','service_role']){const p=(await db.query("SELECT has_function_privilege($1,'public.process_sandbox_payment_event(jsonb,text)','EXECUTE') AS execute,has_table_privilege($1,'public.sandbox_payment_events','INSERT,UPDATE,DELETE,TRUNCATE') AS write",[role])).rows[0];assert.equal(p.execute,role==='service_role');assert.equal(p.write,false);}
-  async function process(event=fixture(),bodyHash){const n=normalize(event);return (await db.query('SELECT public.process_sandbox_payment_event($1::jsonb,$2) AS result',[JSON.stringify(n),bodyHash??crypto.createHash('sha256').update(JSON.stringify(event)).digest('hex')])).rows[0].result;}
+  async function process(event=fixture(),bodyHash){const n={...normalize(event),eventHash:setup().load('src/lib/paddleWebhook.ts').paddleEventHash(event)};return (await db.query('SELECT public.process_sandbox_payment_event($1::jsonb,$2) AS result',[JSON.stringify(n),bodyHash??crypto.createHash('sha256').update(JSON.stringify(event)).digest('hex')])).rows[0].result;}
   async function reset(){await db.exec("TRUNCATE public.sandbox_payment_events,public.entitlements,public.order_items,public.orders;UPDATE public.sandbox_checkout_intents SET status='ready'");}
   const simulated=fixture();simulated.event_id='ntfsimevt_'+'a'.repeat(26);
   const forgedNormalized={...normalize(fixture()),eventId:simulated.event_id};
   const isolated=(await db.query('SELECT public.process_sandbox_payment_event($1::jsonb,$2) AS result',[JSON.stringify(forgedNormalized),'1'.repeat(64)])).rows[0].result;
   assert.equal(isolated.outcome,'ignored');assert.equal((await db.query('SELECT transaction_id FROM public.sandbox_payment_events')).rows[0].transaction_id,null);assert.equal((await db.query('SELECT count(*)::int AS n FROM public.entitlements')).rows[0].n,0);
   const first=await process();assert.equal(first.outcome,'fulfilled');assert.equal((await process()).outcome,'fulfilled');
-  assert.equal((await process(fixture(),'0'.repeat(64))).ok,false);
+  const changed=fixture();changed.data.details.totals.total='499';assert.equal((await process(changed)).ok,false);
+  const replayedPayment=fixture();replayedPayment.notification_id='ntf_'+'b'.repeat(26);assert.equal((await process(replayedPayment)).outcome,'fulfilled');
   let e=fixture();e.event_id=eid(2);assert.equal((await process(e)).outcome,'duplicate');
   assert.equal((await db.query('SELECT count(*)::int AS n FROM public.orders')).rows[0].n,1);
   const ownership=(await db.query('SELECT * FROM public.entitlements')).rows[0];assert.equal(ownership.user_id,user);assert.equal(ownership.status,'active');assert.equal(ownership.source,'purchase');
@@ -108,8 +120,9 @@ test('actual SQL fulfillment is atomic, idempotent, bound to intent and blocks o
   const itemRefund=refund(29);itemRefund.data.type='partial';itemRefund.data.items=[{item_id:'txnitm_'+'a'.repeat(26),type:'full',totals:{total:'500'}}];
   const itemNormalized=normalize(itemRefund),itemHash=crypto.createHash('sha256').update(JSON.stringify(itemRefund)).digest('hex');
   // Model the event recorded for review by the previous strict normalizer.
-  await db.query("INSERT INTO public.sandbox_payment_events(event_id,body_hash,event_type,transaction_id,outcome,occurred_at) VALUES($1,$2,'adjustment.updated',$3,'review',now())",[itemNormalized.eventId,itemHash,txn]);
-  assert.equal((await process(itemRefund,'0'.repeat(64))).ok,false);assert.equal(await status(),'active');
+  await db.query("INSERT INTO public.sandbox_payment_events(event_id,body_hash,event_type,transaction_id,outcome,occurred_at) VALUES($1,$2,'adjustment.updated',$3,'review',$4)",[itemNormalized.eventId,itemHash,txn,itemNormalized.occurredAt]);
+  const changedLegacy=structuredClone(itemRefund);changedLegacy.data.transaction_id='txn_'+'z'.repeat(26);assert.equal((await process(changedLegacy)).ok,false);assert.equal(await status(),'active');
+  itemRefund.notification_id='ntf_'+'b'.repeat(26); // Fresh replay of a historical raw-hash-only row.
   await db.query('UPDATE public.entitlements SET order_item_id=null WHERE product_id=1');
   assert.equal((await process(refund(21))).outcome,'review');assert.equal(await status(),'active');
   await db.query('UPDATE public.entitlements SET order_item_id=$1 WHERE product_id=1',[purchased.order_item_id]);
@@ -127,6 +140,9 @@ test('actual SQL fulfillment is atomic, idempotent, bound to intent and blocks o
   assert.equal((await process(itemRefund)).outcome,'refunded');assert.equal(await status(),'refunded');
   assert.equal((await db.query('SELECT outcome FROM public.sandbox_payment_events WHERE event_id=$1',[eid(29)])).rows[0].outcome,'refunded');
   assert.equal((await process(itemRefund)).outcome,'refunded');
+  itemRefund.notification_id='ntf_'+'c'.repeat(26);assert.equal((await process(itemRefund)).outcome,'refunded');
+  const changedRefund=structuredClone(itemRefund);changedRefund.data.totals.total='499';assert.equal((await process(changedRefund)).ok,false);
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM public.sandbox_payment_events WHERE event_id=$1',[eid(29)])).rows[0].n,1);
   assert.equal((await process(refund())).outcome,'refunded');assert.equal(await status(),'refunded');
   assert.equal((await process(refund())).outcome,'refunded');assert.equal((await process(refund(31))).outcome,'refunded');
   const retained=(await db.query('SELECT status,order_number FROM public.orders')).rows[0];assert.equal(retained.status,'refunded');assert.equal(retained.order_number,'sandbox-000001');

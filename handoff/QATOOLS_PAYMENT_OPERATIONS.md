@@ -42,3 +42,17 @@ Correction rollout: apply migration, commit/push and wait for Ready, then replay
 Correction verification: all nine targeted fulfillment tests passed with actual PostgreSQL enabled and no skips, including the observed item-based refund shape, changed-hash rejection and reprocessing a previously reviewed same-body event without duplicate writes. Production build/TypeScript, scoped ESLint and `git diff --check` passed. Hosted correction/replay remains pending.
 
 References: https://developer.paddle.com/webhooks/adjustments/adjustment-updated/ and https://developer.paddle.com/webhooks/adjustments/adjustment-created/ . Subscribe to both because approval can exist at creation or arrive in a later update.
+
+## Notification replay identity correction — 2026-10-04
+
+Owner's approved-refund replay returned HTTP 503 with the webhook's processing error. Read-only inspection confirmed the same adjustment.updated event ID, a new notification ID and the prior ledger outcome review; the order still remained paid. Paddle replay creates a new notification entity for the same event. Comparing exact raw-body hashes therefore rejects legitimate replays.
+
+The webhook still verifies the signature over exact raw bytes first. It now additionally hashes canonical event content, excluding only the top-level notification_id; recursively sorted JSON object keys make formatting/key order irrelevant. Event content and array order remain significant. Neither raw customer data nor delivery headers are stored. The original raw digest remains available.
+
+Append-only migration 20261004150000_paddle_replay_event_identity.sql adds a nullable stable event_hash. New records reject any changed canonical event content and also bind event type, transaction and occurrence time. For historical records without this digest, a fresh signature-verified delivery must match the saved event/type/transaction/time. Existing terminal outcomes are returned without mutations; only reviewed approved full-refund candidates may be rebound to the complete order/checkout/entitlement checks and adopt the stable digest atomically. Historical content cannot be reconstructed from the old raw hash, so the migration trusts a newly verified Paddle snapshot for this narrow recovery rather than claiming an unavailable old semantic comparison. Browser RPC permissions and simulation isolation stay unchanged. This supersedes the preceding raw-hash-only replay requirement.
+
+Local verification: all 10 fulfillment checks passed with actual isolated PostgreSQL and no skips, including changed notification IDs for payments/refunds, recovery of a legacy reviewed refund using a new delivery, changed-content rejection, one ledger row, rollback and preserved unrelated ownership. Production build/TypeScript also passed. No remote records were mutated by the agent. Hosted migration/deployment/replay verification remains pending.
+
+Owner rollout: supabase db push; commit/push only this correction's six source/test/migration/document files; wait for Vercel Ready. Replay the ORIGINAL approved adjustment.updated notification (Paddle does not allow replaying a replay), then verify HTTP 200 and the original order/refunded ownership state. Do not request another refund.
+
+Reference: https://developer.paddle.com/api-reference/notifications/replay-notification/ and https://developer.paddle.com/webhooks/about/how-webhooks-work/ .
