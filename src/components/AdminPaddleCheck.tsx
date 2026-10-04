@@ -6,7 +6,11 @@ import { formatOrderNumber } from "@/lib/orderNumber";
 
 type Check = {
   transaction: { status: string; currency: string; totalCents: string | null; balanceCents: string | null;
-    checkoutId: string | null; sandboxAttribution: boolean };
+    checkoutId: string | null; sandboxAttribution: boolean;
+    adjustments: { available: boolean; truncated: boolean; records: {
+      id: string; action: string; type: string; status: string; currency: string;
+      totalCents: string | null; createdAt: string | null;
+    }[] } };
   order: { order_number: string | null; status: string; currency: string; total: number } | null;
   checkout: { id: string; status: string } | null;
   checkedAt: string;
@@ -58,7 +62,22 @@ export default function AdminPaddleCheck({ transactionId }: { transactionId: str
         <dt>Saved order total</dt><dd>{result.order ? `${Number(result.order.total).toFixed(2)} ${result.order.currency}` : "—"}</dd>
         <dt>Checked</dt><dd>{new Date(result.checkedAt).toLocaleString("en-GB")}</dd>
       </dl>
-      <p>Transaction status does not show the full refund or dispute history. Check adjustments in Paddle before taking action.</p>
+      <h3>Refunds and adjustments</h3>
+      {!result.transaction.adjustments.available ? <p role="alert" className="admin-orders-error">
+        Adjustment details are unavailable. Check the Paddle sandbox dashboard before taking action.
+      </p> : result.transaction.adjustments.records.length === 0 ? <p>No adjustments returned by Paddle.</p> : <>
+        {result.transaction.adjustments.truncated && <p role="alert">Showing the first 100 adjustments. Check Paddle for the remaining history.</p>}
+        <div className="admin-order-items"><table>
+          <thead><tr><th>Action</th><th>Scope</th><th>Status</th><th>Amount</th><th>Date</th><th>Reference</th></tr></thead>
+          <tbody>{result.transaction.adjustments.records.map(adjustment => <tr key={adjustment.id}>
+            <td>{adjustment.action.replaceAll("_", " ")}</td><td>{adjustment.type}</td>
+            <td>{adjustment.status.replaceAll("_", " ")}</td><td>{amount(adjustment.totalCents, adjustment.currency)}</td>
+            <td>{adjustment.createdAt ? new Date(adjustment.createdAt).toLocaleString("en-GB") : "Unavailable"}</td>
+            <td>{adjustment.id}</td>
+          </tr>)}</tbody>
+        </table></div>
+      </>}
+      <p>This check does not issue refunds or change orders or ownership.</p>
     </div>}
   </div>;
 }

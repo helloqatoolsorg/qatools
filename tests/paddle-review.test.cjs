@@ -40,7 +40,7 @@ test('sandbox transaction check returns only allowlisted fields and matching sav
  assert.equal(body.transaction.status,'completed');assert.equal(body.transaction.totalCents,'500');assert.equal(body.transaction.balanceCents,'0');assert.equal(body.transaction.checkoutId,intent);
  assert.equal(body.order.order_number,'sandbox-000001');assert.equal(body.checkout.status,'completed');
  assert.ok(!JSON.stringify(body).includes('secret'));assert.ok(!JSON.stringify(body).includes('customer'));
- assert.equal(s.network.length,1);const request=s.network[0];assert.equal(request.url,'https://sandbox-api.paddle.com/transactions/'+txn);
+ assert.equal(s.network.length,1);const request=s.network[0];assert.equal(request.url,'https://sandbox-api.paddle.com/transactions/'+txn+'?include=adjustments');
  assert.equal(request.config.method,'GET');assert.equal(request.config.cache,'no-store');assert.equal(request.config.redirect,'error');assert.ok(request.config.signal);
  assert.ok(s.calls.some(c=>c.column==='provider'&&c.value==='paddle_sandbox'));
 });
@@ -57,4 +57,45 @@ test('missing or inconsistent totals are unavailable rather than fabricated zero
   const p=fixture();change(p);const r=await setup({payload:p}).get(),body=await r.json();assert.equal(r.status,200);
   assert.equal(body.transaction.totalCents,null);assert.equal(body.transaction.balanceCents,null);
  }
+});
+
+function adjustment(overrides={}) { return {
+ id:'adj_'+'a'.repeat(26),transaction_id:txn,action:'refund',type:'full',status:'approved',currency_code:'EUR',
+ created_at:'2026-10-04T12:00:00Z',totals:{total:'500',currency_code:'EUR'},
+ reason:'private customer reason',customer_id:'private customer',items:[{private:'private payment information'}],...overrides
+}; }
+test('omitted or empty included adjustments show no returned entries',async()=>{
+ for(const value of [undefined,[]]){const p=fixture();p.data.adjustments=value;const body=await (await setup({payload:p}).get()).json();
+  assert.equal(body.transaction.adjustments.available,true);assert.equal(body.transaction.adjustments.records.length,0);
+ }
+});
+test('full and partial refunds, pending/rejected statuses and dispute reversals remain distinct',async()=>{
+ const cases=[['refund','approved','full'],['refund','pending_approval','partial'],['refund','rejected','partial'],
+  ['chargeback','approved','full'],['chargeback','reversed','full'],['chargeback_reverse','approved','full'],
+  ['chargeback_warning','approved','full'],['chargeback_warning_reverse','approved','full'],['credit','approved','partial'],['credit_reverse','approved','partial']];
+ const p=fixture();p.data.adjustments=cases.map(([action,status,type],i)=>adjustment({id:'adj_'+String(i).padStart(26,'0'),action,status,type}));
+ const body=await (await setup({payload:p}).get()).json(),history=body.transaction.adjustments;
+ assert.equal(history.available,true);assert.equal(history.records.length,cases.length);
+ for(let i=0;i<cases.length;i++){const a=history.records[i];assert.equal(a.action,cases[i][0]);assert.equal(a.status,cases[i][1]);assert.equal(a.type,cases[i][2]);assert.equal(a.totalCents,'500');assert.equal(a.createdAt,'2026-10-04T12:00:00.000Z');}
+ assert.ok(!JSON.stringify(body).includes('private'));assert.equal(body.order.status,'paid');
+});
+test('malformed or foreign adjustment history never appears as an empty clean history',async()=>{
+ for(const value of [null,{},[adjustment({transaction_id:'txn_'+'b'.repeat(26)})],[adjustment(),adjustment()],
+  [adjustment({id:'bad'})],[adjustment({action:'unknown'})],[adjustment({status:'unknown'})],[adjustment({type:'unknown'})],
+  [adjustment({currency_code:'bad'})]]){
+  const p=fixture();p.data.adjustments=value;const r=await setup({payload:p}).get(),body=await r.json();assert.equal(r.status,200);
+  assert.equal(body.transaction.adjustments.available,false);assert.equal(body.transaction.adjustments.records.length,0);
+ }
+});
+test('malformed adjustment amounts or dates remain unavailable without losing status',async()=>{
+ for(const totals of [null,{total:'-500',currency_code:'EUR'},{total:'500.0',currency_code:'EUR'},{total:'500',currency_code:'USD'}]){
+  const p=fixture();p.data.adjustments=[adjustment({totals,created_at:'not a date'})];
+  const history=(await (await setup({payload:p}).get()).json()).transaction.adjustments;
+  assert.equal(history.available,true);assert.equal(history.records[0].totalCents,null);assert.equal(history.records[0].createdAt,null);assert.equal(history.records[0].status,'approved');
+ }
+});
+test('large adjustment histories are bounded and visibly marked incomplete',async()=>{
+ const p=fixture();p.data.adjustments=Array.from({length:101},(_,i)=>adjustment({id:'adj_'+String(i).padStart(26,'0')}));
+ const history=(await (await setup({payload:p}).get()).json()).transaction.adjustments;
+ assert.equal(history.available,true);assert.equal(history.records.length,100);assert.equal(history.truncated,true);
 });

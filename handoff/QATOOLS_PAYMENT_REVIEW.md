@@ -2,7 +2,7 @@
 
 ## Local implementation; deployment pending
 
-Owner confirmed the original hosted review section and shorter order displays work (2026-10-04). The additional transaction check below remains local until its next deployment.
+Owner confirmed the hosted review section, shorter order displays and original transaction check work (2026-10-04). The adjustment display described below remains local until its next deployment.
 
 The next milestone adds a read-only Payment review section below admin orders. Each request independently verifies the bearer account and admin_users membership before server-only database access. All responses are no-store. Existing service SELECT grants from the applied sandbox migrations suffice; no migration or permission expansion is needed.
 
@@ -34,3 +34,15 @@ Local verification for the transaction-check milestone: all 17 targeted transact
 Verification: all 18 targeted payment-review/order tests passed with PostgreSQL fixtures enabled and none skipped. Production build, TypeScript compilation, scoped ESLint and `git diff --check` passed. Hosted verification remains pending deployment.
 
 Commit/push the new route, component, schema extension, tests, admin-page integration and these handoff notes together with the five-digit order display change. Wait for Vercel Ready. In `/admin`, check both payment-review views. Empty views are valid for this account/project state; no new payment or refund is needed to test the empty state. Do not duplicate the owner's completed package upload or purchase.
+
+## Refund and adjustment visibility — local milestone, 2026-10-04
+
+The existing read-only transaction request now uses `?include=adjustments`. The UI displays individual adjustment action, full/partial scope, status, amount, creation date and reference. Pending, approved, rejected and reversed statuses remain separate; refund, credit, chargeback, warning and reversal actions are not summed into a guessed refund or dispute conclusion.
+
+Output is allowlisted: customer references, reasons, items, payout details and raw payloads are excluded. Adjustment IDs must be unique and valid, and transaction references must match the checked transaction. Unsupported/malformed adjustment metadata displays an unavailable notice while preserving the original transaction check. Missing or inconsistent amounts/dates display Unavailable. The documented omitted-adjustments case or an empty array displays “No adjustments returned by Paddle.” A malformed null is unavailable. At most 100 entries are displayed; a longer history gets an explicit incomplete-history notice and directs the operator to Paddle.
+
+This does not issue a refund, change saved order/entitlement status or resolve review entries. Refund and chargeback ownership rules are still undecided and block automatic commercial handling. No SQL migration or new provider endpoint is needed. User should check the existing paid sandbox order after deployment without creating another purchase/refund.
+
+Reference: https://developer.paddle.com/api-reference/transactions/get-transaction/ (`include=adjustments`).
+
+Verification: all 22 targeted transaction/review tests passed with no skips. Coverage includes missing/empty adjustments, full/partial and pending/rejected refunds, chargeback warnings/reversals, malformed/foreign/duplicate entries, unavailable amounts/dates, private-data exclusion and bounded/incomplete histories. Production build, TypeScript, scoped ESLint and `git diff --check` passed. Adjustment cases are synthetic; hosted adjustment retrieval awaits owner deployment/check.
