@@ -11,6 +11,10 @@ def _recook(node):
     if node is None:
         return
     import hou
+    for field in ("state", "email", "date", "machine"):
+        parm = node.parm("license_" + field)
+        if parm is not None:
+            parm.setExpression('hou.pwd().hdaModule().license_field("' + field + '")', hou.exprLanguage.Python)
     # A failed guard may remain cached after activation. Refresh it and the tool.
     guard = node.node("python1")
     for target in (guard, node):
@@ -27,3 +31,10 @@ def activate_online(node=None):
 def activate_from_node(node=None):
     activate_online(node)
     return is_license_valid()
+
+def license_field(field):
+    return houdini_ui.license_field(field, "qafit01")
+
+def clear_local_license(node=None):
+    houdini_ui.clear_local_license()
+    _recook(node)

@@ -28,8 +28,8 @@ assert node.node('python1').parm('python').eval().strip()=='hou.pwd().parent().h
 private=Ed25519PrivateKey.generate()
 public=private.public_key().public_bytes(Encoding.PEM,PublicFormat.SubjectPublicKeyInfo).decode()
 now=int(time.time())
-def proof(products,issued=now):
-    payload={'vendor':'qatools','version':2,'kind':'license','keyId':'test-only','activationId':'1','credentialId':'00000000-0000-4000-8000-000000000001','machineId':client.get_machine_id(),'products':products,'issuedAt':issued,'expiresAt':issued+30*86400}
+def proof(products,issued=now,**identity):
+    payload={'vendor':'qatools','version':2,'kind':'license','keyId':'test-only','activationId':'1','credentialId':'00000000-0000-4000-8000-000000000001','machineId':client.get_machine_id(),'products':products,'issuedAt':issued,'expiresAt':issued+30*86400,**identity}
     data=json.dumps(payload,separators=(',',':')).encode()
     enc=lambda b:base64.urlsafe_b64encode(b).rstrip(b'=').decode()
     return {'payload':enc(data),'signature':enc(private.sign(data))}
@@ -54,6 +54,17 @@ with tempfile.TemporaryDirectory() as directory:
     assert any(cook()), 'Unowned tool must fail'
     test_client._save({'license':proof(['qafit01'],now-30*86400-1)})
     assert any(cook()), 'Expired proof must fail'
+    test_client._save({'license':proof(['qafit01'])})
+    test_client._save({'license':proof(['qafit01'],accountEmail='owner@example.com',activatedAt=now-86400)})
+    node.hdaModule()._recook(node)
+    assert node.parm('license_state').evalAsString()=='\u2705 active'
+    assert node.parm('license_email').evalAsString()=='owner@example.com'
+    assert node.parm('license_date').evalAsString()==__import__('datetime').datetime.fromtimestamp(now-86400,__import__('datetime').timezone.utc).strftime('%Y/%m/%d')
+    assert node.parm('license_machine').evalAsString()==__import__('platform').node()
+    test_client.clear_local_license()
+    node.hdaModule()._recook(node)
+    assert node.parm('license_state').evalAsString()=='\u274c inactive'
+    assert any(cook()), 'Local clear must block actual geometry cooking'
     test_client._save({'license':proof(['qafit01'])})
     calls=[]
     houdini_ui.show_account_dialog=lambda: calls.append('dialog')

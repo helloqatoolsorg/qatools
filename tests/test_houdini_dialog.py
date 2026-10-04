@@ -59,3 +59,16 @@ class DialogTests(unittest.TestCase):
         ui.readMultiInput.assert_called_once()
         self.assertEqual(ui.displayMessage.call_args.kwargs["severity"], "error")
         client.refresh.assert_not_called()
+
+class LocalClearTests(unittest.TestCase):
+    def test_clear_requires_explicit_confirmation(self):
+        for choice in (0, 1):
+            client = Mock()
+            ui = Mock()
+            ui.displayMessage.return_value = choice
+            hou = types.SimpleNamespace(ui=ui, severityType=types.SimpleNamespace(Error="error"))
+            with patch.dict(sys.modules, {"hou": hou}), patch.object(houdini_ui, "default_client", return_value=client):
+                houdini_ui.clear_local_license()
+            self.assertEqual(client.clear_local_license.call_count, 1 if choice == 0 else 0)
+            client.activate.assert_not_called()
+            client.refresh.assert_not_called()

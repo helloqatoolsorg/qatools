@@ -115,6 +115,11 @@ def verify_license(envelope, public_keys, machine_id, now=None, allow_expired=Fa
         raise LicenseError("The signed license does not match this computer or has an invalid format.")
     if not allow_expired and now >= expiry:
         raise LicenseError("Your offline license has expired. Connect to the internet and refresh the license.")
+    email = payload.get("accountEmail")
+    activated = payload.get("activatedAt")
+    if ((email is not None and (not isinstance(email, str) or len(email) > 320 or not re.fullmatch(r"[^\s@]+@[^\s@]+", email)))
+            or (activated is not None and (type(activated) is not int or activated <= 0 or activated > issued + 300))):
+        raise LicenseError("Invalid signed account identity.")
     return payload
 
 
@@ -263,9 +268,15 @@ class Client:
                 return {"valid": False, "message": "NOT ACTIVATED"}
             payload = self._payload(state)
             return {"valid": True, "products": payload["products"], "machineId": payload["machineId"],
+                    "accountEmail": payload.get("accountEmail", ""), "activatedAt": payload.get("activatedAt"),
                     "expiresAt": payload["expiresAt"], "validUntil": datetime.fromtimestamp(payload["expiresAt"], timezone.utc).isoformat()}
         except LicenseError as error:
             return {"valid": False, "message": str(error)}
+
+    def clear_local_license(self):
+        # Explicit local action only. Does not release a remote account machine slot.
+        with self._exclusive():
+            self._save({})
 
     def activate(self, key):
         if not isinstance(key, str) or not re.fullmatch(r"QA_[A-Za-z0-9_-]{43}", key.strip()):

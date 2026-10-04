@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { privateJson, readActivationBody } from "@/lib/activationHttp";
 import { issueDenial, issueLicense, signingConfiguration, verifyLicense, type SignedEnvelope } from "@/lib/signedLicense";
+import { licenseIdentity } from "@/lib/licenseIdentity";
 
 export const runtime = "nodejs";
 const terminalReasons = new Set(["assignment_inactive", "credential_changed", "account_unavailable", "no_entitlements"]);
@@ -29,6 +30,6 @@ export async function POST(request: Request) {
       return privateJson({ error: "Renewal temporarily unavailable." }, 503);
     }
     if (!data.activation || !data.products) return privateJson({ error: "Renewal temporarily unavailable." }, 503);
-    return privateJson({ license: issueLicense(data.activation, data.products) });
+    return privateJson({ license: issueLicense(data.activation, data.products, undefined, await licenseIdentity(data.activation)) });
   } catch { return privateJson({ error: "Renewal temporarily unavailable." }, 503); }
 }

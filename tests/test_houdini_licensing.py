@@ -61,6 +61,21 @@ class LicensingTests(unittest.TestCase):
         with self.assertRaises(LicenseError):
             self.client.require_product("unowned")
 
+    def test_signed_identity_and_explicit_local_clear(self):
+        proof = self.license(accountEmail="owner@example.com", activatedAt=self.now - 86400)
+        self.client._save({"license": proof})
+        status = self.client.status()
+        self.assertEqual(status["accountEmail"], "owner@example.com")
+        self.assertEqual(status["activatedAt"], self.now - 86400)
+        for patch in ({"accountEmail": "forged"}, {"activatedAt": self.now + 1000}):
+            with self.assertRaises(LicenseError):
+                verify_license(self.license(**patch), self.keys, MACHINE, self.now)
+        self.client.clear_local_license()
+        self.assertFalse(self.client.status()["valid"])
+        with self.assertRaises(LicenseError):
+            self.client.require_product("qafit01")
+        self.assertEqual(self.calls, [])
+
     def test_machine_algorithm_matches_existing_prototype(self):
         with patch("platform.node", return_value="PC"), patch("platform.system", return_value="Windows"), patch("platform.machine", return_value="AMD64"):
             self.assertEqual(get_machine_id(), hashlib.sha256(b"PCWindowsAMD64").hexdigest()[:16].upper())

@@ -7,6 +7,7 @@ export type LicensePayload = {
   vendor: "qatools"; version: 2; kind: "license"; keyId: string;
   activationId: string; credentialId: string; machineId: string;
   products: string[]; issuedAt: number; expiresAt: number;
+  accountEmail?: string; activatedAt?: number;
 };
 type Assignment = { id: number; machine_id: string; credential_id: string };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -53,13 +54,15 @@ export function verifyLicense(envelope: unknown, allowExpired = false, now = Mat
     value.expiresAt - value.issuedAt !== OFFLINE_SECONDS || value.issuedAt > now + 300 || (!allowExpired && now >= value.expiresAt)) {
     throw new Error("Invalid or expired license.");
   }
+  if ((value.accountEmail !== undefined && (typeof value.accountEmail !== "string" || value.accountEmail.length > 320 || !/^[^\s@]+@[^\s@]+$/.test(value.accountEmail))) ||
+      (value.activatedAt !== undefined && (!Number.isSafeInteger(value.activatedAt) || value.activatedAt <= 0 || value.activatedAt > value.issuedAt + 300))) throw new Error("Invalid license identity.");
   return value;
 }
 
-export function issueLicense(assignment: Assignment, products: { slug: string }[], now = Math.floor(Date.now() / 1000)): SignedEnvelope {
+export function issueLicense(assignment: Assignment, products: { slug: string }[], now = Math.floor(Date.now() / 1000), identity: { accountEmail?: string; activatedAt?: number } = {}): SignedEnvelope {
   const envelope = encode({ vendor: "qatools", version: 2, kind: "license", activationId: String(assignment.id),
     credentialId: assignment.credential_id, machineId: assignment.machine_id,
-    products: [...new Set(products.map(p => p.slug))].sort(), issuedAt: now, expiresAt: now + OFFLINE_SECONDS });
+    products: [...new Set(products.map(p => p.slug))].sort(), issuedAt: now, expiresAt: now + OFFLINE_SECONDS, ...identity });
   verifyLicense(envelope, false, now);
   return envelope;
 }

@@ -1,5 +1,7 @@
 """Shared Houdini activation UI. Keys are never stored on HDA node parameters."""
 import threading
+import platform
+from datetime import datetime, timezone
 from .client import default_client, LicenseError
 
 def require_license_or_fail(product_slug="qafit01"):
@@ -15,6 +17,30 @@ def is_license_valid(product_slug="qafit01"):
         return True
     except LicenseError:
         return False
+
+def license_field(field, product_slug="qafit01"):
+    status = default_client().status()
+    active = status.get("valid") and product_slug in status.get("products", [])
+    if field == "state":
+        return "\u2705 active" if active else "\u274c inactive"
+    if field == "email":
+        return status.get("accountEmail") or "\u2014"
+    if field == "date":
+        date = status.get("activatedAt")
+        return datetime.fromtimestamp(date, timezone.utc).strftime("%Y/%m/%d") if date else "\u2014"
+    if field == "machine":
+        return platform.node()
+    return ""
+
+def clear_local_license():
+    import hou
+    if hou.ui.displayMessage("Clear the local qatools license for all tools on this computer?\nYour account ownership and server machine assignment are retained.",
+            buttons=("Clear", "Cancel"), default_choice=1, close_choice=1, title="qatools") != 0:
+        return
+    try:
+        default_client().clear_local_license()
+    except (LicenseError, OSError) as error:
+        hou.ui.displayMessage(str(error), severity=hou.severityType.Error, title="qatools")
 
 def show_account_dialog():
     import hou

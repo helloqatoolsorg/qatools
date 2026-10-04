@@ -3,6 +3,7 @@ import { hashActivationKey, validActivationKey } from "@/lib/activationCredentia
 import { activationFailure, privateJson, readActivationBody } from "@/lib/activationHttp";
 
 import { issueLicense, signingConfiguration } from "@/lib/signedLicense";
+import { licenseIdentity } from "@/lib/licenseIdentity";
 
 export const runtime = "nodejs";
 
@@ -32,6 +33,6 @@ export async function POST(request: Request) {
     if (!renewed.data.ok) return activationFailure(renewed.data.code);
     if (!renewed.data.activation || !renewed.data.products) return activationFailure();
     return privateJson({ activation: renewed.data.activation, products: renewed.data.products,
-      signedLicenseAvailable: true, license: issueLicense(renewed.data.activation, renewed.data.products) });
+      signedLicenseAvailable: true, license: issueLicense(renewed.data.activation, renewed.data.products, undefined, await licenseIdentity(renewed.data.activation)) });
   } catch { return activationFailure(); }
 }

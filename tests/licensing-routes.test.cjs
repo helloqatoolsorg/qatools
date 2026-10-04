@@ -16,12 +16,13 @@ function setup(options = {}) {
   const calls = [], modules = new Map();
   const metadata = { id: credentialId, key_prefix: 'QA_abcdefgh', created_at: '2026-10-03', updated_at: '2026-10-03', reveal_available: true };
   const db = {
+    auth:{admin:{getUserById:async id=>{calls.push({identityUser:id});return {data:{user:{email:options.identityFailure?null:"owner@example.com"}},error:null};}}},
     from(table) {
       calls.push({ table });
       const q = {
         select(columns) { calls.push({ columns }); return q; },
         eq(column,value) { calls.push({ column,value }); return q; },
-        maybeSingle: async () => ({ data: options.noKey ? null : metadata, error: options.databaseError ? { message: 'sensitive database diagnostic' } : null }),
+        maybeSingle: async () => ({ data: options.noKey ? null : table === "account_activation_credentials" ? {...metadata,user_id:"credential-owner"} : metadata, error: options.databaseError ? { message: 'sensitive database diagnostic' } : null }),
       };
       return q;
     },
@@ -39,7 +40,7 @@ function setup(options = {}) {
         }, error: options.databaseError ? {} : null };
       }
       return { data: options.code ? { ok:false, code:options.code } : {
-        ok:true, credential:metadata, activation:{id:1,machine_id:'0123456789ABCDEF',credential_id:credentialId},
+        ok:true, credential:metadata, activation:{id:1,machine_id:'0123456789ABCDEF',credential_id:credentialId,activated_at:'2026-10-01T12:00:00Z'},
         products:[{id:1,slug:'tool-a',name:'Tool A'},{id:2,slug:'tool-b',name:'Tool B'}],
       }, error:options.databaseError ? {message:'sensitive database diagnostic'}:null };
     },
@@ -56,7 +57,7 @@ function setup(options = {}) {
         if(name==='server-only') return {};
         if(name==='node:crypto') return crypto;
         if(name==='next/server') return {NextResponse:{json:(body,init)=>Response.json(body,init)}};
-        if(name==='@/lib/supabaseAdmin') return {supabaseAdmin:db};
+        if(name==='@/lib/supabaseAdmin'||name==='./supabaseAdmin') return {supabaseAdmin:db};
         if(name.startsWith('@/lib/')) return load(name.replace('@/','src/')+'.ts');
         if(name==='@supabase/supabase-js') return {createClient:()=>({auth:{getUser:async token=>{
           calls.push({verifiedToken:token});
@@ -281,4 +282,10 @@ test('website-signed bytes verify with the actual Houdini Python client', {skip:
   });
   assert.equal(result.status,0,result.stderr);
   assert.deepEqual(JSON.parse(result.stdout),{products:['tool-a','tool-b'],duration:30*86400});
+});
+
+test('signed identity comes from the credential account and ignores supplied email',async()=>{
+ const s=setup(),response=await s.load(activateRoute).POST(s.request({machineId:'0123456789ABCDEF',email:'forged@example.com'},testKey));assert.equal(response.status,200);
+ const payload=s.load('src/lib/signedLicense.ts').verifyLicense((await response.json()).license);assert.equal(payload.accountEmail,'owner@example.com');assert.equal(payload.activatedAt,Date.parse('2026-10-01T12:00:00Z')/1000);assert.equal(s.calls.find(c=>c.identityUser).identityUser,'credential-owner');
+ const unavailable=setup({identityFailure:true});assert.equal((await unavailable.load(activateRoute).POST(unavailable.request({machineId:'0123456789ABCDEF'},testKey))).status,503);
 });
