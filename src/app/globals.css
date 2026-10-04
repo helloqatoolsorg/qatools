@@ -54,6 +54,7 @@
   grid-column:3;
   justify-self:end;
   display:flex;
+  align-items:center;
   gap:7px
 }
 
@@ -280,11 +281,11 @@
 }
 
 .card-copy{
-  padding:0 2px 4px
+  padding:0
 }
 
 .card-info{
-  margin:0 -2px;
+  margin:0;
   padding:12px;
   background:#141414
 }
@@ -784,7 +785,7 @@ footer{
   padding:5px 7px;
   color:#888;
   cursor:pointer;
-  font:11px monospace;
+  font:12px monospace;
   transition:background .15s,color .15s,border-color .15s
 }
 
@@ -1606,7 +1607,7 @@ html{
 
 .card-add-cart{
   width:100%;
-  margin-top:13px;
+  margin-top:0;
   padding:10px 12px;
   border:1px solid #2c2c2c;
   background:transparent;

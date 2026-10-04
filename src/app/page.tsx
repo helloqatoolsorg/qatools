@@ -27,6 +27,7 @@ type Product = {
   name: string;
   slug: string;
   subtitle: string;
+  product_type: "tool" | "bundle" | "project";
   price_eur: number | string;
   release_date: string | null;
 
@@ -49,7 +50,8 @@ type LookupValue = {
 
 type FilterType =
   | "category"
-  | "complexity";
+  | "complexity"
+  | "type";
 
 type ActiveFilter = {
   type: FilterType;
@@ -253,6 +255,7 @@ export default function Home() {
             name,
             slug,
             subtitle,
+            product_type,
             price_eur,
             release_date,
             category (
@@ -730,6 +733,7 @@ export default function Home() {
                 .length === 0 ||
               activeFilters.some(
                 (filter) => {
+                  if (filter.type === "type") return filter.value === product.product_type;
                   if (
                     filter.type ===
                     "category"
@@ -1160,6 +1164,7 @@ export default function Home() {
                     event.stopPropagation()
                   }
                 >
+                  <div className="filter-group"><div className="filter-label">TYPE</div>{["tool", "bundle", "project"].map(value => <button key={value} type="button" className={"filter-option " + (isFilterActive("type", value) ? "selected" : "")} onClick={() => toggleFilter("type", value)}>{value.toUpperCase()}</button>)}</div>
                   <div className="filter-group">
                     <div className="filter-label">
                       CATEGORY

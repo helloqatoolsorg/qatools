@@ -9,6 +9,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useQAToolsState } from "@/context/QAToolsState";
 import { supabase } from "@/lib/supabase";
+import AdminProducts from "@/components/AdminProducts";
 import AdminOrders from "@/components/AdminOrders";
 import AdminPaymentReview from "@/components/AdminPaymentReview";
 import AdminDownloads from "@/components/AdminDownloads";
@@ -120,6 +121,7 @@ function formatDate(
 
 export default function AdminPage() {
   const [adminSection, setAdminSection] = useState("dashboard");
+  useEffect(() => { const section = new URLSearchParams(window.location.search).get("section"); if (section && ["products", "downloads", "prices"].includes(section)) setAdminSection(section); }, []);
 
   const {
     user,
@@ -904,7 +906,7 @@ export default function AdminPage() {
           <aside className="user-sidebar">
             <div className="user-title">ADMIN</div>
             <nav aria-label="Admin sections">
-              {[["dashboard", "Dashboard"], ["customers", "Customers / Accounts"], ["orders", "Orders"], ["payments", "Payment review"], ["downloads", "Tool files"], ["prices", "Paddle prices"]].map(([id, label]) =>
+              {[["dashboard", "Dashboard"], ["customers", "Customers / Accounts"], ["orders", "Orders"], ["products", "Products"], ["payments", "Payment review"], ["downloads", "Tool files"], ["prices", "Paddle prices"]].map(([id, label]) =>
                 <button key={id} type="button" className={"user-nav " + (adminSection === id ? "active" : "")} aria-current={adminSection === id ? "page" : undefined} onClick={() => setAdminSection(id)}>{label}</button>)}
             </nav>
           </aside>
@@ -1311,6 +1313,7 @@ export default function AdminPage() {
             </div>
 
             </div>
+            {adminSection === "products" && <AdminProducts key={`products-${user.id}`} />}
             {adminSection === "orders" && <AdminOrders key={`orders-${user.id}`} />}
             {adminSection === "payments" && <AdminPaymentReview key={`payment-review-${user.id}`} />}
             {adminSection === "downloads" && <AdminDownloads key={`downloads-${user.id}`} products={products} />}

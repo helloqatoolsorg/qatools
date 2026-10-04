@@ -17,6 +17,7 @@ export type LikedProduct = {
   name: string;
   slug: string;
   subtitle: string;
+  product_type: "tool" | "bundle" | "project";
   price_eur: number | string;
   release_date: string | null;
 
@@ -121,6 +122,7 @@ export function useLikedProducts() {
             name,
             slug,
             subtitle,
+            product_type,
             price_eur,
             release_date,
             category (

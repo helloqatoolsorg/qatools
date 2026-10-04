@@ -4,6 +4,12 @@
 export type Database = {
   public: {
     Tables: {
+      product_members: {
+        Row: { product_id: number; tool_id: number };
+        Insert: { product_id: number; tool_id: number };
+        Update: { product_id?: number; tool_id?: number };
+        Relationships: [];
+      };
       product_downloads: {
         Row: { product_id: number; file_path: string; file_name: string; enabled: boolean; created_at: string };
         Insert: { product_id: number; file_path: string; file_name: string; enabled?: boolean; created_at?: string };
@@ -352,6 +358,8 @@ export type Database = {
       };
       products: {
         Row: {
+          product_type: "tool" | "bundle" | "project";
+          draft_request_id: string | null;
           id: number;
           created_at: string;
           name: string;
@@ -369,6 +377,8 @@ export type Database = {
           complexity_id: number;
         };
         Insert: {
+          product_type?: "tool" | "bundle" | "project";
+          draft_request_id?: string | null;
           id?: number;
           created_at?: string;
           name?: string;
@@ -386,6 +396,8 @@ export type Database = {
           complexity_id: number;
         };
         Update: {
+          product_type?: "tool" | "bundle" | "project";
+          draft_request_id?: string | null;
           id?: number;
           created_at?: string;
           name?: string;
@@ -447,6 +459,9 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      publish_product_draft: { Args: { p_admin_id: string; p_product_id: number; p_expected_updated_at: string }; Returns: { id: number; updated_at: string } };
+      save_product_draft: { Args: { p_admin_id: string; p_request_id: string; p_data: import("./productDraft").DraftInput; p_product_id?: number; p_expected_updated_at?: string }; Returns: { id: number; updated_at: string } };
+      attach_product_draft_image: { Args: { p_admin_id: string; p_product_id: number; p_path: string }; Returns: { id: number; updated_at: string } };
       read_admin_orders: {
         Args: { p_admin_id: string; p_page: number; p_status: string; p_sort: string; p_direction: string };
         Returns: { page: number; hasMore: boolean; orders: {

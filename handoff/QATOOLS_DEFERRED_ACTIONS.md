@@ -51,3 +51,10 @@ Payment behavior remains sandbox-only. These results permit pausing development;
 - QATOOLS_SECOND_COMPUTER_TEST.md: transfer results and deferred offline check.
 
 Do not repeat completed purchases, uploads or account changes because an older document still lists them as pending. No new remote operation is authorized by this checklist alone.
+
+## Product-management continuation — 2026-10-05
+
+- Complete bundle/project constituent ownership and refund attribution before enabling sales; preserve independent earlier purchases. Composition drafts exist locally and are prevented from publishing.
+- Add private project-file delivery, bundle packages and generated bulk-tool installer archives; current draft editor only uploads artwork and reuses existing individual-tool ZIP admin controls.
+- Extend editor to published products with appropriate concurrency/payment-price handling; add artwork reordering/replacement/removal, videos and a complete tool-page preview. Current editor updates unpublished drafts only.
+- Verify newly deployed product filters, admin catalog/draft creation, artwork and individual-tool publication, plus the card/header refinements on desktop and mobile. No fake product/tool data or remote uploads were made.
