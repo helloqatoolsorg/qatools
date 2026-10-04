@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase";
 import PasswordForm from "@/components/PasswordForm";
 import AccountActivationKey from "@/components/AccountActivationKey";
 import ProductDownload from "@/components/ProductDownload";
+import OrderInvoice from "@/components/OrderInvoice";
 
 type AuthMode =
   | "login"
@@ -1891,6 +1892,11 @@ export default function UserPage() {
                         >
                           <strong>
                             {productNames}
+                            {order.provider === "paddle_sandbox" &&
+                              ["paid", "refunded", "partially_refunded"].includes(order.status) &&
+                              Number(order.total) > 0 && order.provider_transaction_id && (
+                                <OrderInvoice orderId={order.id} />
+                              )}
                           </strong>
 
                           <span>
@@ -1916,10 +1922,7 @@ export default function UserPage() {
                   )}
 
                   <p className="user-muted">
-                    Receipt downloads
-                    will be added here
-                    when the checkout
-                    provider is connected.
+                    Invoices are available for paid Paddle orders, including refunded orders.
                   </p>
                 </>
               )}
