@@ -33,3 +33,9 @@ This is a source/document review, not an external security audit or claim that p
 Owner ran the licensing-domain update script: 21 tests and package verification passed; rebuilt ZIP points to https://www.qatools.org. Owner uploaded/redownloaded/installed and confirmed license Refresh succeeds. Owner then applied, built and deployed customer invoice downloads and confirmed the sandbox buyer's original invoice downloads successfully. Owner reports checkout styling now matches qatools. Receipt email and live invoice checks remain separate.
 
 Owner authorized general sandbox cart support and chose qarand01 as the second paid tool. The coordinated source/migration/test batch is prepared in the chat workspace, pending mandatory isolated SQL checks, application, migrations, deployment, owner price setup and real multi-item payment/refund tests. See QATOOLS_SANDBOX_CART.md. The qafit01-only restriction is not claimed removed from the deployed site yet.
+
+## Superseding cart checkpoint and admin setup request
+
+Owner subsequently ran the cart batch successfully: 75 tests passed with zero skips, scoped lint, production build and diff checks passed. Both cart migrations were applied, code pushed, and Vercel Ready reported. General sandbox cart checkout is deployed per owner report; the actual hosted multi-item test is still pending. Owner chose another existing paid tool instead of qarand01 (not uploaded yet), and manually created its sandbox product/price; exact tool slug and price are still unknown here.
+
+Owner requested simpler recurring tool setup. A new sandbox-only admin Set up Paddle price action is implemented locally with durable creation reservations, existing-product/price reuse and automatic verified mapping. Migration 20261004190000 must be applied before deploying this new batch. See QATOOLS_ADMIN_PADDLE_SETUP.md for verification and rollout. Live payments remain unsupported; tool uploads/content remain owner-operated.

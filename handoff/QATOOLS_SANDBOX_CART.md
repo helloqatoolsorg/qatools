@@ -1,4 +1,4 @@
-# Sandbox cart checkout — prepared 2026-10-04
+# Sandbox cart checkout — 2026-10-04
 
 Owner authorized extending the sandbox beyond the qafit01-only restriction and selected qarand01 for the second paid-tool test. No qarand01 Paddle IDs or prices were invented. Current scope remains EUR tax-inclusive, one-time tool purchases, quantity one per tool, up to 20 paid items. Live payments are unchanged and remain unsupported.
 
@@ -12,6 +12,8 @@ Owner authorized extending the sandbox beyond the qafit01-only restriction and s
 - Admin payment review continues using the same intent/event tables. Existing pending list's product_id is the first cart item; the full immutable snapshot is retained server-side. Operator reconciliation for ambiguous attempts remains limited.
 
 ## Verification status
+
+Latest owner-reported checkpoint: apply-cart-update.ps1 completed with 75 tests passed, zero skipped, scoped lint, production build and diff checks passed. Both migrations 20261004180000 and 20261004180100 were applied to Supabase successfully. Owner committed/pushed this batch and reported Vercel Ready. Hosted multi-item purchase/refund checks remain pending. Owner selected another existing paid tool because qarand01 was not yet uploaded; its slug/price are not supplied yet. The preparation notes below are historical and are superseded by this checkpoint.
 
 Prepared in chat workspace; NOT applied to the repository or Supabase, committed, or deployed. New route/price/browser normalization tests: 19 passed. Existing checkout/browser/fulfillment/review/invoice regressions: 53 passed, two database tests skipped because PGlite was unavailable. Virtual project TypeScript passed. Scoped lint passed for new APIs/helpers and modified checkout/browser/fulfillment code; admin/page retains its pre-existing three link errors and one image warning.
 

@@ -2,6 +2,7 @@ import "server-only";
 import { paddleSandboxApiConfig } from "./paddleSandbox";
 import { paddleCartDatabase, type PriceMapping, type CartLine } from "./paddleCartDatabase";
 export type CartProduct = { id: number; slug: string; price_eur: number | string; published: boolean };
+export class CartPriceMismatchError extends Error {}
 export function euroCents(value: number | string): number {
   const text = String(value);
   if (!/^(0|[1-9][0-9]{0,5})(\.[0-9]{1,2})?$/.test(text)) throw new Error("Invalid item price.");
@@ -25,7 +26,7 @@ export async function validateCartPrice(product: CartProduct, mapping: PriceMapp
       p.unit_price?.amount !== String(amount) || p.unit_price?.currency_code !== "EUR" ||
       p.quantity?.minimum !== 1 || p.quantity?.maximum !== 1 || !Array.isArray(p.unit_price_overrides) || p.unit_price_overrides.length !== 0 ||
       p.product?.id !== mapping.paddle_product_id || p.product.name !== product.slug || p.product.status !== "active" || p.product.tax_category !== "standard") {
-    throw new Error("Paddle price must match this tool's published EUR price, including tax, one-time, quantity one.");
+    throw new CartPriceMismatchError("Paddle price must match this tool's published EUR price, including tax, one-time, quantity one.");
   }
   return { productId: product.id, slug: product.slug, amount, priceId: mapping.price_id, paddleProductId: mapping.paddle_product_id };
 }
