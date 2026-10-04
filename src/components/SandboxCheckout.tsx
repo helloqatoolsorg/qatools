@@ -112,7 +112,7 @@ function CheckoutSession({ products, disabled }: { products: CartProduct[]; disa
       setPaidSlugs(result.expected.items.map((line: { slug: string }) => line.slug));
       owner.current = accountId; transaction.current = result.transactionId;
       paddle.current.Checkout.open({ transactionId: result.transactionId, settings: {
-        displayMode: "overlay", theme: "dark", locale: "en", showAddDiscounts: false, showAddTaxId: false,
+        displayMode: "overlay", theme: "dark", locale: "en", showAddDiscounts: false, showAddTaxId: true,
       } });
     } catch (reason) {
       if (!alive.current || currentUser.current !== accountId) return;

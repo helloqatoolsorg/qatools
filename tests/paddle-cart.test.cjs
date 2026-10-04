@@ -17,6 +17,15 @@ test('cart validates every line and ignores provider item ordering',()=>{const v
 test('cart rejects missing, duplicate, substituted, discounted, recurring and changed-price lines',()=>{const v=setup().load('src/lib/paddleCartValidation.ts').validateCartTransaction;for(const change of [t=>t.items.pop(),t=>t.items[1]=t.items[0],t=>t.items[1].quantity=2,t=>t.items[1].price.id='pri_'+'c'.repeat(26),t=>t.items[1].price.billing_cycle={},t=>t.items[1].price.tax_mode='external',t=>t.details.line_items[1].id=t.details.line_items[0].id,t=>t.details.line_items[1].totals.total='699',t=>t.details.totals.tax='199',t=>t.details.totals.discount='1',t=>t.details.totals.credit='1',t=>t.details.totals.balance='0',t=>t.custom_data.qatools_environment='live',t=>t.custom_data.qatools_checkout_id='bad',t=>t.currency_code='USD']){const t=transaction();change(t);assert.throws(()=>v(t,intent,items));}});
 test('signed multi-item completion is normalized without customer data',()=>{const normalize=setup().load('src/lib/paddleFulfillment.ts').normalizePaddleEvent,e=fixture();e.data.email='private@example.invalid';const n=normalize(e);assert.equal(n.valid,true);assert.equal(n.total,1200);assert.equal(n.items.length,2);assert.equal(n.checkoutVersion,'cart-v1');assert.ok(!JSON.stringify(n).includes('private@'));e.data.items.pop();assert.equal(normalize(e).valid,false);});
 test('cart simulations cannot grant ownership',()=>{const normalize=setup().load('src/lib/paddleFulfillment.ts').normalizePaddleEvent,e=fixture();e.event_id='ntfsimevt_'+'a'.repeat(26);const n=normalize(e);assert.equal(n.valid,false);assert.equal(n.txnId,null);assert.equal(n.intentId,null);});
+test('business details and zero tax preserve validation without leaking billing data',()=>{
+ const s=setup(),validate=s.load('src/lib/paddleCartValidation.ts').validateCartTransaction,normalize=s.load('src/lib/paddleFulfillment.ts').normalizePaddleEvent;
+ const t=transaction();t.business_id='biz_'+'c'.repeat(26);t.details.totals.subtotal='1200';t.details.totals.tax='0';
+ assert.equal(validate(t,intent,items).total,1200);
+ const e=fixture(40);e.data.business_id=t.business_id;e.data.details.totals.subtotal='1200';e.data.details.totals.tax='0';
+ e.data.business={name:'Synthetic private company',tax_identifier:'SYNTHETIC-NOT-A-REAL-VAT-ID'};
+ const n=normalize(e);assert.equal(n.valid,true);assert.equal(n.total,1200);assert.equal(n.subtotal,1200);assert.ok(!JSON.stringify(n).includes('Synthetic private'));assert.ok(!JSON.stringify(n).includes('SYNTHETIC-NOT'));
+ t.details.totals.total='1000';assert.throws(()=>validate(t,intent,items));
+});
 for(const [option,status] of [['noToken',401],['invalidToken',401],['unconfirmed',403],['disabled',503]])test('cart authentication gate: '+option,async()=>{const s=setup({[option]:true});assert.equal((await s.post()).status,status);assert.equal(s.network.length,0);assert.equal(s.calls.length,0);});
 test('cart refuses identity/amount claims, duplicates, empty and oversized carts',async()=>{for(const body of [{productIds:[]},{productIds:[1,1]},{productIds:['1']},{productIds:[0]},{productIds:[1],userId:'forged'},{productIds:[1],total:1},{productIds:Array.from({length:21},(_,i)=>i+1)}]){const s=setup();assert.equal((await s.post(body)).status,400);assert.equal(s.network.length,0);}});
 test('cart creates exactly one attributed transaction after trusted reservation and revalidation',async()=>{const s=setup(),r=await s.post(),b=await r.json();assert.equal(r.status,200);assert.equal(b.expected.total,12);assert.equal(b.expected.items.length,2);assert.equal(r.headers.get('cache-control'),'no-store');const posts=s.network.filter(n=>n.config.method==='POST');assert.equal(posts.length,1);const p=JSON.parse(posts[0].config.body);assert.equal(p.items.length,2);assert.ok(p.items.every(i=>i.quantity===1));assert.equal(p.custom_data.qatools_checkout_version,'cart-v1');assert.ok(!JSON.stringify(p).includes(user));assert.ok(s.calls.some(c=>c.name==='reserve_sandbox_cart'&&c.args.p_user_id===user));});
@@ -59,5 +68,17 @@ test('SQL cart migration, atomic fulfillment, refunds, rollback and legacy compa
  // Distinct fully-refunded items remain idempotent when replayed out of order.
  const firstAgain=JSON.parse(JSON.stringify(refund));firstAgain.event_id='evt_'+String(33).padStart(26,'0');assert.equal((await process(firstAgain)).outcome,'refunded');assert.equal((await db.query('SELECT status FROM public.orders')).rows[0].status,'refunded');
  const replay=JSON.parse(JSON.stringify(next));replay.notification_id='ntf_'+'b'.repeat(26);assert.equal((await process(replay)).outcome,'refunded');replay.data.totals.total='699';assert.equal((await process(replay)).ok,false);
+ // Zero-tax business checkout fulfills at the verified tax-inclusive catalog total.
+ const businessBuyer='00000000-0000-4000-8000-000000000003',businessTxn='txn_'+'d'.repeat(26);
+ await db.query('INSERT INTO auth.users VALUES($1,now(),null)',[businessBuyer]);
+ const businessIntent=(await db.query('SELECT public.reserve_sandbox_cart($1,$2::jsonb) AS r',[businessBuyer,JSON.stringify(items)])).rows[0].r;
+ assert.equal(businessIntent.created,true);
+ await db.query('SELECT public.finish_sandbox_checkout($1,$2,$3)',[businessBuyer,businessIntent.intent.id,businessTxn]);
+ const businessEvent=fixture(40);businessEvent.data.id=businessTxn;businessEvent.data.custom_data.qatools_checkout_id=businessIntent.intent.id;
+ businessEvent.data.business_id='biz_'+'c'.repeat(26);businessEvent.data.details.totals.tax='0';businessEvent.data.details.totals.subtotal='1200';
+ assert.equal((await process(businessEvent)).outcome,'fulfilled');
+ const businessOrder=(await db.query('SELECT subtotal,total FROM public.orders WHERE user_id=$1',[businessBuyer])).rows[0];
+ assert.equal(Number(businessOrder.subtotal),12);assert.equal(Number(businessOrder.total),12);
+ assert.equal((await db.query("SELECT count(*) AS n FROM public.entitlements WHERE user_id=$1 AND status='active'",[businessBuyer])).rows[0].n,2);
  }finally{await db.close();}
 });
