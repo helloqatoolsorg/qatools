@@ -11,6 +11,7 @@ import { supabase } from "@/lib/supabase";
 import AdminOrders from "@/components/AdminOrders";
 import AdminPaymentReview from "@/components/AdminPaymentReview";
 import AdminDownloads from "@/components/AdminDownloads";
+import AdminPrices from "@/components/AdminPrices";
 import AdminActivationHistory, { type AdminActivation } from "@/components/AdminActivationHistory";
 
 type AdminState =
@@ -1310,6 +1311,7 @@ export default function AdminPage() {
             <AdminOrders key={`orders-${user.id}`} />
             <AdminPaymentReview key={`payment-review-${user.id}`} />
             <AdminDownloads key={`downloads-${user.id}`} products={products} />
+            <AdminPrices key={`prices-${user.id}`} products={products} />
 
             <section
               style={{

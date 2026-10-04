@@ -20,11 +20,14 @@ export function subscribeCheckout(listener: (event: CheckoutEvent) => void) {
   return () => { listeners.delete(listener); };
 }
 
-export function checkoutMatchesExpectedPrice(event: CheckoutEvent, transactionId: string) {
+export type ExpectedCheckout = { total: number; items: { priceId: string; slug: string }[] };
+export function checkoutMatchesExpectedPrice(event: CheckoutEvent, transactionId: string, expected?: ExpectedCheckout) {
   const data = event.data;
+  const target = expected ?? { total: 5, items: [{ priceId: "pri_01m41bkp4f0fxgb9cfm37n5p4b", slug: "qafit01" }] };
   return data?.transaction_id === transactionId && data.currency_code === "EUR" &&
-    data.totals?.total === 5 && data.totals.discount === 0 && data.totals.credit === 0 &&
-    data.items?.length === 1 && data.items[0].price_id === "pri_01m41bkp4f0fxgb9cfm37n5p4b" && data.items[0].quantity === 1;
+    data.totals?.total === target.total && data.totals.discount === 0 && data.totals.credit === 0 &&
+    data.items?.length === target.items.length && target.items.every(item =>
+      data.items?.filter(i => i.price_id === item.priceId && i.quantity === 1).length === 1);
 }
 
 export async function loadSandboxPaddle(token: string): Promise<Paddle> {

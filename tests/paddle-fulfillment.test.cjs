@@ -7,7 +7,7 @@ function setup(options={}){
  function load(file){if(cache.has(file))return cache.get(file);const mod={exports:{}};
  vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{
   exports:mod.exports,Buffer,Date,process:{env:{}},require(name){
-   if(name==='server-only')return {};if(name==='node:crypto')return crypto;
+   if(name==='server-only')return {};if(name==='./paddleCartValidation')return load('src/lib/paddleCartValidation.ts');if(name==='node:crypto')return crypto;
    if(name==='next/server')return {NextResponse:{json:Response.json}};
    if(name==='@/lib/activationHttp')return load('src/lib/activationHttp.ts');
    if(name==='@/lib/paddleSandbox')return {paddleSandboxConfig(){if(options.noConfig)throw Error('private');return {webhookSecret:'synthetic-secret'};}};
