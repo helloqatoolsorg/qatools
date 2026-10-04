@@ -16,6 +16,13 @@ test('SDK initializes once in sandbox and stops notifying removed listeners',asy
  let events=0;const remove=api.subscribeCheckout(()=>events++);callback(matching);assert.equal(events,1);remove();callback(matching);assert.equal(events,1);
  await assert.rejects(api.loadSandboxPaddle('test_other'));assert.equal(initializes,1);
 });
+test('VAT adjustment can keep a cart open without accepting arbitrary price changes',()=>{
+ const check=load('src/lib/paddleBrowser.ts',{}).checkoutMatchesExpectedPrice;
+ const expected={total:5,items:[{priceId:price,slug:'qafit01'}],allowBusinessTaxAdjustment:true};
+ const event={data:{...matching.data,customer:{business:{id:'biz_'+'c'.repeat(26),tax_identifier:'SYNTHETIC-ID'}},totals:{total:4.17,subtotal:4.17,tax:0,discount:0,credit:0}}};
+ assert.equal(check(event,txn,expected),true);assert.equal(check(event,txn),false);
+ for(const change of [e=>delete e.data.customer,e=>e.data.customer.business.id='wrong',e=>e.data.customer.business.tax_identifier='',e=>e.data.totals.tax=1,e=>e.data.totals.total=6,e=>e.data.totals.total=0,e=>e.data.totals.discount=1,e=>e.data.totals.credit=1,e=>e.data.totals.subtotal=4,e=>e.data.items[0].quantity=2]){const changed=JSON.parse(JSON.stringify(event));change(changed);assert.equal(check(changed,txn,expected),false);}
+});
 function component(){const refs=[],effects=[],states=[],writes=[];let callback,refreshes=0,closed=0;
  const react={useRef:value=>{const r={current:value};refs.push(r);return r;},useState:value=>{const index=states.length;states.push(value);return [value,next=>{states[index]=next;}];},useEffect:fn=>effects.push(fn)};
  const mod=load('src/components/SandboxCheckout.tsx',{AbortSignal,require:name=>{

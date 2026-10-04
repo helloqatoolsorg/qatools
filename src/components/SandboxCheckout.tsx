@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useQAToolsState } from "@/context/QAToolsState";
 import type { CartProduct } from "@/hooks/useCartProducts";
 import { supabase } from "@/lib/supabase";
-import { checkoutMatchesExpectedPrice, loadSandboxPaddle, subscribeCheckout } from "@/lib/paddleBrowser";
+import { checkoutMatchesExpectedPrice, loadSandboxPaddle, subscribeCheckout, type ExpectedCheckout } from "@/lib/paddleBrowser";
 
 export default function SandboxCheckout({ products, disabled }: { products: CartProduct[]; disabled: boolean }) {
   const { user } = useAuth();
@@ -30,7 +30,7 @@ function CheckoutSession({ products, disabled }: { products: CartProduct[]; disa
   const paddle = useRef<Awaited<ReturnType<typeof loadSandboxPaddle>> | null>(null);
   const alive = useRef(true);
   const paidItems = products.filter(item => Number(item.price_eur) > 0);
-  const expected = useRef<{ total: number; items: { priceId: string; slug: string }[] } | undefined>(undefined);
+  const expected = useRef<ExpectedCheckout | undefined>(undefined);
   const available = paidItems.length > 0 && paidItems.length <= 20 && paidItems.every(item => supported.includes(item.id));
   const confirmed = waiting && paidSlugs.length > 0 && paidSlugs.every(slug => purchasedItems.includes(slug));
 
@@ -57,7 +57,7 @@ function CheckoutSession({ products, disabled }: { products: CartProduct[]; disa
   useEffect(() => subscribeCheckout(event => {
     if (!transaction.current || owner.current !== currentUser.current) return;
     if (event.data?.transaction_id && event.data.transaction_id !== transaction.current) return;
-    if (event.name === "checkout.loaded" || event.name === "checkout.updated") {
+    if (["checkout.loaded", "checkout.updated", "checkout.customer.updated", "checkout.items.updated"].includes(event.name ?? "")) {
       if (!checkoutMatchesExpectedPrice(event, transaction.current, expected.current)) {
         transaction.current = null;
         paddle.current?.Checkout.close();
@@ -108,7 +108,7 @@ function CheckoutSession({ products, disabled }: { products: CartProduct[]; disa
       if (!result.expected || !Number.isFinite(result.expected.total) || result.expected.total !== paidItems.reduce((sum,item) => sum + Math.round(Number(item.price_eur) * 100),0) / 100 ||
           !Array.isArray(result.expected.items) || result.expected.items.length !== paidItems.length ||
           !paidItems.every(item => result.expected.items.filter((line: { slug?: string; priceId?: string }) => line.slug === item.slug && /^pri_[a-z0-9]{26}$/.test(line.priceId ?? "")).length === 1)) throw new Error("Checkout no longer matches your cart. Refresh before paying.");
-      expected.current = result.expected;
+      expected.current = { ...result.expected, allowBusinessTaxAdjustment: true };
       setPaidSlugs(result.expected.items.map((line: { slug: string }) => line.slug));
       owner.current = accountId; transaction.current = result.transactionId;
       paddle.current.Checkout.open({ transactionId: result.transactionId, settings: {
@@ -126,7 +126,7 @@ function CheckoutSession({ products, disabled }: { products: CartProduct[]; disa
       <button className="cart-page-checkout" type="button" onClick={checkout} disabled={disabled || busy || waiting || !token || !available}>
         {waiting ? "CONFIRMING PAYMENT..." : busy ? "CHECKOUT OPEN..." : "CHECKOUT"}
       </button>
-      <p style={{ color: "#777", font: "10px monospace" }}>{!user ? <>Please <a href="/user">log in</a> to checkout.</> : !token ? "Paid checkout is not available yet." : !available ? "A paid item is not ready for checkout yet. Remove unavailable items or contact support." : "Sandbox checkout — test payments only. Tax included."}</p>
+      <p style={{ color: "#777", font: "10px monospace" }}>{!user ? <>Please <a href="/user">log in</a> to checkout.</> : !token ? "Paid checkout is not available yet." : !available ? "A paid item is not ready for checkout yet. Remove unavailable items or contact support." : "Sandbox checkout — test payments only. Prices include tax; business tax is calculated at checkout."}</p>
     </>}
     {error && <p role="alert" style={{ color: "#e86565", font: "10px monospace" }}>{error}</p>}
     {(message || confirmed) && <p role="status" style={{ color: "#55b86d", font: "10px monospace" }}>{confirmed ? "Your purchased items are now in your account. Refresh your Houdini license to include them." : message} <a href="/user?section=purchased">Your items</a></p>}

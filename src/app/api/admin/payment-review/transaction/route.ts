@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     const [order, checkout, event] = await Promise.all([
       paymentReviewDatabase.from("orders").select("order_number, status, currency, total")
         .eq("provider", "paddle_sandbox").eq("provider_transaction_id", transactionId).maybeSingle(),
-      paymentReviewDatabase.from("sandbox_checkout_intents").select("id, status, currency, amount_cents")
+      paymentReviewDatabase.from("sandbox_checkout_intents").select("id, status, currency, amount_cents, charged_amount_cents")
         .eq("transaction_id", transactionId).maybeSingle(),
       paymentReviewDatabase.from("sandbox_payment_events").select("event_id")
         .eq("transaction_id", transactionId).limit(1).maybeSingle(),

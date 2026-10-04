@@ -239,3 +239,9 @@ Free acquisition follow-up: owner reported the migration push complete and a zer
 - Owner confirmed the admin-key correction looks fine and authorized the next standard step. Owner registered with Paddle; sandbox/live account type remains to be confirmed.
 - Locally prepared server-only sandbox configuration and raw-byte webhook-signature/body-limit helpers. Seven tests and full production build passed. No Paddle credentials configured, webhook route/checkout enabled, catalog mapped, payments processed or entitlements changed.
 - Paid checkout remains disabled pending trusted transactional webhook fulfillment and sandbox end-to-end testing. Refund/tax policies are not newly decided. Setup/remaining work: QATOOLS_PADDLE_SANDBOX.md.
+
+## Optional business billing — 2026-10-04
+
+- Owner approved optional business/VAT details at Paddle checkout. Individual buyers are not required to provide them. Paddle collects those details and includes them on its invoice; qatools retrieves the account's invoice without duplicating VAT registration data in its own profiles.
+- Owner observed VAT becoming zero and the payable amount decreasing after adding a VAT number in sandbox. The implementation must retain the website catalog price while recording the provider-confirmed amount actually paid. Refund matching must use actual paid amounts.
+- Tax eligibility and calculation remain Paddle's responsibility; no promise is made that every VAT number removes VAT or that sandbox validation proves live eligibility. The coordinated VAT-total fix is local and requires migration/deployment and a real hosted sandbox invoice check. See QATOOLS_BUSINESS_TAX_TOTALS.md.

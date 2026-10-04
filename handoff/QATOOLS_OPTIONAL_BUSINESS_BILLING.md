@@ -1,5 +1,7 @@
 # Optional business billing — 2026-10-04
 
+Superseding observation: owner later tested the deployed optional fields and found that VAT became zero AND the total decreased. The same-total tests described below did not cover this legitimate provider behavior. The coordinated fix and pending hosted verification are documented in QATOOLS_BUSINESS_TAX_TOTALS.md; do not claim business payment completion from optional-field visibility alone.
+
 Owner requested optional professional VAT fields in Paddle checkout. Enabled showAddTaxId in SandboxCheckout; Paddle's Add tax number option collects business name, tax number and full billing address when the buyer chooses it. Individuals are not required to use this option. Sandbox and live Paddle support it; the qatools implementation remains sandbox-only.
 
 Paddle collects and validates the business details and renders them on its invoice. No new qatools billing form or duplicate tax-ID storage is introduced. Invoice downloads continue to retrieve the current provider PDF for the account's own order.

@@ -67,6 +67,7 @@ export function normalizePaddleEvent(value: unknown) {
   return {
     eventId: event.event_id as string, type, txnId: simulation ? null : txnId, intentId: simulation ? null : intentId, valid: cartVersion ? !!cartPayment : valid,
     checkoutVersion: cartVersion ? "cart-v1" : "legacy", items: cartPayment?.items ?? [], refundedTools,
+    taxAdjusted: cartPayment?.taxAdjusted ?? false,
     refundItems: refundedTools ? refundItems.map(i => ({ providerItemId: i.providerItemId as string, amount: i.amount as number })) : [],
     priceId: typeof price.id === "string" ? price.id : null,
     subtotal: cartPayment?.subtotal ?? subtotal, total: cartPayment?.total ?? total, fullRefund, refundId: fullRefund || refundedTools ? data.id as string : null,

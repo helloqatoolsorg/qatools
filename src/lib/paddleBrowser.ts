@@ -2,7 +2,8 @@
 
 export type CheckoutEvent = { name?: string; data?: {
   transaction_id?: string; currency_code?: string;
-  totals?: { total?: number; discount?: number; credit?: number };
+  totals?: { total?: number; subtotal?: number; tax?: number; discount?: number; credit?: number };
+  customer?: { business?: { id?: string; tax_identifier?: string } | null };
   items?: { price_id?: string; quantity?: number }[];
 } };
 type Paddle = {
@@ -20,12 +21,17 @@ export function subscribeCheckout(listener: (event: CheckoutEvent) => void) {
   return () => { listeners.delete(listener); };
 }
 
-export type ExpectedCheckout = { total: number; items: { priceId: string; slug: string }[] };
+export type ExpectedCheckout = { total: number; items: { priceId: string; slug: string }[]; allowBusinessTaxAdjustment?: boolean };
 export function checkoutMatchesExpectedPrice(event: CheckoutEvent, transactionId: string, expected?: ExpectedCheckout) {
   const data = event.data;
-  const target = expected ?? { total: 5, items: [{ priceId: "pri_01m41bkp4f0fxgb9cfm37n5p4b", slug: "qafit01" }] };
+  const target: ExpectedCheckout = expected ?? { total: 5, items: [{ priceId: "pri_01m41bkp4f0fxgb9cfm37n5p4b", slug: "qafit01" }] };
+  const business = data?.customer?.business;
+  // Browser checks only keep the provider window open; signed server confirmation grants ownership.
+  const adjusted = target.allowBusinessTaxAdjustment === true && typeof data?.totals?.total === "number" && Number.isFinite(data.totals.total) &&
+    data.totals.total > 0 && data.totals.total < target.total && data.totals.tax === 0 && data.totals.subtotal === data.totals.total &&
+    /^biz_[a-z0-9]{26}$/.test(business?.id ?? "") && typeof business?.tax_identifier === "string" && business.tax_identifier.trim().length > 0;
   return data?.transaction_id === transactionId && data.currency_code === "EUR" &&
-    data.totals?.total === target.total && data.totals.discount === 0 && data.totals.credit === 0 &&
+    (data.totals?.total === target.total || adjusted) && data.totals?.discount === 0 && data.totals.credit === 0 &&
     data.items?.length === target.items.length && target.items.every(item =>
       data.items?.filter(i => i.price_id === item.priceId && i.quantity === 1).length === 1);
 }
