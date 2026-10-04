@@ -7,7 +7,7 @@ import AdminPaddleCheck from "./AdminPaddleCheck";
 import "./AdminOrders.css";
 
 type Order = {
-  id: number; order_number: string | null; user_id: string; customerName: string | null;
+  id: number; order_number: string | null; user_id: string; customerName: string | null; customerEmail: string | null;
   provider: string; provider_order_id: string | null; provider_transaction_id: string | null;
   status: string; currency: string; subtotal: number; total: number;
   created_at: string; provider_created_at: string | null;
@@ -25,6 +25,8 @@ function date(value: string) {
 export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [status, setStatus] = useState("all");
+  const [sort, setSort] = useState("date");
+  const [direction, setDirection] = useState("desc");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -38,7 +40,7 @@ export default function AdminOrders() {
       try {
         const { data, error: sessionError } = await supabase.auth.getSession();
         if (sessionError || !data.session) throw new Error("Please log in again to view orders.");
-        const response = await fetch(`/api/admin/orders?page=${page}&status=${status}`, {
+        const response = await fetch(`/api/admin/orders?page=${page}&status=${status}&sort=${sort}&direction=${direction}`, {
           headers: { Authorization: `Bearer ${data.session.access_token}` },
           cache: "no-store", signal: controller.signal,
         });
@@ -52,7 +54,7 @@ export default function AdminOrders() {
     }
     load();
     return () => controller.abort();
-  }, [page, status, refresh]);
+  }, [page, status, sort, direction, refresh]);
 
   return <section className="admin-orders" aria-labelledby="orders-heading">
     <div className="admin-orders-heading">
@@ -63,17 +65,23 @@ export default function AdminOrders() {
           {['pending', 'paid', 'refunded', 'partially_refunded', 'cancelled'].map(value =>
             <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}
         </select></label>
+        <label>Sort <select value={sort} onChange={event => { setSort(event.target.value); setPage(1); }}>
+          {[["number", "Number"], ["email", "Customer email"], ["state", "State"], ["price", "Price"], ["date", "Date"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select></label>
+        <button type="button" aria-label={direction === "asc" ? "Sort descending" : "Sort ascending"} onClick={() => { setDirection(value => value === "asc" ? "desc" : "asc"); setPage(1); }}>{direction === "asc" ? "↑ ASC" : "↓ DESC"}</button>
         <button type="button" disabled={loading} onClick={() => setRefresh(value => value + 1)}>REFRESH ORDERS</button>
       </div>
     </div>
     {loading ? <p role="status">Loading orders…</p> : error ? <p role="alert" className="admin-orders-error">{error}</p> : <>
       {orders.length === 0 ? <p>No orders found{status !== 'all' ? ' with this status' : ''}.</p> :
-        <div className="admin-orders-list">{orders.map(order => <details key={order.id}>
-          <summary><span>{formatOrderNumber(order.order_number)}</span><span>{order.customerName ?? 'Customer account'}</span>
-            <span>{order.status.replaceAll('_', ' ')}</span><span>{money(order.total, order.currency)}</span>
+        <div className="admin-orders-list"><div className="admin-orders-columns">
+          {[["number", "Number"], ["email", "Customer email"], ["state", "State"], ["price", "Price"], ["date", "Date"]].map(([key, label]) => <button type="button" key={key} onClick={() => { if (sort === key) setDirection(value => value === "asc" ? "desc" : "asc"); else { setSort(key); setDirection("asc"); } setPage(1); }}>{label}{sort === key ? (direction === "asc" ? " ↑" : " ↓") : ""}</button>)}
+        </div>{orders.map(order => <details key={order.id}>
+          <summary><span>{formatOrderNumber(order.order_number)}</span><span>{order.customerEmail ?? 'Email unavailable'}</span>
+            <span className={"order-state order-state-" + order.status}>{order.status.replaceAll('_', ' ')}</span><span>{money(order.total, order.currency)}</span>
             <time dateTime={order.created_at}>{date(order.created_at)}</time></summary>
           <div className="admin-order-details">
-            <dl><dt>Customer ID</dt><dd>{order.user_id}</dd><dt>Provider</dt><dd>{order.provider}</dd>
+            <dl><dt>Customer email</dt><dd>{order.customerEmail ?? "—"}</dd><dt>Customer name</dt><dd>{order.customerName ?? "—"}</dd><dt>Customer ID</dt><dd>{order.user_id}</dd><dt>Provider</dt><dd>{order.provider}</dd>
               <dt>Provider order</dt><dd>{order.provider_order_id ?? '—'}</dd>
               <dt>Provider transaction</dt><dd>{order.provider_transaction_id ?? '—'}</dd>
               <dt>Subtotal</dt><dd>{money(order.subtotal, order.currency)}</dd>

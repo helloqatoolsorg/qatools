@@ -1,4 +1,5 @@
 "use client";
+import AccountName from "@/components/AccountName";
 
 import { useQAToolsState } from "@/context/QAToolsState";
 
@@ -39,6 +40,7 @@ export default function InstallPage() {
         </nav>
 
         <nav className="icon-nav">
+          <AccountName />
           <a
             className={`icon-link liked-nav-link ${
               likedCount > 0

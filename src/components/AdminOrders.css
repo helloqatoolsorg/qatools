@@ -11,6 +11,9 @@
 .admin-orders details { border-bottom:1px solid #242424; }
 .admin-orders summary { display:grid; grid-template-columns:140px minmax(100px,1fr) 130px 110px 170px; gap:12px; padding:16px 8px; cursor:pointer; align-items:center; }
 .admin-orders summary:hover { background:#111; }
+.admin-orders-columns { display:grid; grid-template-columns:140px minmax(100px,1fr) 130px 110px 170px; gap:12px; padding:12px 8px; }
+.admin-orders-columns button { text-align:left; background:transparent; padding:7px 5px; }
+@media(max-width:850px) { .admin-orders-columns { display:flex; flex-wrap:wrap; } }
 .admin-orders summary span,.admin-orders summary time { overflow-wrap:anywhere; }
 .admin-order-details { padding:8px 16px 24px; background:#101010; }
 .admin-order-details dl { display:grid; grid-template-columns:150px minmax(0,1fr); gap:10px; }

@@ -305,6 +305,7 @@ export default function CartMenu() {
 
           <button
             className="checkout-button"
+            onClick={() => { setOpen(false); window.location.assign("/cart"); }}
             type="button"
             disabled={
               products.length ===

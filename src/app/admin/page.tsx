@@ -1,4 +1,5 @@
 "use client";
+import AccountName from "@/components/AccountName";
 
 import {
   useEffect,
@@ -118,6 +119,8 @@ function formatDate(
 }
 
 export default function AdminPage() {
+  const [adminSection, setAdminSection] = useState("dashboard");
+
   const {
     user,
     loading,
@@ -720,6 +723,7 @@ export default function AdminPage() {
         </nav>
 
         <nav className="icon-nav">
+          <AccountName />
           <a
             className={`icon-link liked-nav-link ${
               likedCount > 0
@@ -896,18 +900,15 @@ export default function AdminPage() {
           </a>
         </main>
       ) : (
-        <main
-          style={{
-            maxWidth:
-              "1100px",
-
-            margin:
-              "0 auto",
-
-            padding:
-              "70px 26px 120px",
-          }}
-        >
+        <main className="admin-workspace">
+          <aside className="user-sidebar">
+            <div className="user-title">ADMIN</div>
+            <nav aria-label="Admin sections">
+              {[["dashboard", "Dashboard"], ["customers", "Customers / Accounts"], ["orders", "Orders"], ["payments", "Payment review"], ["downloads", "Tool files"], ["prices", "Paddle prices"]].map(([id, label]) =>
+                <button key={id} type="button" className={"user-nav " + (adminSection === id ? "active" : "")} aria-current={adminSection === id ? "page" : undefined} onClick={() => setAdminSection(id)}>{label}</button>)}
+            </nav>
+          </aside>
+          <div className="admin-workspace-content">
           <div
             style={{
               display:
@@ -1000,6 +1001,7 @@ export default function AdminPage() {
                 "38px",
             }}
           >
+            <div hidden={adminSection !== "dashboard"}>
             <div
               style={{
                 display:
@@ -1303,17 +1305,18 @@ export default function AdminPage() {
                       1.6,
                   }}
                 >
-                  Review order history below.
+                  Review order history in the Orders section.
                 </p>
               </div>
             </div>
 
-            <AdminOrders key={`orders-${user.id}`} />
-            <AdminPaymentReview key={`payment-review-${user.id}`} />
-            <AdminDownloads key={`downloads-${user.id}`} products={products} />
-            <AdminPrices key={`prices-${user.id}`} products={products} />
+            </div>
+            {adminSection === "orders" && <AdminOrders key={`orders-${user.id}`} />}
+            {adminSection === "payments" && <AdminPaymentReview key={`payment-review-${user.id}`} />}
+            {adminSection === "downloads" && <AdminDownloads key={`downloads-${user.id}`} products={products} />}
+            {adminSection === "prices" && <AdminPrices key={`prices-${user.id}`} products={products} />}
 
-            <section
+            <section hidden={adminSection !== "customers"}
               style={{
                 marginTop:
                   "48px",
@@ -2489,6 +2492,7 @@ export default function AdminPage() {
               </p>
             </div>
           </section>
+          </div>
         </main>
       )}
 

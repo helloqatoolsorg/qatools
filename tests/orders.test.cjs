@@ -3,7 +3,7 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=r
 function setup(options={}) {
  const calls=[],modules=new Map();
  const rows=Array.from({length:options.count??1},(_,i)=>({id:100-i,order_number:`sandbox-${String(100-i).padStart(6,'0')}`,user_id:'customer',status:'paid',items:[],total:5,currency:'EUR'}));
- const db={from(table){calls.push({table});const q={select(columns){calls.push({columns});return q;},eq(column,value){calls.push({column,value});return q;},
+ const db={async rpc(name,args){calls.push({rpc:name,args});return {data:{orders:rows.slice(0,50).map(r=>({...r,customerName:'Test customer',customerEmail:'customer@example.test'})),page:args.p_page,hasMore:rows.length>50},error:options.databaseError||options.profileError?{message:'secret SQL details'}:null};},from(table){calls.push({table});const q={select(columns){calls.push({columns});return q;},eq(column,value){calls.push({column,value});return q;},
   order(column,config){calls.push({order:column,...config});return q;},
   async maybeSingle(){return {data:options.nonAdmin?null:{user_id:'admin'},error:options.membershipError?{}:null};},
   async range(start,end){calls.push({start,end});return {data:rows,error:options.databaseError?{message:'secret SQL details'}:null};},
@@ -23,20 +23,17 @@ for(const [option,status] of [['noToken',401],['invalidToken',401],['nonAdmin',4
  assert.ok(s.calls.filter(c=>c.table).every(c=>c.table==='admin_users'));
 });
 test('malformed filters/pages do not reach commercial tables',async()=>{
- for(const query of ['?page=0','?page=-1','?page=1.5','?page=10000','?page=x','?status=paid,refunded','?status=bogus']) {
-  const s=setup();assert.equal((await s.get(query)).status,400);assert.ok(!s.calls.some(c=>c.table==='orders'));
+ for(const query of ['?page=0','?page=-1','?page=1.5','?page=10000','?page=x','?status=paid,refunded','?status=bogus','?sort=customer_password','?direction=random']) {
+  const s=setup();assert.equal((await s.get(query)).status,400);assert.ok(!s.calls.some(c=>c.rpc));
  }
 });
-test('bounded newest-first paging uses one sentinel row and only shown customer IDs',async()=>{
- const s=setup({count:51});const response=await s.get('?page=2&status=paid');const data=await response.json();
- assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');
- assert.equal(data.orders.length,50);assert.equal(data.hasMore,true);assert.equal(data.page,2);assert.equal(data.orders[0].customerName,'Test customer');
- assert.equal(data.orders[0].order_number,'sandbox-000100');
- assert.ok(s.calls.some(c=>c.columns?.includes('order_number')));
- assert.ok(s.calls.some(c=>c.start===50&&c.end===100));assert.ok(s.calls.some(c=>c.column==='status'&&c.value==='paid'));
- assert.ok(s.calls.some(c=>c.order==='id'&&c.ascending===false));assert.deepEqual(Array.from(s.calls.find(c=>c.profileIds).profileIds),['customer']);
- assert.ok(s.calls.filter(c=>c.columns).every(c=>!c.columns.includes('invoice_details')&&!c.columns.includes('secret')&&!c.columns.includes('*')));
+test('admin query passes validated sort/filter and returns bounded page with email',async()=>{
+ const s=setup({count:51}),response=await s.get('?page=2&status=paid&sort=email&direction=asc'),data=await response.json();
+ assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');assert.equal(data.orders.length,50);assert.equal(data.hasMore,true);assert.equal(data.page,2);
+ assert.equal(data.orders[0].customerEmail,'customer@example.test');const call=s.calls.find(c=>c.rpc);assert.equal(call.rpc,'read_admin_orders');
+ assert.deepEqual({...call.args},{p_admin_id:'admin',p_page:2,p_status:'paid',p_sort:'email',p_direction:'asc'});
 });
+
 test('empty orders return a genuine empty state and skip customer lookup',async()=>{
  const s=setup({count:0});const result=await (await s.get()).json();assert.equal(result.orders.length,0);assert.equal(result.hasMore,false);
  assert.ok(!s.calls.some(c=>c.table==='profiles'));
@@ -67,5 +64,36 @@ test('order read migration grants service reads without browser escalation or wr
   await assert.rejects(db.exec("UPDATE public.orders SET user_id='forged'"),/permission denied/);
   await db.exec("RESET ROLE; SELECT set_config('request.jwt.claim.sub','customer-a',false); SET ROLE authenticated;");
   assert.equal((await db.query('SELECT * FROM public.orders')).rows.length,1);assert.equal((await db.query('SELECT * FROM public.order_items')).rows.length,1);
+ }finally{await db.close();}
+});
+
+test('actual SQL sorting is global, stable, filtered and restricted',{skip:!process.env.PGLITE_TEST_MODULE},async()=>{
+ const {PGlite}=require(process.env.PGLITE_TEST_MODULE),db=new PGlite();
+ try{
+ await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role; CREATE SCHEMA auth;
+ CREATE TABLE auth.users(id uuid PRIMARY KEY,email text,email_confirmed_at timestamptz,banned_until timestamptz);
+ CREATE TABLE public.admin_users(user_id uuid PRIMARY KEY);
+ CREATE TABLE public.profiles(user_id uuid PRIMARY KEY,name text);
+ CREATE TABLE public.products(id bigint PRIMARY KEY,name text,slug text);
+ CREATE TABLE public.orders(id bigint PRIMARY KEY,order_number text,user_id uuid,provider text,provider_order_id text,provider_transaction_id text,status text,currency text,subtotal numeric,total numeric,created_at timestamptz,provider_created_at timestamptz);
+ CREATE TABLE public.order_items(id bigint PRIMARY KEY,order_id bigint,product_id bigint,quantity integer,unit_price numeric);
+ INSERT INTO auth.users VALUES('00000000-0000-0000-0000-000000000001','admin@example.test',now(),NULL),('00000000-0000-0000-0000-000000000002','z@example.test',now(),NULL),('00000000-0000-0000-0000-000000000003','a@example.test',now(),NULL);
+ INSERT INTO admin_users VALUES('00000000-0000-0000-0000-000000000001');
+ INSERT INTO profiles VALUES('00000000-0000-0000-0000-000000000002','Customer Z');
+ INSERT INTO products VALUES(1,'qafit01','qafit01');
+ INSERT INTO orders SELECT n,'sandbox-'||n,CASE WHEN n=55 THEN '00000000-0000-0000-0000-000000000003'::uuid ELSE '00000000-0000-0000-0000-000000000002'::uuid END,'paddle_sandbox',NULL,'txn_'||n,CASE WHEN n=54 THEN 'refunded' ELSE 'paid' END,'EUR',n,n,'2026-10-01'::timestamptz+n*interval '1 minute',NULL FROM generate_series(1,55)n;
+ INSERT INTO order_items VALUES(1,55,1,1,55);`);
+ await db.exec(fs.readFileSync('supabase/migrations/20261005090000_admin_order_sorting.sql','utf8'));
+ const admin='00000000-0000-0000-0000-000000000001';
+ async function read(page,status,sort,dir,id=admin){return (await db.query('SELECT public.read_admin_orders($1,$2,$3,$4,$5) result',[id,page,status,sort,dir])).rows[0].result;}
+ for(const role of ['anon','authenticated','service_role'])assert.equal((await db.query("SELECT has_function_privilege($1,'public.read_admin_orders(uuid,integer,text,text,text)','EXECUTE') allowed",[role])).rows[0].allowed,role==='service_role');
+ await assert.rejects(read(1,'all','date','desc','00000000-0000-0000-0000-000000000002'),/Admin access/);
+ for(const sort of ['number','price','date']){const asc=await read(1,'all',sort,'asc'),desc=await read(1,'all',sort,'desc');assert.equal(asc.orders[0].id,1);assert.equal(desc.orders[0].id,55);assert.equal(asc.orders.length,50);assert.equal(asc.hasMore,true);const last=await read(2,'all',sort,'asc');assert.deepEqual(last.orders.map(o=>o.id),[51,52,53,54,55]);assert.equal(last.hasMore,false);}
+ const email=await read(1,'all','email','asc');assert.equal(email.orders[0].id,55);assert.equal(email.orders[0].customerEmail,'a@example.test');assert.equal(email.orders[0].items[0].product.slug,'qafit01');assert.equal(email.orders[1].id,54);
+ assert.equal((await read(1,'all','email','desc')).orders[0].id,54);
+ assert.equal((await read(1,'all','state','desc')).orders[0].id,54);assert.equal((await read(1,'all','state','asc')).orders[0].id,55);
+ assert.deepEqual((await read(1,'refunded','price','asc')).orders.map(o=>o.id),[54]);assert.equal((await read(1,'pending','date','desc')).orders.length,0);
+ await assert.rejects(read(0,'all','date','desc'),/Invalid/);await assert.rejects(read(1,'all','forged','desc'),/Invalid/);
+ await db.exec(`UPDATE auth.users SET banned_until=now()+interval '1 day' WHERE id='00000000-0000-0000-0000-000000000001';`);await assert.rejects(read(1,'all','date','desc'),/Admin access/);
  }finally{await db.close();}
 });

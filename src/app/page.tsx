@@ -1,4 +1,5 @@
 "use client";
+import AccountName from "@/components/AccountName";
 
 import {
   useEffect,
@@ -923,6 +924,7 @@ export default function Home() {
         </nav>
 
         <nav className="icon-nav">
+          <AccountName />
           <a
             className={`icon-link liked-nav-link ${
               likedCount > 0
@@ -1610,6 +1612,7 @@ export default function Home() {
                       </a>
 
                       <div className="card-copy">
+                        <div className="card-info">
                         <div className="title-line">
                           <h2>
                             <a
@@ -1717,6 +1720,8 @@ export default function Home() {
                               </span>
                             )}
                           </div>
+                        </div>
+
                         </div>
 
                         <button

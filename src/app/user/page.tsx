@@ -1,4 +1,5 @@
 "use client";
+import AccountName from "@/components/AccountName";
 import { formatOrderNumber } from "@/lib/orderNumber";
 
 import {
@@ -21,6 +22,7 @@ type AuthMode =
   | "reset";
 
 type UserSection =
+  | "overview"
   | "purchased"
   | "license"
   | "orders"
@@ -181,7 +183,7 @@ export default function UserPage() {
     setActiveSection,
   ] =
     useState<UserSection>(
-      "purchased"
+      "overview"
     );
 
   const [
@@ -313,6 +315,7 @@ export default function UserPage() {
     }
 
     if (
+      section === "overview" ||
       section === "purchased" ||
       section === "license" ||
       section === "orders" ||
@@ -895,6 +898,7 @@ export default function UserPage() {
 
     const savedProfile =
       data as ProfileRow;
+    window.dispatchEvent(new Event("qatools-profile-updated"));
 
     setProfileName(
       savedProfile.name ??
@@ -948,6 +952,7 @@ export default function UserPage() {
         </nav>
 
         <nav className="icon-nav">
+          <AccountName />
           <a
             className={`icon-link liked-nav-link ${
               likedCount > 0
@@ -1030,9 +1035,7 @@ export default function UserPage() {
           ================================================ */}
 
           <aside className="user-sidebar">
-            <div className="user-title">
-              MY qatools
-            </div>
+            <button type="button" className="user-title overview-link" onClick={() => changeSection("overview")}>MY qatools</button>
 
             <nav>
               <button
@@ -1120,9 +1123,22 @@ export default function UserPage() {
                 General / Personal Information
               </button>
             </nav>
+            <button type="button" className="user-nav sidebar-logout" disabled={busy} onClick={handleLogOut}>Log out</button>
+            {error && activeSection !== "general" && <p role="alert" className="user-muted">{error}</p>}
           </aside>
 
           <section className="user-content">
+            {activeSection === "overview" && <section className="user-section active">
+              <div className="user-section-head"><h1>Account overview</h1></div>
+              <dl className="account-overview">
+                <div><dt>User name</dt><dd>{profileLoading ? "Loading…" : profileName || "—"}</dd></div>
+                <div><dt>Email</dt><dd>{user.email || "—"}</dd></div>
+                <div><dt>Active machine</dt><dd>{entitlementsLoading ? "Loading…" : accountActivations.find(a => a.status === "active")?.machine_id || "Not activated"}</dd></div>
+                <div><dt>Activation date</dt><dd>{entitlementsLoading ? "Loading…" : formatDate(accountActivations.find(a => a.status === "active")?.activated_at ?? null)}</dd></div>
+                <div><dt>Purchased tools</dt><dd>{entitlementsLoading ? "Loading…" : entitlements.filter(e => e.status === "active" && e.source === "purchase").length}</dd></div>
+              </dl>
+              <AccountActivationKey key={user.id} />
+            </section>}
 
             {/* ==============================================
                 REAL PURCHASED PRODUCTS
@@ -1835,10 +1851,7 @@ export default function UserPage() {
                   </span>
 
                   <p className="user-muted">
-                    Paid orders will
-                    appear here
-                    automatically after
-                    checkout is connected.
+                    Your paid orders will appear here after checkout.
                   </p>
                 </div>
               ) : (
@@ -1856,6 +1869,7 @@ export default function UserPage() {
                       ORDER
                     </span>
 
+                    <span>STATE</span>
                     <span>
                       AMOUNT
                     </span>
@@ -1910,6 +1924,7 @@ export default function UserPage() {
                             {orderReference}
                           </span>
 
+                          <span className={"order-state order-state-" + order.status}>{order.status.replaceAll("_", " ")}</span>
                           <span>
                             {formatMoney(
                               order.total,

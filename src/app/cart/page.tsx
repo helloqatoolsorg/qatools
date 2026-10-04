@@ -1,4 +1,5 @@
 "use client";
+import AccountName from "@/components/AccountName";
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -79,6 +80,7 @@ export default function CartPage() {
         </nav>
 
         <nav className="icon-nav">
+          <AccountName />
           <a
             className={`icon-link liked-nav-link ${
               likedCount > 0

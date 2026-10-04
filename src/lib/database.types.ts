@@ -447,6 +447,18 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      read_admin_orders: {
+        Args: { p_admin_id: string; p_page: number; p_status: string; p_sort: string; p_direction: string };
+        Returns: { page: number; hasMore: boolean; orders: {
+          id: number; order_number: string | null; user_id: string;
+          customerEmail: string | null; customerName: string | null;
+          provider: string; provider_order_id: string | null; provider_transaction_id: string | null;
+          status: string; currency: string; subtotal: number; total: number;
+          created_at: string; provider_created_at: string | null;
+          items: { id: number; product_id: number; quantity: number; unit_price: number;
+            product: { id: number; name: string; slug: string } | null }[];
+        }[] };
+      };
       set_product_download: {
         Args: { p_admin_id: string; p_product_id: number; p_expected_path: string | null; p_file_path: string | null; p_file_name: string | null; p_enabled: boolean };
         Returns: { ok: boolean; code?: string };

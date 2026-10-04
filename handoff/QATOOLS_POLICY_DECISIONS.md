@@ -1,6 +1,13 @@
 # QA Tools — Commercial and licensing policy decisions
 
 Updated: 2026-10-04
+
+## Fixed bundle pricing and download counts — owner clarification, 2026-10-04
+
+- Bundles are groups of tools with one fixed price cheaper than the sum of their individual prices. Already-owned tools do not reduce the bundle price. Grant missing constituent ownership and retain previously owned tools without duplicate ownership. This supersedes the agent's earlier remaining-tools-only pricing proposal; that proposal was not implemented.
+- Before implementing bundle refunds, preserve attribution to independent purchases: refunding a bundle must not remove a tool owned through an earlier independent acquisition. Detailed bundle refund/versioning and fully-owned bundle purchase behavior remain open.
+- Free acquisitions must not create orders. Owner wants comparable free and paid download counts and delegated implementation details. Selected metric: successful authorized download requests, repeats included, classified by acquisition source rather than current product price. This measures download requests, not confirmed transfer completion. Future bulk requests count each included tool once after successful archive preparation/link issuance; failed requests do not count. Recording is pending implementation.
+- See QATOOLS_FEATURE_BACKLOG.md for implementation scope. No bundle pricing, ownership or download-counter code was changed by this decision record.
 Purpose: internal source material for future customer terms, license agreement, purchase disclosures, support documentation and privacy review.
 Status: decision record, NOT a published agreement or customer acceptance record.
 
