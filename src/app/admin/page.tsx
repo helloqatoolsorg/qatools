@@ -1,5 +1,5 @@
 "use client";
-import AccountName from "@/components/AccountName";
+import { AdminHeader, AdminSidebar, adminSections } from "@/components/AdminNavigation";
 
 import {
   useEffect,
@@ -7,9 +7,9 @@ import {
 } from "react";
 
 import { useAuth } from "@/context/AuthContext";
-import { useQAToolsState } from "@/context/QAToolsState";
 import { supabase } from "@/lib/supabase";
 import AdminProducts from "@/components/AdminProducts";
+import PublicationState from "@/components/PublicationState";
 import AdminOrders from "@/components/AdminOrders";
 import AdminPaymentReview from "@/components/AdminPaymentReview";
 import AdminDownloads from "@/components/AdminDownloads";
@@ -121,17 +121,12 @@ function formatDate(
 
 export default function AdminPage() {
   const [adminSection, setAdminSection] = useState("dashboard");
-  useEffect(() => { const section = new URLSearchParams(window.location.search).get("section"); if (section && ["products", "downloads", "prices"].includes(section)) setAdminSection(section); }, []);
+  useEffect(() => { const section = new URLSearchParams(window.location.search).get("section"); if (section && adminSections.some(([id]) => id === section)) setAdminSection(section); }, []);
 
   const {
     user,
     loading,
   } = useAuth();
-
-  const {
-    likedCount,
-    cartCount,
-  } = useQAToolsState();
 
   const [
     adminState,
@@ -699,86 +694,7 @@ export default function AdminPage() {
 
   return (
     <div className="content-page">
-      <header className="site-header">
-        <a
-          className="brand"
-          href="/"
-        >
-          <img
-            src="/assets/qatools_logo.png"
-            alt="qatools"
-          />
-        </a>
-
-        <nav className="main-nav">
-          <a href="/">
-            products
-          </a>
-
-          <a href="/install">
-            how to install
-          </a>
-
-          <a href="/whats-new">
-            what&apos;s new
-          </a>
-        </nav>
-
-        <nav className="icon-nav">
-          <AccountName />
-          <a
-            className={`icon-link liked-nav-link ${
-              likedCount > 0
-                ? "has-likes"
-                : ""
-            }`}
-            href="/liked"
-            aria-label="Liked products"
-            title="Liked products"
-          >
-            <span className="liked-icon">
-              {likedCount > 0
-                ? "♥"
-                : "♡"}
-            </span>
-
-            <span className="liked-count">
-              {likedCount > 0
-                ? likedCount
-                : ""}
-            </span>
-          </a>
-
-          <a
-            className="icon-link"
-            href="/user"
-            aria-label="Account"
-            title="Account"
-          >
-            ○
-          </a>
-
-          <button
-            id="cartButton"
-            className={
-              cartCount > 0
-                ? "cart-has-items"
-                : ""
-            }
-            aria-label="Cart"
-            title="Cart"
-            type="button"
-          >
-            □
-
-            <span className="cart-count">
-              {cartCount > 0
-                ? cartCount
-                : ""}
-            </span>
-          </button>
-        </nav>
-      </header>
+      <AdminHeader />
 
       {loading ||
       adminState ===
@@ -903,13 +819,7 @@ export default function AdminPage() {
         </main>
       ) : (
         <main className="admin-workspace">
-          <aside className="user-sidebar">
-            <div className="user-title">ADMIN</div>
-            <nav aria-label="Admin sections">
-              {[["dashboard", "Dashboard"], ["customers", "Customers / Accounts"], ["orders", "Orders"], ["products", "Products"], ["payments", "Payment review"], ["downloads", "Tool files"], ["prices", "Paddle prices"]].map(([id, label]) =>
-                <button key={id} type="button" className={"user-nav " + (adminSection === id ? "active" : "")} aria-current={adminSection === id ? "page" : undefined} onClick={() => setAdminSection(id)}>{label}</button>)}
-            </nav>
-          </aside>
+          <AdminSidebar active={adminSection} onSelect={setAdminSection} />
           <div className="admin-workspace-content">
           <div
             style={{
@@ -2353,6 +2263,7 @@ export default function AdminPage() {
                                               product
                                             ) => (
                                               <option
+                                                className={product.published ? "publication-option-published" : "publication-option-unpublished"}
                                                 key={
                                                   product.id
                                                 }
@@ -2370,6 +2281,7 @@ export default function AdminPage() {
                                             )
                                           )}
                                         </select>
+                                        {selectedProductId && <PublicationState published={availableProducts.find(p => String(p.id) === String(selectedProductId))?.published ?? false} />}
 
                                         <button
                                           type="button"

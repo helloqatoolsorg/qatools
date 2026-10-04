@@ -1519,7 +1519,7 @@ footer{
   grid-template-columns:minmax(120px,1.4fr) 1fr .8fr .8fr .6fr
 }
 
-.account-name{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:11px monospace;color:#aaa}
+.account-name{margin-inline-end:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:11px monospace;color:#aaa}
 .admin-workspace{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:calc(100vh - 76px)}
 .admin-workspace-content{padding:40px 26px 100px;min-width:0;max-width:1200px;width:100%}
 @media(max-width:900px){.admin-workspace{grid-template-columns:1fr}.admin-workspace>.user-sidebar{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);padding:20px}.admin-workspace>.user-sidebar nav{flex-direction:row;flex-wrap:wrap}.admin-workspace-content{padding:24px 16px 70px}}
@@ -2384,3 +2384,7 @@ body:not(.products-page) .cart-overlay{
 .admin-activation-record{padding:12px 0;border-top:1px solid #222;line-height:1.8}
 .admin-activation-record>span{margin-left:12px}
 .admin-release-confirm{max-width:620px;padding:12px;border:1px solid #333;line-height:1.7;margin-bottom:12px}
+
+/* Match publication states throughout admin controls. */
+.publication-state.published,.publication-option-published{color:#80bd90!important}
+.publication-state.unpublished,.publication-option-unpublished{color:#e56b6b!important}

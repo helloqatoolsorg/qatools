@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import PublicationState from "@/components/PublicationState";
 import { supabase } from "@/lib/supabase";
 import "./AdminOrders.css";
 import "./AdminDownloads.css";
@@ -55,10 +56,11 @@ export default function AdminDownloads({ products }: { products: Product[] }) {
   return <section className="admin-orders admin-downloads">
     <div className="admin-orders-heading"><div><span className="admin-orders-kicker">DELIVERY</span><h2>Tool downloads</h2></div></div>
     <div className="admin-orders-controls">
-      <label>Item<select value={id} disabled={busy} onChange={event => { setId(event.target.value); setLoaded(false); setDownload(null); setFile(null); setMessage(null); }}><option value="">Choose an item</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}{product.published ? "" : " (unpublished)"}</option>)}</select></label>
+      <label>Item<select value={id} disabled={busy} onChange={event => { setId(event.target.value); setLoaded(false); setDownload(null); setFile(null); setMessage(null); }}><option value="">Choose an item</option>{products.map(product => <option className={product.published ? "publication-option-published" : "publication-option-unpublished"} key={product.id} value={product.id}>{product.name}{product.published ? "" : " (unpublished)"}</option>)}</select></label>
       <button type="button" disabled={!id || busy} onClick={() => setRevision(value => value + 1)}>REFRESH</button>
     </div>
     {id && <div className="admin-download-details">
+      <PublicationState published={products.find(p => String(p.id) === id)?.published ?? false} />
       <p>{!loaded ? (error ? "Download unavailable." : "Loading download...") : download ? `${download.file_name} · ${download.enabled ? "ENABLED" : "DISABLED"}` : "No package uploaded yet."}</p>
       {download && <button type="button" disabled={busy || !loaded} onClick={() => save(false)}>{download.enabled ? "DISABLE DOWNLOAD" : "ENABLE DOWNLOAD"}</button>}
       <label className="admin-download-file">ZIP package<input key={`${id}-${revision}`} type="file" accept=".zip" disabled={busy || !loaded} onChange={event => {

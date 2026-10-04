@@ -1,0 +1,12 @@
+{
+  "env": [
+    {
+      "qatools": "$HOUDINI_PACKAGE_PATH/qatools"
+    }
+  ],
+  "path": [
+    {
+      "HOUDINI_PATH": "$qatools"
+    }
+  ]
+}

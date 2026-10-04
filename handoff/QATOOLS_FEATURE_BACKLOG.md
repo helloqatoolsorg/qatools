@@ -97,3 +97,7 @@ Migration: 20261005100000_product_drafts.sql; apply before deploying new public 
 ## Remote migration checkpoint — 2026-10-05
 
 Owner reported successful supabase db push applying 20261005100000_product_drafts.sql. Remote schema migration is complete. Code commit/push, Vercel deployment and hosted workflow/visual verification are still pending.
+
+## Owner follow-up/editor installer batch — 2026-10-05
+
+Admin Products/draft form deployed and visually checked by owner. Follow-up local work: shared top shelf/left menu; tool-page-like media/metadata layout; bundle filter-style multi-selection with Add and whole-tag removal; green Published/red Unpublished across admin; account name/icon spacing. Separate HDA/standard JSON uploads prepare complete private individual-tool installer ZIPs, retaining the shared runtime and existing authorized download route. Builder supports multiple HDAs; bundle sales/delivery and bulk customer selection remain pending. Prepared releases are built on upload, not regenerated on each customer request. Source HDA/JSON asset catalog and dynamic bundle assembly are not implemented yet. No migration needed for this follow-up; code deployment and hosted editor/upload/install checks pending. See QATOOLS_PRODUCT_DRAFTS.md for limits, tests and scoped files.

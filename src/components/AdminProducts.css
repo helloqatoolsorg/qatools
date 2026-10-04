@@ -35,3 +35,29 @@
 .admin-product-error { color:#e19a8b; }
 @media(max-width:800px) { .admin-product-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:560px) { .admin-product-grid,.admin-product-fields { grid-template-columns:1fr; } .admin-media-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .admin-product-editor { padding:24px 16px; } }
+
+.admin-editor-content{max-width:none}
+.admin-product-editor{max-width:none;padding:0;margin:0}
+.admin-product-title{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.admin-product-hero{grid-template-columns:minmax(0,1.25fr) minmax(300px,1fr);gap:32px;margin-top:24px}
+.admin-product-info{position:static;padding-top:0}
+.admin-product-info .admin-product-fields{grid-template-columns:1fr;gap:20px}
+.admin-product-info label:first-child input{font:400 32px monospace;letter-spacing:-.06em}
+.admin-product-info textarea{line-height:1.65;min-height:180px}
+.admin-product-media-column .admin-product-media{border:0;padding:0;margin:0}
+.admin-hero-placeholder{min-height:570px;display:grid;place-items:center;color:#666;font:13px monospace}
+.admin-tool-package{border-top:1px solid var(--line);padding-top:12px;margin:30px 0}
+.admin-tool-package label{margin:18px 0}
+.admin-tool-package a{text-decoration:underline;text-underline-offset:3px}
+.admin-bundle-filter{position:relative}
+.admin-bundle-options{display:flex;flex-direction:column;gap:9px;padding:16px;max-height:360px;overflow:auto;width:min(330px,85vw)}
+.admin-products .admin-included-tool{display:inline-flex;gap:12px;align-items:center;font:11px monospace;padding:8px 10px}
+.admin-products .admin-included-tool:hover{background:#242424}
+.publication-state{display:inline-block;font:10px monospace;border:1px solid currentColor;padding:5px 7px}
+@media(max-width:1100px){.admin-product-hero{grid-template-columns:1fr}.admin-hero-placeholder,.admin-product-hero .product-media,.admin-product-hero .product-media img{min-height:320px}.admin-product-info .admin-product-fields{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.admin-product-info .admin-product-fields{grid-template-columns:1fr}}
+
+.admin-product-includes .admin-bundle-filter{border:0;padding:0}
+.admin-bundle-filter summary{list-style:none}
+.admin-bundle-filter summary::-webkit-details-marker{display:none}
+.admin-products .admin-included-tool{color:#999;border-color:#2a2a2a}

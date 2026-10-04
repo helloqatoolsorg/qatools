@@ -48,10 +48,10 @@ def show_account_dialog():
     values = ()
     try:
         action, values = hou.ui.readMultiInput("", ("License key",), password_input_indices=(0,),
-            buttons=("Activate", "Refresh", "Close"), title="qatools license key activation", default_choice=0, close_choice=2)
+            buttons=("Activate", "Refresh", "Close"), title="License key activation", default_choice=0, close_choice=2)
         if action == 0:
             client.activate(values[0])
-            hou.ui.displayMessage("qatools account activated for all owned tools.\nMachine limit: 1 active computer per account.", title="qatools")
+            hou.ui.displayMessage("qatools account activated for all owned tools.", title="qatools")
         elif action == 1:
             result = client.refresh(force=True)
             hou.ui.displayMessage("qatools license refreshed." if result.get("renewed") else result.get("message", "License status unchanged."), title="qatools")

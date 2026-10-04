@@ -58,3 +58,5 @@ Do not repeat completed purchases, uploads or account changes because an older d
 - Add private project-file delivery, bundle packages and generated bulk-tool installer archives; current draft editor only uploads artwork and reuses existing individual-tool ZIP admin controls.
 - Extend editor to published products with appropriate concurrency/payment-price handling; add artwork reordering/replacement/removal, videos and a complete tool-page preview. Current editor updates unpublished drafts only.
 - Verify newly deployed product filters, admin catalog/draft creation, artwork and individual-tool publication, plus the card/header refinements on desktop and mobile. No fake product/tool data or remote uploads were made.
+
+Editor continuation update: saved unpublished individual tools now have working separate HDA/portable JSON upload fields and automatic complete private ZIP preparation locally. The shared builder can combine multiple tools, but bundle delivery/ownership, separate source-asset storage and customer bulk download selection remain pending. Review current editor and normal downloaded Houdini installation before that larger batch.

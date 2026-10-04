@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import PublicationState from "@/components/PublicationState";
 import { supabase } from "@/lib/supabase";
 import "./AdminOrders.css";
 type Product = { id: string | number; name: string; slug: string; published: boolean };
@@ -11,7 +12,7 @@ export default function AdminPrices({ products }: { products: Product[] }) {
   return <section className="admin-orders">
     <div className="admin-orders-heading"><div><span className="admin-orders-kicker">PAYMENTS · SANDBOX</span><h2>Tool prices</h2></div></div>
     <p className="user-muted">Choose a paid tool to set up its Paddle price using the website price, including tax.</p>
-    <div className="admin-orders-controls"><label>Item<select value={id} onChange={e => setId(e.target.value)}><option value="">Choose an item</option>{products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label></div>
+    <div className="admin-orders-controls"><label>Item<select value={id} onChange={e => setId(e.target.value)}><option value="">Choose an item</option>{products.map(p => <option className={p.published ? "publication-option-published" : "publication-option-unpublished"} key={p.id} value={p.id}>{p.name}</option>)}</select></label></div>
     {id && <PriceEditor key={id} productId={Number(id)} />}
   </section>;
 }
@@ -56,7 +57,7 @@ function PriceEditor({ productId }: { productId: number }) {
   return <div>
     <button type="button" disabled={busy} onClick={() => request("load")}>{loaded ? "REFRESH PRICE" : "LOAD PRICE"}</button>
     {loaded && tool && <>
-      <p>{tool.slug} · {Number(tool.price_eur).toFixed(2)} EUR including tax · One-time purchase</p>
+      <PublicationState published={tool.published} /><p>{tool.slug} · {Number(tool.price_eur).toFixed(2)} EUR including tax · One-time purchase</p>
       {mapping ? <p role="status">{mapping.enabled ? "Paddle checkout enabled." : "Paddle checkout disabled."}</p> : <>
         <button type="button" disabled={busy || !canCreate} onClick={() => request("create")}>{busy ? "PLEASE WAIT…" : "SET UP PADDLE PRICE"}</button>
         {setup && <p className="user-muted">A setup attempt is recorded. Connect the existing IDs below; check Paddle if an ID is missing.</p>}
