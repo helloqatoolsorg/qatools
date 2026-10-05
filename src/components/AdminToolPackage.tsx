@@ -18,29 +18,29 @@ export default function AdminToolPackage({ productId, disabled, onBusyChange, to
     return () => { cancelled = true; };
   },[productId,revision]);
   async function upload() {
-    if (!tool || busy || disabled || (productId && !loaded)) return;
+    if ((kind!=="bundle" && !tool) || busy || disabled || (productId && !loaded)) return;
     setBusy(true); onBusyChange(true); setError(null); setMessage(null);
     try {
-      if (tool.size > 4 * 1024 * 1024 - 8192) throw new Error("Choose installer files totaling less than 4 MB.");
-      if(kind==="bundle" || prepared ? !/\.zip$/i.test(tool.name) : !/\.hda(lc|nc)?$/i.test(tool.name))throw new Error(prepared ? "Choose a prepared tool ZIP." : kind==="bundle" ? "Choose a bundle ZIP." : "Choose a Houdini HDA, HDALC or HDANC file.");
+      if (tool && tool.size > 4 * 1024 * 1024 - 8192) throw new Error("Choose installer files totaling less than 4 MB.");
+      if(tool && (prepared ? !/\.zip$/i.test(tool.name) : !/\.hda(lc|nc)?$/i.test(tool.name)))throw new Error(prepared ? "Choose a prepared tool ZIP." : kind==="bundle" ? "Choose a bundle ZIP." : "Choose a Houdini HDA, HDALC or HDANC file.");
       const targetId=await ensureDraft();
       let expectedPath=download?.file_path ?? "";
       if(!productId){const current=await fetch("/api/admin/downloads?productId="+targetId,{cache:"no-store",headers:{Authorization:"Bearer "+await token()}});const result=await current.json();if(!current.ok)throw new Error(result.error ?? "Unable to verify installer.");expectedPath=result.download?.file_path ?? "";}
-      const body = new FormData(); body.set("tool",tool);
+      const body = new FormData(); if(tool)body.set("tool",tool);
       const params = new URLSearchParams({productId:String(targetId),expectedPath});
-      const response = await fetch("/api/admin/products/package?" + params,{method:"POST",headers:{Authorization:"Bearer " + await token()},body});
+      const response = await fetch("/api/admin/products/"+(kind==="bundle" ? "assemble" : "package")+"?" + params,{method:"POST",headers:{Authorization:"Bearer " + await token()},...(kind==="bundle" ? {} : {body})});
       const result = await response.json(); if (!response.ok) throw new Error(result.error ?? "Unable to save installer.");
       setDownload(result.download); onToolChange(null); setMessage(result.message); setRevision(v=>v+1);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save installer."); }
     finally { setBusy(false); onBusyChange(false); }
   }
-  return <section className="admin-tool-package"><h2>Tool files</h2><p>{!productId && "Choose a file now; uploading saves an unpublished draft first. "}{kind==="bundle" ? "Upload a ZIP containing one HDA per included tool under qatools/otls/. Name each HDA after its tool slug; _online is also accepted. The shared installer files are included automatically." : "The installer includes one qatools.json, your HDA and the shared qatools licensing files."}</p>
+  return <section className="admin-tool-package"><h2>Tool files</h2><p>{!productId && kind!=="bundle" && "Choose a file now; uploading saves an unpublished draft first. "}{kind==="bundle" ? "Select the included tools, then build the installer from their uploaded files. Changes are saved before building. Each tool must be published with an enabled installer. Rebuild explicitly to include later tool updates." : "The installer includes one qatools.json, your HDA and the shared qatools licensing files."}</p>
     <fieldset disabled={disabled || busy}>
-      <label>{prepared ? "Replace prepared tool ZIP" : kind==="bundle" ? "Upload bundle ZIP" : "Upload Houdini tool"}<input key={revision} type="file" accept={kind==="bundle" || prepared ? ".zip" : ".hda,.hdalc,.hdanc"} onChange={e => { onToolChange(e.target.files?.[0] ?? null); setMessage(null); }} /></label>
+      {kind!=="bundle" && <label>{prepared ? "Replace prepared tool ZIP" : "Upload Houdini tool"}<input key={revision} type="file" accept={prepared ? ".zip" : ".hda,.hdalc,.hdanc"} onChange={e => { onToolChange(e.target.files?.[0] ?? null); setMessage(null); }} /></label>}
       {tool && <p>Selected: {tool.name} <button type="button" onClick={()=>onToolChange(null)}>Remove</button></p>}
       <p>qatools.json · included automatically</p>
       <p><a href="/qatools.json" download="qatools.json">Download standard qatools.json</a> · Use the portable package configuration.</p>
-      <button type="button" disabled={!tool || (!!productId && !loaded)} onClick={upload}>{busy ? "Preparing installer..." : download ? "Replace installer" : "Upload & prepare installer"}</button>
+      <button type="button" disabled={(kind!=="bundle" && !tool) || (!!productId && !loaded)} onClick={upload}>{busy ? "Preparing installer..." : kind==="bundle" ? download ? "Rebuild bundle installer" : "Build bundle installer" : download ? "Replace installer" : "Upload & prepare installer"}</button>
     </fieldset>
     {download && <p>Current installer: {download.file_name} · {download.enabled ? "enabled" : "disabled"}</p>}
     {error && <p role="alert" className="admin-product-error">{error} <button type="button" disabled={busy} onClick={() => { setLoaded(false); setRevision(v => v+1); }}>Reload</button></p>}{message && <p role="status">{message}</p>}

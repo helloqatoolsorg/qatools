@@ -126,3 +126,8 @@ Owner approved uploaded prepared ZIPs as the new-tool creation entry point. Loca
 ## Self-service authoring checkpoint — 2026-10-05
 
 Local Prepare qatools tool helper and portable Houdini 22 authoring installer are ready for owner GUI review. Supports saved single-output SOP assets with preserved originals, standard License fields, guarded output, shared offline verification, automatic prepared ZIP/metadata and scene-wide refresh for prepared instances. Unsupported layouts/conflicting scripts are refused. Six real Houdini functional tests pass. Next owner actions: install/show shelf, create real tools, upload them as drafts, then resume qabundle01 end-to-end tests. No new SQL migration; see QATOOLS_TOOL_AUTHORING.md.
+
+
+## Automatic bundle assembly checkpoint — 2026-10-05
+
+Bundles now assemble from the selected published tools' existing private installers; the editor no longer requires a bundle ZIP upload. Shared JSON/runtime appears once. Explicit rebuilds create independent saved releases; source updates never silently change an existing bundle. Transactional source-path/membership checks preserve the current installer on stale builds. Migration 20261005170000 precedes deployment. Owner purchase/download/Houdini/refund/repurchase verification is next. Project delivery and customer bulk selection remain deferred. See QATOOLS_BUNDLE_OWNERSHIP_DELIVERY.md for scoped rollout commands and bounds.

@@ -12,22 +12,17 @@
 - Existing grants are backfilled. Free/admin sources are preserved. Downloads through an inherited bundle grant are counted using its active purchase/admin origin. Counts measure authorized signed-link issuance, not completed file transfers.
 - Deleting an unused draft removes its own manifest/mapping/media metadata; commercial/price/history references still block deletion. Storage objects are retained, consistent with existing replacement behavior.
 
-## Bundle ZIP for the owner
+## Automatic bundle installer assembly — current workflow
 
-In the bundle editor, select published individual tools and save. Upload one ZIP with this structure:
+Supersedes the manual bundle ZIP upload workflow. Select published individual tools with enabled uploaded installers, then click Build bundle installer in the bundle editor. The editor saves the selection first. No bundle upload or new Houdini shelf action is required.
 
-```text
-qatools/
-  otls/
-    qafit01_online.hdalc
-    qaroad01.hda
-```
+The server fetches each selected tool's private installer, verifies its ZIP/HDA content against its slug and prepared identity when present, and keeps only the HDA. It inserts the current shared qatools.json and licensing/runtime once. The saved archive contains qatools.json at the root, HDAs under qatools/otls/, and shared runtime under qatools/. Individual downloads remain unchanged.
 
-Use each selected tool's exact slug as its filename stem; the optional _online suffix is accepted. HDA, HDALC and HDANC are supported. Exactly one HDA must match each selected tool, with no extra HDAs. Match the real HDA definition/licensing guard to its tool; filename/header validation does not inspect its Houdini node network.
+This is a separately saved bundle release. Later changes to an individual installer do not silently change an existing bundle. Click Rebuild bundle installer to explicitly update it. Released included-tool membership remains immutable; rebuilding preserves that composition. Publication and sandbox pricing still use the existing checks.
 
-qatools.json and standard shared runtime copies may be present, but the server replaces them with its trusted current versions. Other scripts, unrelated files, unsafe/duplicate paths, encrypted/unsupported ZIP entries, corrupt CRCs and oversized expanded content are rejected. Stored and deflated ZIPs are supported. Installer inputs must stay under the existing 4 MB multipart limit; expanded entries are individually bounded and the rebuilt archive is limited to 25 MB. Larger packages need a future direct-to-private-storage workflow.
+Missing/disabled/unpublished source tools, invalid ZIPs, identity mismatches, duplicate output filenames, changed sources, stale destination mappings and storage errors leave the current bundle mapping intact. Source paths and the saved selection are rechecked transactionally before selecting the newly uploaded archive. Unselected uploaded objects after a conflict are retained under the existing storage policy. Each source archive is limited to 5 MB and combined source ZIPs/output to 25 MB; source HDA limits remain 4 MB. Larger release handling remains a separate storage milestone. Projects remain unpublished.
 
-The prepared download contains one root qatools.json, all selected HDAs under qatools/otls/, and the shared licensing/runtime files. It uses this separately uploaded content, not constituent download mappings. Projects remain unpublished; their folder-preserving ZIP workflow is pending.
+The old manual-upload server endpoint remains for compatibility; the editor now exposes only assembly for bundles. Existing bundle archives are preserved until rebuilt.
 
 ## Apply locally prepared changes
 
@@ -62,3 +57,18 @@ Existing offline signed proofs can remain valid until their next successful chec
 ## Local verification
 
 110 targeted tests passed with no failures or skips: bundle ZIP validation and authorized upload, the actual migration chain in isolated PostgreSQL, historical grant backfill, independent/overlapping access, bundle-first mixed carts, refunds/replays, forced rollback, manual grants, download-source counts, unused-draft cleanup, existing cart/payment/VAT behavior, publication, licensing routes and admin recovery. Production build (including TypeScript), changed-source ESLint and diff whitespace checks passed. These tests use synthetic accounts/provider events and do not replace the owner's hosted sandbox and Houdini checks. No remote migration, commit, push, deployment or product upload was performed.
+
+
+## Automatic assembly rollout — 2026-10-05
+
+Implemented locally, not remotely applied or deployed. Apply migration 20261005170000_automatic_bundle_assembly.sql first. Then stage only this batch:
+
+```powershell
+git add next.config.ts src/app/api/admin/products/assemble/route.ts src/components/AdminToolPackage.tsx src/lib/database.types.ts supabase/migrations/20261005170000_automatic_bundle_assembly.sql tests/automatic-bundle-assembly.test.cjs tests/bundle-ownership.test.cjs handoff/QATOOLS_BUNDLE_OWNERSHIP_DELIVERY.md handoff/QATOOLS_FEATURE_BACKLOG.md
+git commit -m "Build bundle installers from selected tools"
+git push
+```
+
+After Ready: open qabundle01, select real published tools with uploaded installers, build, set/verify its discounted Paddle price and publish. Download/install the built archive, verify each included tool uses account activation, then run purchase/refund/repurchase checks. Refund a bundle containing a separately purchased tool and confirm that tool stays active. These owner-hosted tests remain pending.
+
+Local checks: six targeted tests pass (including actual PostgreSQL migration execution), assembly authorization and failure cases, preserved bundle/payment ownership tests. Production build/TypeScript, changed-source lint and diff check passed. No hosted products, source HDAs or installed Houdini licensing caches were changed.

@@ -107,6 +107,21 @@ test('actual PostgreSQL bundle sources, pinned checkout, overlapping refunds and
  }
  const legacyOld=await legacyBuy(60);await refund(legacyOld,61);await legacyBuy(62);await refund(legacyOld,63);assert.equal(await state(1,legacyBuyer),'active');
  await db.exec("UPDATE products SET slug='one' WHERE id=1");
+ // Assembly commits only the exact source mappings and membership it validated.
+ await db.exec(read('20261005170000_automatic_bundle_assembly.sql'));
+ await db.query("INSERT INTO storage.objects VALUES('qatools-downloads',$1)",[path(1)]);
+ await db.query("SELECT set_product_download($1,1,NULL,$2,'package.zip',true)",[admin,path(1)]);
+ const builtPath='10/00000000-0000-4000-8000-000000000099/built.zip';await db.query("INSERT INTO storage.objects VALUES('qatools-downloads',$1)",[builtPath]);
+ const sources=[{tool_id:1,file_path:path(1)},{tool_id:2,file_path:path(2)}];
+ for(const [who,src] of [[buyer,sources],[admin,[sources[0]]],[admin,[sources[0],{...sources[1],file_path:'stale.zip'}]],[admin,[sources[0],sources[0]]]]){
+  assert.equal((await db.query("SELECT set_assembled_bundle_download($1,10,$2,$3,'built.zip',$4) r",[who,path(10),builtPath,src])).rows[0].r.ok,false);
+ }
+ assert.equal((await db.query("SELECT set_assembled_bundle_download($1,10,$2,$3,'built.zip',$4) r",[admin,path(10),builtPath,sources])).rows[0].r.ok,true);
+ await assert.rejects(db.query("SELECT set_assembled_bundle_download($1,10,$2,$3,'built.zip',$4)",[admin,path(10),builtPath,sources]),/changed/);
+ await db.exec('UPDATE product_downloads SET enabled=false WHERE product_id=2');
+ assert.equal((await db.query("SELECT set_assembled_bundle_download($1,10,$2,$3,'built.zip',$4) r",[admin,builtPath,builtPath,sources])).rows[0].r.ok,false);
+ assert.equal((await db.query('SELECT file_path FROM bundle_releases WHERE product_id=10')).rows[0].file_path,builtPath);
+ for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'set_assembled_bundle_download(uuid,bigint,text,text,text,jsonb)','EXECUTE') allowed",[role])).rows[0].allowed,false);
  const rid='00000000-0000-4000-8000-000000000080';
  const identity={schema:1,label:'Beautiful Noise',internal_name:'Beautiful_Noise',slug:'beautiful_noise',file:'beautiful_noise.hda',sha256:'a'.repeat(64)};
  const imported=(await db.query('SELECT import_prepared_tool($1,$2,$3) r',[admin,rid,identity])).rows[0].r;
