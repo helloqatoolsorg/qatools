@@ -2,7 +2,7 @@ import { requireAdmin } from "@/lib/requireAdmin";
 import { privateJson, readActivationBody } from "@/lib/activationHttp";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { paddleCartDatabase } from "@/lib/paddleCartDatabase";
-import { cartMappings, validateCartPrice } from "@/lib/paddleCartCatalog";
+import { cartMappings, verifyCatalogPrice } from "@/lib/paddleCartCatalog";
 export async function GET(request: Request) {
   try {
     const auth = await requireAdmin(request);
@@ -24,8 +24,8 @@ export async function POST(request: Request) {
     if (product.error) throw new Error("Product lookup failed.");
     if (!product.data) return privateJson({ error: "Item not found." }, 404);
     if (body.enabled) {
-      try { await validateCartPrice(product.data, { product_id: body.productId, price_id: body.priceId, paddle_product_id: body.paddleProductId, enabled: true }); }
-      catch { return privateJson({ error: "The Paddle price must match the published tool: EUR including tax, one-time, quantity one, with the tool slug as its Paddle product name." }, 409); }
+      try { await verifyCatalogPrice(product.data, { product_id: body.productId, price_id: body.priceId, paddle_product_id: body.paddleProductId, enabled: true }); }
+      catch { return privateJson({ error: "The Paddle price must match the saved tool: EUR including tax, one-time, quantity one, with the tool slug as its Paddle product name." }, 409); }
     }
     const saved = await paddleCartDatabase.rpc("set_sandbox_product_price", { p_admin_id: auth.user.id, p_product_id: body.productId,
       p_price_id: body.priceId, p_paddle_product_id: body.paddleProductId, p_enabled: body.enabled,

@@ -252,3 +252,11 @@ Free acquisition follow-up: owner reported the migration push complete and a zer
 - Owner approved optional business/VAT details at Paddle checkout. Individual buyers are not required to provide them. Paddle collects those details and includes them on its invoice; qatools retrieves the account's invoice without duplicating VAT registration data in its own profiles.
 - Owner observed VAT becoming zero and the payable amount decreasing after adding a VAT number in sandbox. The implementation must retain the website catalog price while recording the provider-confirmed amount actually paid. Refund matching must use actual paid amounts.
 - Tax eligibility and calculation remain Paddle's responsibility; no promise is made that every VAT number removes VAT or that sandbox validation proves live eligibility. The coordinated VAT-total fix is local and requires migration/deployment and a real hosted sandbox invoice check. See QATOOLS_BUSINESS_TAX_TOTALS.md.
+
+## Admin publication and composed-product policy — 2026-10-05
+
+Approved: incomplete drafts may be saved; publication requires server-checked metadata, media, delivery and a matching verified price for paid products. Free products skip Paddle. First release date is set by the server and retained thereafter. Shared qatools.json and licensing runtime are maintained centrally, with a fixed copy included once in each prepared release.
+
+Approved bundle/project model: a separate catalog product, price, purchase and uploaded release ZIP, with backend links to its included tools. These links are not decorative-only. Already-owned tools do not reduce the fixed bundle price. Published membership/release contents must be recorded consistently for licensing/refunds. A full bundle refund removes only access supplied by that purchase; independent purchases, another active bundle or another valid source must continue to provide access. Projects use validated ZIP uploads initially, preserving folder structure.
+
+Implementation boundary: this admin-publication batch implements draft/editor improvements and individual-tool publication. Bundle/project commercial fulfillment, purchase-source tracking, dedicated ZIP validation and refund projection remain pending. Composition publication stays blocked until those are verified. No legal agreement or live Paddle rollout is claimed.

@@ -29,8 +29,8 @@ export async function POST(request: Request) {
       return privateJson({ error: "Choose one valid item." }, 400);
     const { data: product, error: productError } = await supabaseAdmin.from("products")
       .select("id,slug,price_eur,published").eq("id", Number(body.productId)).single();
-    if (productError || !product) return privateJson({ error: "Item unavailable." }, 400);
-    const mapping = await fetchValidatedSandboxPrice(product);
+    if (productError || !product || product.price_eur === null) return privateJson({ error: "Item unavailable." }, 400);
+    const mapping = await fetchValidatedSandboxPrice({...product,price_eur:product.price_eur});
     const { data: reservation, error } = await paddleCheckoutDatabase.rpc("reserve_sandbox_checkout", {
       p_user_id: auth.user.id, p_product_id: product.id,
     });

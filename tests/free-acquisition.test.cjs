@@ -37,7 +37,7 @@ function cart(options={}) {
  const mod={exports:{}};
  vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/app/cart/page.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,{
   exports:mod.exports,fetch:async(url,init)=>{requests.push({url,init});return Response.json(options.failure?{error:'Price changed'}:{products:[{slug:'free'}]},{status:options.failure?409:200});},
-  require(name){if(name==='react')return {useState(value){const i=index++;state[i]=value;return [value,v=>state[i]=v];}};
+  require(name){if(name==='@/components/AccountName'||name==='@/components/SandboxCheckout')return ()=>null;if(name==='react')return {useState(value){const i=index++;state[i]=value;return [value,v=>state[i]=v];}};
    if(name==='react/jsx-runtime')return {jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})};
    if(name==='@/lib/supabase')return {supabase:{auth:{getSession:async()=>({data:{session:options.loggedOut?null:{access_token:'synthetic'}},error:null})}}};
    if(name==='@/hooks/useCartProducts')return {useCartProducts:()=>({products,total:10,loading:false}),formatCartPrice:String,getCartProductImage:()=>null};
@@ -53,7 +53,7 @@ test('mixed cart sends only free IDs and refreshes ownership after confirmed suc
 test('failed acquisition or missing login retains cart and ownership',async()=>{
  for(const options of [{failure:true},{loggedOut:true}]){const c=cart(options);await c.button.props.onClick();assert.deepEqual(c.removed,[]);assert.equal(c.refreshed,0);assert.ok(c.state[2]);assert.equal(c.state[0],false);}
 });
-test('paid-only checkout is disabled and cannot acquire items',async()=>{const c=cart({paidOnly:true});assert.equal(c.button.props.disabled,true);await c.button.props.onClick();assert.equal(c.requests.length,0);});
+test('paid-only cart exposes no free acquisition action',async()=>{const c=cart({paidOnly:true});assert.equal(c.button,null);assert.equal(c.requests.length,0);});
 test('SQL validates catalog/account atomically and preserves existing ownership',{skip:!process.env.PGLITE_TEST_MODULE},async()=>{
  const {PGlite}=require(process.env.PGLITE_TEST_MODULE),db=new PGlite();
  const user='00000000-0000-0000-0000-000000000001',unconfirmed='00000000-0000-0000-0000-000000000002',banned='00000000-0000-0000-0000-000000000003';

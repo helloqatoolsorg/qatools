@@ -4,7 +4,7 @@ import PublicationState from "@/components/PublicationState";
 import { supabase } from "@/lib/supabase";
 import "./AdminOrders.css";
 type Product = { id: string | number; name: string; slug: string; published: boolean };
-type Tool = { id: number; slug: string; price_eur: number | string; published: boolean };
+type Tool = { id: number; slug: string; price_eur: number | string | null; published: boolean };
 type Mapping = { product_id: number; price_id: string; paddle_product_id: string; enabled: boolean };
 type Setup = { status: string; paddle_product_id: string | null; price_id: string | null };
 export default function AdminPrices({ products }: { products: Product[] }) {
@@ -16,7 +16,7 @@ export default function AdminPrices({ products }: { products: Product[] }) {
     {id && <PriceEditor key={id} productId={Number(id)} />}
   </section>;
 }
-function PriceEditor({ productId }: { productId: number }) {
+export function PriceEditor({ productId }: { productId: number }) {
   const [mapping, setMapping] = useState<Mapping | null>(null), [tool, setTool] = useState<Tool | null>(null), [setup, setSetup] = useState<Setup | null>(null);
   const [loaded, setLoaded] = useState(false), [price, setPrice] = useState(""), [product, setProduct] = useState("");
   const [enabled, setEnabled] = useState(true), [busy, setBusy] = useState(false), [message, setMessage] = useState<string | null>(null), [error, setError] = useState<string | null>(null);
@@ -53,16 +53,16 @@ function PriceEditor({ productId }: { productId: number }) {
       setError(text);
     } finally { setBusy(false); }
   }
-  const canCreate = loaded && tool?.published && Number(tool.price_eur) > 0 && !mapping && !setup;
+  const canCreate = loaded && tool && Number(tool.price_eur) > 0 && !mapping && !setup;
   return <div>
     <button type="button" disabled={busy} onClick={() => request("load")}>{loaded ? "REFRESH PRICE" : "LOAD PRICE"}</button>
     {loaded && tool && <>
-      <PublicationState published={tool.published} /><p>{tool.slug} · {Number(tool.price_eur).toFixed(2)} EUR including tax · One-time purchase</p>
+      <PublicationState published={tool.published} /><p>{tool.slug} · {tool.price_eur === null ? "Price not set" : Number(tool.price_eur).toFixed(2) + " EUR including tax"} · One-time purchase</p>
       {mapping ? <p role="status">{mapping.enabled ? "Paddle checkout enabled." : "Paddle checkout disabled."}</p> : <>
         <button type="button" disabled={busy || !canCreate} onClick={() => request("create")}>{busy ? "PLEASE WAIT…" : "SET UP PADDLE PRICE"}</button>
         {setup && <p className="user-muted">A setup attempt is recorded. Connect the existing IDs below; check Paddle if an ID is missing.</p>}
-        {!tool.published && <p className="user-muted">Publish this tool before setting up its price.</p>}
-        {Number(tool.price_eur) === 0 && <p className="user-muted">Free tools do not need Paddle.</p>}
+        {!tool.published && <p className="user-muted">Price setup does not publish this draft.</p>}
+        {tool.price_eur !== null && Number(tool.price_eur) === 0 && <p className="user-muted">Free tools do not need Paddle.</p>}
       </>}
       <details>
         <summary>Connect existing IDs or manage price</summary>

@@ -69,7 +69,7 @@ test('catalog rejects forged values and changed, unpublished or free tools befor
   for (const body of [{ productId: '2' }, { productId: 2, expectedSlug: 'wrong', expectedAmount: 700 }, { productId: 2, expectedSlug: 'synthetic-tool', expectedAmount: 1 }, { productId: 2, expectedSlug: 'synthetic-tool', expectedAmount: 700, apiKey: 'forged' }]) {
     const s = setup(); assert.ok((await s.post(body)).status >= 400); assert.equal(s.network.length, 0);
   }
-  for (const option of ['free', 'unpublished', 'mapped', 'prior']) { const s = setup({ [option]: true }); assert.ok((await s.post()).status >= 400); assert.equal(s.network.length, 0); }
+  for (const option of ['free', 'mapped', 'prior']) { const s = setup({ [option]: true }); assert.ok((await s.post()).status >= 400); assert.equal(s.network.length, 0); }
 });
 test('catalog creates one sandbox product and price using trusted settings and persisted stages', async () => {
   const s = setup(), r = await s.post(); assert.equal(r.status, 200); assert.equal(r.headers.get('cache-control'), 'no-store');
@@ -134,3 +134,7 @@ test('real SQL guards catalog attempts, immutable snapshots, stages, mapping and
     }
   } finally { await db.close(); }
 });
+
+test('saved paid drafts can prepare Paddle without publishing',async()=>{const s=setup({unpublished:true});assert.equal((await s.post()).status,200);assert.equal(s.calls.some(c=>typeof c==='object'&&c.name==='publish_product_draft'),false);});
+
+test('draft setup reuses an existing matching Paddle price',async()=>{const s=setup({unpublished:true,existingPrice:true});assert.equal((await s.post()).status,200);assert.equal(s.network.filter(n=>n.method==='POST').length,0);});

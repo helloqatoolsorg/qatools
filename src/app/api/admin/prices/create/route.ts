@@ -2,7 +2,7 @@ import { requireAdmin } from "@/lib/requireAdmin";
 import { privateJson, readActivationBody } from "@/lib/activationHttp";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { paddleCartDatabase } from "@/lib/paddleCartDatabase";
-import { euroCents, validateCartPrice, type CartProduct } from "@/lib/paddleCartCatalog";
+import { euroCents, verifyCatalogPrice, type CartProduct } from "@/lib/paddleCartCatalog";
 import { catalogRequest, CatalogSetupError, findCatalogEntry } from "@/lib/paddleCatalogSetup";
 
 export async function GET(request: Request) {
@@ -30,13 +30,13 @@ export async function POST(request: Request) {
     if (!body || Object.keys(body).some(k => !["productId", "expectedSlug", "expectedAmount"].includes(k)) ||
       typeof body.productId !== "number" || !Number.isSafeInteger(body.productId) || body.productId <= 0 ||
       typeof body.expectedSlug !== "string" || typeof body.expectedAmount !== "number" || !Number.isSafeInteger(body.expectedAmount) || body.expectedAmount <= 0) {
-      return privateJson({ error: "Load a published paid tool before setting up Paddle." }, 400);
+      return privateJson({ error: "Load a saved paid tool before setting up Paddle." }, 400);
     }
     const found = await supabaseAdmin.from("products").select("id,slug,price_eur,published").eq("id", body.productId).maybeSingle();
     if (found.error) throw new Error("Lookup failed.");
     if (!found.data) return privateJson({ error: "Item not found." }, 404);
     const tool: CartProduct = found.data;
-    if (!tool.published || !tool.slug || tool.slug.length > 150 || tool.slug !== body.expectedSlug || euroCents(tool.price_eur) !== body.expectedAmount) {
+    if (!tool.slug || tool.slug.length > 150 || tool.slug !== body.expectedSlug || euroCents(tool.price_eur) !== body.expectedAmount) {
       return privateJson({ error: "The website tool or price changed. Reload the price panel." }, 409);
     }
     const mapped = await paddleCartDatabase.from("sandbox_product_prices").select("product_id,price_id,paddle_product_id,enabled").eq("product_id", tool.id).maybeSingle();
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
       await advance("price_creating", "price_ready", productId, priceId);
     } else await advance("product_ready", "price_ready", productId, priceId);
     // Verify the actual stored provider price, then atomically map only the unchanged website snapshot.
-    await validateCartPrice(tool, { product_id: tool.id, price_id: priceId, paddle_product_id: productId, enabled: true });
+    await verifyCatalogPrice(tool, { product_id: tool.id, price_id: priceId, paddle_product_id: productId, enabled: true });
     const completed = await paddleCartDatabase.rpc("complete_sandbox_catalog_setup", { p_admin_id: adminId, p_attempt_id: attemptId });
     if (completed.error || completed.data !== true) throw new CatalogSetupError("Paddle entries are saved, but the website price changed or could not be linked. Reload and connect the existing IDs.");
     return privateJson({ message: "Paddle sandbox price is ready. The website price was verified and checkout is enabled." });

@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const chunks: Uint8Array[] = []; let length = 0;
     while (true) { const part = await reader.read(); if (part.done) break; length += part.value.length; if (length > 4 * 1024 * 1024) { await reader.cancel(); return json({ error: "Choose an image up to 4 MB." }, 413); } chunks.push(part.value); }
     const bytes = Buffer.concat(chunks); const format = imageFormat(bytes);
-    if (!format) return json({ error: "Choose a PNG, JPG or WebP image." }, 400);
+    if (!format) return json({ error: "Choose a PNG, JPG, WebP or GIF image." }, 400);
     const { data: bucket, error: bucketError } = await supabaseAdmin.storage.getBucket("product-media");
     if (bucketError || !bucket?.public) return json({ error: "Product media storage is unavailable." }, 503);
     const path = "drafts/" + id + "/" + randomUUID() + "." + format;

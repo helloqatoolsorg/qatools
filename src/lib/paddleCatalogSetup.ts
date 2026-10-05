@@ -1,6 +1,6 @@
 import "server-only";
 import { paddleSandboxApiConfig } from "./paddleSandbox";
-import { CartPriceMismatchError, euroCents, validateCartPrice, type CartProduct } from "./paddleCartCatalog";
+import { CartPriceMismatchError, euroCents, verifyCatalogPrice, type CartProduct } from "./paddleCartCatalog";
 
 export class CatalogSetupError extends Error {}
 type ProviderProduct = { id: string; name: string; status: string; type: string; tax_category: string; prices?: { id: string }[] };
@@ -44,7 +44,7 @@ export async function findCatalogEntry(product: CartProduct) {
   if (existing.prices.length > 100) throw new CatalogSetupError("Connect this tool's price IDs manually.");
   for (const price of existing.prices) {
     try {
-      await validateCartPrice(product, { product_id: product.id, paddle_product_id: existing.id, price_id: price.id, enabled: true });
+      await verifyCatalogPrice(product, { product_id: product.id, paddle_product_id: existing.id, price_id: price.id, enabled: true });
       valid.push(price.id);
     } catch (error) {
       // Only a verified mismatch permits another price. Transport/permission failures stop setup.

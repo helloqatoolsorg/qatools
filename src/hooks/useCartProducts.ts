@@ -148,7 +148,7 @@ export function useCartProducts() {
       }
 
       const loaded =
-        data ?? [];
+        (data ?? []).filter((p): p is typeof p & {price_eur:number} => p.price_eur !== null);
 
       /*
         Keep the same order as

@@ -12,8 +12,8 @@ async function token() {
   if (result.error || !result.data.session) throw new Error("Please log in again.");
   return result.data.session.access_token;
 }
-export default function AdminDownloads({ products }: { products: Product[] }) {
-  const [id, setId] = useState("");
+export default function AdminDownloads({ products, productId }: { products: Product[]; productId?: number }) {
+  const [id, setId] = useState(productId ? String(productId) : "");
   const [download, setDownload] = useState<Download | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [revision, setRevision] = useState(0);
@@ -23,7 +23,6 @@ export default function AdminDownloads({ products }: { products: Product[] }) {
   const [message, setMessage] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
-    setDownload(null); setLoaded(false); setFile(null); setError(null);
     if (!id) return;
     (async () => {
       try {
@@ -49,15 +48,15 @@ export default function AdminDownloads({ products }: { products: Product[] }) {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Unable to save download.");
-      setMessage(result.message); setRevision(value => value + 1);
+      setMessage(result.message); setLoaded(false); setFile(null); setRevision(value => value + 1);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save download."); }
     finally { setBusy(false); }
   }
   return <section className="admin-orders admin-downloads">
     <div className="admin-orders-heading"><div><span className="admin-orders-kicker">DELIVERY</span><h2>Tool downloads</h2></div></div>
     <div className="admin-orders-controls">
-      <label>Item<select value={id} disabled={busy} onChange={event => { setId(event.target.value); setLoaded(false); setDownload(null); setFile(null); setMessage(null); }}><option value="">Choose an item</option>{products.map(product => <option className={product.published ? "publication-option-published" : "publication-option-unpublished"} key={product.id} value={product.id}>{product.name}{product.published ? "" : " (unpublished)"}</option>)}</select></label>
-      <button type="button" disabled={!id || busy} onClick={() => setRevision(value => value + 1)}>REFRESH</button>
+      {!productId && <label>Item<select value={id} disabled={busy} onChange={event => { setId(event.target.value); setLoaded(false); setDownload(null); setFile(null); setMessage(null); }}><option value="">Choose an item</option>{products.map(product => <option className={product.published ? "publication-option-published" : "publication-option-unpublished"} key={product.id} value={product.id}>{product.name}{product.published ? "" : " (unpublished)"}</option>)}</select></label>}
+      <button type="button" disabled={!id || busy} onClick={() => {setLoaded(false);setFile(null);setError(null);setRevision(value => value + 1);}}>REFRESH</button>
     </div>
     {id && <div className="admin-download-details">
       <PublicationState published={products.find(p => String(p.id) === id)?.published ?? false} />

@@ -152,7 +152,7 @@ export function useLikedProducts() {
       }
 
       const loaded =
-        data ?? [];
+        (data ?? []).filter((p): p is typeof p & {price_eur:number} => p.price_eur !== null);
 
       loaded.sort(
         (a, b) =>

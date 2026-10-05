@@ -1,9 +1,9 @@
 import "server-only";
 import { paddleSandboxApiConfig } from "./paddleSandbox";
 import { paddleCartDatabase, type PriceMapping, type CartLine } from "./paddleCartDatabase";
-export type CartProduct = { id: number; slug: string; price_eur: number | string; published: boolean };
+export type CartProduct = { id: number; slug: string; price_eur: number | string | null; published: boolean };
 export class CartPriceMismatchError extends Error {}
-export function euroCents(value: number | string): number {
+export function euroCents(value: number | string | null): number {
   const text = String(value);
   if (!/^(0|[1-9][0-9]{0,5})(\.[0-9]{1,2})?$/.test(text)) throw new Error("Invalid item price.");
   const [whole, fraction = ""] = text.split(".");
@@ -12,8 +12,13 @@ export function euroCents(value: number | string): number {
   return cents;
 }
 export async function validateCartPrice(product: CartProduct, mapping: PriceMapping): Promise<CartLine> {
+  if (!product.published) throw new Error("Item unavailable.");
+  return verifyCatalogPrice(product,mapping);
+}
+// Admin setup can verify a saved draft without enabling customer checkout.
+export async function verifyCatalogPrice(product: CartProduct, mapping: PriceMapping): Promise<CartLine> {
   const amount = euroCents(product.price_eur);
-  if (!product.published || product.id !== mapping.product_id || !mapping.enabled ||
+  if (product.id !== mapping.product_id || !mapping.enabled ||
       !/^pri_[a-z0-9]{26}$/.test(mapping.price_id) || !/^pro_[a-z0-9]{26}$/.test(mapping.paddle_product_id)) throw new Error("Item unavailable.");
   const config = paddleSandboxApiConfig();
   const response = await fetch(config.apiBase + "/prices/" + mapping.price_id + "?include=product", {

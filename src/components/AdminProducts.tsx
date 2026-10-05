@@ -1,4 +1,7 @@
 "use client";
+import { PriceEditor } from "@/components/AdminPrices";
+import ProductPublication from "@/components/ProductPublication";
+import AdminDownloads from "@/components/AdminDownloads";
 import AdminToolPackage from "@/components/AdminToolPackage";
 import PublicationState from "@/components/PublicationState";
 import Image from "next/image";
@@ -23,6 +26,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   const userId = user?.id;
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [id, setId] = useState<number | null>(null);
+  const [priceText,setPriceText]=useState("0");
   const [draft, setDraft] = useState<DraftInput | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [pendingTools, setPendingTools] = useState<number[]>([]);
@@ -55,8 +59,8 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
           if (rawId !== null) {
             const product = body.products.find((p: Product) => String(p.id) === rawId);
             if (!product) throw new Error("Product not found.");
-            setId(product.id); setUpdatedAt(product.updated_at); setDraft({ name: product.name, product_type: product.product_type, subtitle: product.subtitle, description: product.description, price_eur: Number(product.price_eur), compatibility: product.compatibility, current_version: product.current_version, release_date: product.release_date, category_id: product.category_id, complexity_id: product.complexity_id, tool_ids: product.tool_ids });
-            setPendingTools(product.tool_ids); setDirty(false);
+            setId(product.id); setUpdatedAt(product.updated_at); setDraft({ name: product.name, product_type: product.product_type, subtitle: product.subtitle, description: product.description, price_eur: product.price_eur === null ? null : Number(product.price_eur), compatibility: product.compatibility, current_version: product.current_version, release_date: product.release_date, category_id: product.category_id ?? 0, complexity_id: product.complexity_id ?? 0, tool_ids: product.tool_ids });
+            setPriceText(product.price_eur === null ? "" : String(product.price_eur)); setPendingTools(product.tool_ids); setDirty(false);
           }
         }
         setError(null);
@@ -68,15 +72,18 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   const selected = catalog?.products.find(p => p.id === id);
   const readOnly = selected?.published ?? false;
   function choose(kind: ProductType) {
+    setPriceText("0");
     setDraft({ name: "", product_type: kind, subtitle: "", description: "", price_eur: 0, compatibility: "", current_version: "", release_date: null, category_id: 0, complexity_id: 0, tool_ids: [] }); setDirty(true);
   }
   function change<K extends keyof DraftInput>(key: K, value: DraftInput[K]) { setDraft(d => d ? { ...d, [key]: value } : d); setDirty(true); setMessage(null); }
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!draft || busy || packageBusy || readOnly) return;
+    if(priceText!=="" && !/^(0|[1-9][0-9]{0,5})([.,][0-9]{1,2})?$/.test(priceText)){setError("Enter a price with at most two decimal places.");return;}
+    const amount=priceText===""?null:Number(priceText.replace(",","."));
     setBusy(true); setError(null); setMessage(null);
     try {
       requestId.current ??= crypto.randomUUID();
-      const response = await fetch("/api/admin/products", { method: "POST", headers: { Authorization: "Bearer " + await access(), "Content-Type": "application/json" }, body: JSON.stringify({ requestId: requestId.current, data: draft, ...(id ? { productId: id, expectedUpdatedAt: updatedAt } : {}) }) });
+      const response = await fetch("/api/admin/products", { method: "POST", headers: { Authorization: "Bearer " + await access(), "Content-Type": "application/json" }, body: JSON.stringify({ requestId: requestId.current, data: {...draft,price_eur:amount}, ...(id ? { productId: id, expectedUpdatedAt: updatedAt } : {}) }) });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error ?? "Unable to save draft.");
       setId(body.draft.id); setUpdatedAt(body.draft.updated_at); setDirty(false); setMessage(body.message);
@@ -85,17 +92,6 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
         if (!await upload(pendingArtwork.file, true, { id: body.draft.id, updatedAt: body.draft.updated_at, mediaId: selected?.product_media.find(m => m.role === "card")?.id ?? null })) return;
       } else setRevision(v => v + 1);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save draft."); }
-    finally { setBusy(false); }
-  }
-  async function publish() {
-    if (!id || !updatedAt || dirty || busy || packageBusy || readOnly || draft?.product_type !== "tool") return;
-    if (!window.confirm("Publish " + draft.name + " on the website? Check its content and download package first.")) return;
-    setBusy(true); setError(null); setMessage(null);
-    try {
-      const response = await fetch("/api/admin/products", { method: "PATCH", headers: { Authorization: "Bearer " + await access(), "Content-Type": "application/json" }, body: JSON.stringify({ productId: id, expectedUpdatedAt: updatedAt }) });
-      const body = await response.json(); if (!response.ok) throw new Error(body.error ?? "Unable to publish tool.");
-      setMessage(body.message); setRevision(v => v + 1);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to publish tool."); }
     finally { setBusy(false); }
   }
   async function upload(file: File | undefined, main = false, target?: {id:number;updatedAt:string;mediaId:number|null}) {
@@ -118,7 +114,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   }
   function chooseArtwork(file: File | undefined) {
     if (!file) return;
-    if (file.size > 4 * 1024 * 1024 || !["image/png","image/jpeg","image/webp"].includes(file.type)) { setError("Choose a PNG, JPG or WebP up to 4 MB."); return; }
+    if (file.size > 4 * 1024 * 1024 || !["image/png","image/jpeg","image/webp","image/gif"].includes(file.type)) { setError("Choose a PNG, JPG, WebP or GIF up to 4 MB."); return; }
     setError(null); setPendingArtwork({file,url:URL.createObjectURL(file)});
     if (id && !dirty) void upload(file,true);
   }
@@ -129,9 +125,10 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   if (!editor) return <section className="admin-products">
     <h2>Products</h2>
     <div className="admin-product-filters"><label>State<select value={stateFilter} onChange={e => setStateFilter(e.target.value)}><option value="all">All</option><option value="published">Published</option><option value="draft">Unpublished</option></select></label><label>Type<select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}><option value="all">All</option>{productTypes.map(t => <option key={t}>{t}</option>)}</select></label><label>Search<input value={query} onChange={e => setQuery(e.target.value)} /></label></div>
-    <div className="product-grid admin-product-grid"><a className="card admin-new-product" href="/admin/products/edit"><span>＋</span>New product</a>
+    <div className="admin-product-entry-actions"><a className="card admin-new-product" href="/admin/products/edit">＋ New product</a><button type="button" className="card admin-new-product" disabled={!catalog.products.some(p=>!p.published)} onClick={()=>{setStateFilter("draft");setTypeFilter("all");setQuery("");}}>Continue editing</button></div>
+    <div className="product-grid admin-product-grid">
       {catalog.products.filter(p => (stateFilter === "all" || p.published === (stateFilter === "published")) && (typeFilter === "all" || p.product_type === typeFilter) && (p.name + " " + p.subtitle).toLowerCase().includes(query.toLowerCase())).map(p => {
-        const image = artwork(p); return <a key={p.id} className="product-card admin-product-card" href={"/admin/products/edit?id=" + p.id}>{image ? <div className="media-frame"><Image src={image} alt={p.name} width={640} height={360} unoptimized /></div> : <div className="admin-product-artwork">No artwork</div>}<div className="card-info"><h3>{p.name}</h3><p>{p.subtitle}</p><div className="tags"><span className="card-tag">{p.product_type.toUpperCase()}</span><PublicationState published={p.published} /></div><p>€{Number(p.price_eur).toFixed(2)}</p></div></a>;
+        const image = artwork(p); return <article key={p.id} className="product-card admin-product-card"><a href={"/admin/products/edit?id="+p.id}>{image ? <div className="media-frame"><Image src={image} alt={p.name} width={640} height={360} unoptimized /></div> : <div className="admin-product-artwork">No artwork</div>}<div className="card-info"><h3>{p.name}</h3><p>{p.subtitle}</p><div className="tags"><span className="card-tag">{p.product_type.toUpperCase()}</span><PublicationState published={p.published}/></div><p>{p.price_eur===null?"Price not set":"€"+Number(p.price_eur).toFixed(2)}</p></div></a>{!p.published&&<div className="admin-card-actions"><a className="admin-card-action" href={"/admin/products/edit?id="+p.id}>Edit</a><a className="admin-card-action" href={"/admin/products/edit?id="+p.id+"&publish=1"}>Publish</a></div>}</article>;
       })}
     </div>
   </section>;
@@ -139,35 +136,37 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
     {error && <p role="alert" className="admin-product-error">{error}</p>}{message && <p role="status">{message}</p>}
     {!draft ? <div className="admin-type-choice" role="dialog" aria-modal="false" aria-labelledby="product-type-title"><h2 id="product-type-title">Choose product type</h2>{productTypes.map(t => <button key={t} type="button" onClick={() => choose(t)}>{t.toUpperCase()}</button>)}</div> : <>
       {readOnly && <p>This product is published. This editor currently saves unpublished drafts only. <a href={"/product?slug=" + selected?.slug}>View product</a></p>}
-      <div className="product-hero admin-product-hero"><div className="admin-product-media-column">      <section className="admin-product-media"><input ref={artworkInput} className="admin-artwork-input" type="file" accept="image/png,image/jpeg,image/webp" disabled={busy || packageBusy || readOnly} onChange={e => { chooseArtwork(e.target.files?.[0]); e.target.value=""; }} />
+      <div className="product-hero admin-product-hero"><div className="admin-product-media-column">      <section className="admin-product-media"><input ref={artworkInput} className="admin-artwork-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy || packageBusy || readOnly} onChange={e => { chooseArtwork(e.target.files?.[0]); e.target.value=""; }} />
           <button type="button" className="product-media admin-main-artwork" disabled={busy || packageBusy || readOnly} onClick={() => artworkInput.current?.click()} aria-label={pendingArtwork || (selected && artwork(selected)) ? "Change main image" : "Upload main image"}>
             {pendingArtwork || (selected && artwork(selected)) ? <Image src={pendingArtwork?.url ?? artwork(selected!)!} alt="Product preview" width={960} height={600} unoptimized /> : <span className="admin-hero-placeholder">＋ Add media</span>}
-            <span className="admin-artwork-overlay">{busy ? "Uploading..." : pendingArtwork || (selected && artwork(selected)) ? "Click to change image" : "PNG · JPG · WebP"}</span>
+            <span className="admin-artwork-overlay">{busy ? "Uploading..." : pendingArtwork || (selected && artwork(selected)) ? "Click to change image" : "PNG · JPG · WebP · GIF"}</span>
           </button>
           {pendingArtwork && <p>{dirty || !id ? "Image selected. Save the draft to upload it." : "Image selected."}</p>}
-          <h2>Gallery</h2><p>PNG, JPG or WebP up to 4 MB.</p><div className="admin-media-grid">{selected?.product_media.filter(m => m.role !== "card" && m.role !== "main").map(m => { const url = mediaUrl(m); return url ? <div key={m.id}><Image src={url} alt="Product artwork" width={640} height={360} unoptimized /><small>{m.role}</small></div> : null; })}</div><label className="admin-media-upload">Add gallery image<input type="file" accept="image/png,image/jpeg,image/webp" disabled={!id || busy || dirty || readOnly} onChange={e => { void upload(e.target.files?.[0]); e.target.value=""; }} /></label>{dirty && id && <p>Save your changes before adding media.</p>}</section>{draft.product_type === "tool" && <AdminToolPackage key={id ?? "new"} productId={id} disabled={busy || dirty || readOnly} onBusyChange={setPackageBusy} />}</div><div className="product-info admin-product-info"><form onSubmit={save}><fieldset disabled={busy || packageBusy || readOnly}><div className="admin-product-fields">
+          {draft.product_type !== "tool" && <p>qatools.json · included automatically in the release package</p>}<h2>Gallery</h2><p>PNG, JPG, WebP or GIF up to 4 MB.</p><div className="admin-media-grid">{selected?.product_media.filter(m => m.role !== "card" && m.role !== "main").map(m => { const url = mediaUrl(m); return url ? <div key={m.id}><Image src={url} alt="Product artwork" width={640} height={360} unoptimized /><small>{m.role}</small></div> : null; })}</div><label className="admin-media-upload">Add gallery image<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={!id || busy || dirty || readOnly} onChange={e => { void upload(e.target.files?.[0]); e.target.value=""; }} /></label>{dirty && id && <p>Save your changes before adding media.</p>}</section>{draft.product_type === "tool" && <AdminToolPackage key={id ?? "new"} productId={id} disabled={busy || dirty} onBusyChange={setPackageBusy} />}{id && readOnly && <details><summary>Advanced ZIP replacement and download availability</summary><AdminDownloads key={id} productId={id} products={[{id,name:draft.name,slug:selected?.slug ?? draft.name,published:readOnly}]} /></details>}</div><div className="product-info admin-product-info"><form onSubmit={save}><fieldset disabled={busy || packageBusy || readOnly}><div className="admin-product-fields">
         <label>Title<input required pattern="[a-z0-9][a-z0-9_-]{0,79}" maxLength={80} value={draft.name} onChange={e => change("name",e.target.value)} placeholder="qatool01" /><small>Lowercase letters, numbers, underscores or hyphens. Slug matches the title.</small></label>
         <label>Type<input value={draft.product_type} readOnly /></label>
-        <label className="admin-product-wide">Subtitle<input required maxLength={200} value={draft.subtitle} onChange={e => change("subtitle",e.target.value)} /></label>
-        <label className="admin-product-wide">Description<textarea required maxLength={20000} rows={10} value={draft.description} onChange={e => change("description",e.target.value)} /></label>
-        <label>Price · EUR including tax<input required type="number" min={0} max={999999.99} step="0.01" value={draft.price_eur} onChange={e => change("price_eur",Number(e.target.value))} /></label>
-        <label>Version<input required maxLength={40} value={draft.current_version} onChange={e => change("current_version",e.target.value)} /></label>
-        <label>Release date<input type="date" value={draft.release_date ?? ""} onChange={e => change("release_date",e.target.value || null)} /></label>
-        <label className="admin-product-wide">Compatibility<input required maxLength={200} value={draft.compatibility} onChange={e => change("compatibility",e.target.value)} /></label>
-        <label>Category<select required value={draft.category_id || ""} onChange={e => change("category_id",Number(e.target.value))}><option value="">Choose category</option>{catalog.categories.filter(v => v.active || v.id === draft.category_id).map(v => <option key={v.id} value={v.id}>{v.name}{v.active ? "" : " (inactive)"}</option>)}</select></label>
-        <label>Complexity<select required value={draft.complexity_id || ""} onChange={e => change("complexity_id",Number(e.target.value))}><option value="">Choose complexity</option>{catalog.complexities.filter(v => v.active || v.id === draft.complexity_id).map(v => <option key={v.id} value={v.id}>{v.name}{v.active ? "" : " (inactive)"}</option>)}</select></label>
-      </div>
-      <div className="tags admin-product-selected-tags">{[catalog.categories.find(v => v.id === draft.category_id)?.name,catalog.complexities.find(v => v.id === draft.complexity_id)?.name].filter(Boolean).map((name,index) => <span key={index} className="card-tag">{name?.toUpperCase()}</span>)}</div>
-      {draft.product_type !== "tool" && <section className="admin-product-includes"><h2>Included tools</h2>
+        <label className="admin-product-wide">Subtitle<input maxLength={200} value={draft.subtitle} onChange={e => change("subtitle",e.target.value)} /></label>
+        <label className="admin-product-wide">Description<textarea maxLength={20000} rows={10} value={draft.description} onChange={e => change("description",e.target.value)} /></label>
+      {draft.product_type !== "tool" && <section className="admin-product-includes admin-product-wide"><h2>Included tools</h2>
         <details className="admin-bundle-filter"><summary className="menu-trigger">select tools ＋</summary><div className="dropdown filter-menu open filter-group admin-bundle-options">
           <div className="filter-label">TOOLS</div>{tools.map(t => <button key={t.id} type="button" className={"filter-option " + (pendingTools.includes(t.id) ? "selected" : "")} aria-pressed={pendingTools.includes(t.id)} onClick={() => setPendingTools(v => v.includes(t.id) ? v.filter(id => id !== t.id) : [...v,t.id])}>{t.name.toUpperCase()}</button>)}
           <button className="admin-bundle-add" type="button" onClick={event => { change("tool_ids",pendingTools); event.currentTarget.closest("details")?.removeAttribute("open"); }}>ADD</button></div>
         </details><div className="tags">{draft.tool_ids.map(id => <button key={id} type="button" className="filter-chip admin-included-tool" aria-label={"Remove " + catalog.products.find(t => t.id === id)?.name} onClick={() => { change("tool_ids",draft.tool_ids.filter(v => v !== id)); setPendingTools(v => v.filter(x => x !== id)); }}>{catalog.products.find(t => t.id === id)?.name} <span aria-hidden="true">×</span></button>)}</div>
         <p>Fixed bundle price; already-owned tools do not reduce it. Choose a price below the tools’ combined price. Bundle and project sales are not enabled yet.</p>
       </section>}
+        <label>Price · EUR including tax<input type="text" inputMode="decimal" maxLength={9} value={priceText} onChange={e => {setPriceText(e.target.value);setDirty(true);setMessage(null);}} placeholder="0.00" /></label>
+        <label>Version<input maxLength={40} value={draft.current_version} onChange={e => change("current_version",e.target.value)} /></label>
+        <p>Release date is recorded when first published.</p>
+        <label className="admin-product-wide">Compatibility<input maxLength={200} value={draft.compatibility} onChange={e => change("compatibility",e.target.value)} /></label>
+        <label>Category<select value={draft.category_id || ""} onChange={e => change("category_id",Number(e.target.value))}><option value="">Choose category</option>{catalog.categories.filter(v => v.active || v.id === draft.category_id).map(v => <option key={v.id} value={v.id}>{v.name}{v.active ? "" : " (inactive)"}</option>)}</select></label>
+        <label>Complexity<select value={draft.complexity_id || ""} onChange={e => change("complexity_id",Number(e.target.value))}><option value="">Choose complexity</option>{catalog.complexities.filter(v => v.active || v.id === draft.complexity_id).map(v => <option key={v.id} value={v.id}>{v.name}{v.active ? "" : " (inactive)"}</option>)}</select></label>
+      </div>
+      <div className="tags admin-product-selected-tags">{[catalog.categories.find(v => v.id === draft.category_id)?.name,catalog.complexities.find(v => v.id === draft.complexity_id)?.name].filter(Boolean).map((name,index) => <span key={index} className="card-tag">{name?.toUpperCase()}</span>)}</div>
+
       <button type="submit">{busy ? "Saving..." : "Accept · save unpublished draft"}</button></fieldset></form></div></div>
 
-      {draft.product_type === "tool" && id && !readOnly && <section className="admin-product-publication"><h2>Publication</h2><p>Upload the Houdini tool and JSON above, or use an existing ZIP in <a href="/admin?section=downloads">Tool files</a>, then publish. For paid tools, configure checkout in <a href="/admin?section=prices">Paddle prices</a> after publishing.</p><button type="button" disabled={dirty || busy || packageBusy} onClick={publish}>Publish tool</button></section>}
+      {id && readOnly && <section><h2>Paddle price</h2><PriceEditor key={id} productId={id}/></section>}
+      {id && !readOnly && <ProductPublication productId={id} updatedAt={updatedAt} disabled={dirty || busy || packageBusy} onPublished={()=>setRevision(v=>v+1)} />}
       {draft.product_type === "project" && <p>Project files and publishing will be connected in the next product-management batch. This draft is kept unpublished.</p>}
     </>}
   </section>;

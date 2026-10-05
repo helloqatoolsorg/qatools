@@ -76,3 +76,7 @@ Scoped files for this follow-up: src/components/AdminProducts.tsx; src/component
 Verification: 20 targeted route/PostgreSQL tests passed with zero skips, including stable primary-image replacement, gallery preservation, stale edit rejection, authorization, orphan-upload cleanup, source snapshots, retry idempotence and fail-closed counting. Scoped lint passed. Production build and hosted owner checks are recorded separately; no remote upload, migration, commit or deployment was performed by the agent.
 
 Final local verification for this batch: production build/TypeScript passed, scoped lint passed, and scoped git diff --check passed. Hosted image upload/replacement and download-count checks await owner migration/deployment.
+
+## Publication workflow continuation — 2026-10-05
+
+Previous inline-artwork/download-count batch is committed as bfae9ee; owner reported both corresponding migrations applied. The new local batch supports incomplete drafts, field-specific validation, GIFs, automatic JSON packaging, admin editor entry/card actions and a publication dialog with Paddle setup before publication. Saved and published standalone HDAs can prepare versioned replacement ZIPs. See QATOOLS_PRODUCT_PUBLICATION.md for migration, scoped files and remaining composed-product work. Existing dated descriptions of publishing before Paddle, mandatory JSON uploads and mandatory draft metadata are superseded by that batch.

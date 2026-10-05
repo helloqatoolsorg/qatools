@@ -29,12 +29,12 @@ function setup(options={}){
  const calls=[];
  const db={from(table){calls.push({table});const q={select(){return q;},eq(){return q;},async maybeSingle(){return {data:table==='products'?{id:1,slug:'qafit01',product_type:options.bundle?'bundle':'tool',published:!!options.published}:options.existing?{file_path:options.existing}:null,error:null};}};return q;},storage:{async getBucket(){return {data:{public:!!options.publicBucket},error:null};},from(){return {async upload(file,bytes){calls.push({upload:file,bytes});return {error:options.uploadError?{}:null};}};}},async rpc(name,args){calls.push({rpc:name,args});return {data:{ok:!options.mappingFailure},error:null};}};
  const route=load('src/app/api/admin/products/package/route.ts',{'@/lib/requireAdmin':{async requireAdmin(){return options.denied?{response:Response.json({error:'Denied'},{status:403})}:{user:{id:'verified-admin'}};}},'@/lib/activationHttp':{privateJson:(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}})},'@/lib/supabaseAdmin':{supabaseAdmin:db},'@/lib/houdiniPackage':library});
- const request=(expected='',badJson=false)=>{const form=new FormData();form.set('tool',new File([hda],'qafit01_online.hdalc'));form.set('config',new File([badJson?Buffer.from('{}'):config],'qatools.json'));return new Request('http://localhost/api/admin/products/package?productId=1&expectedPath='+encodeURIComponent(expected),{method:'POST',body:form});};
+ const request=(expected='',badJson=false)=>{const form=new FormData();form.set('tool',new File([hda],'qafit01_online.hdalc'));if(badJson)form.set('config',new File([Buffer.from('{}')],'qatools.json'));return new Request('http://localhost/api/admin/products/package?productId=1&expectedPath='+encodeURIComponent(expected),{method:'POST',body:form});};
  return {calls,route,request};
 }
 test('package upload authorizes before reading bodies or storage',async()=>{const s=setup({denied:true});const response=await s.route.POST(s.request());assert.equal(response.status,403);assert.equal(s.calls.length,0);});
-test('published/composed products, stale mapping and invalid JSON never upload',async()=>{
- for(const o of [{published:true},{bundle:true},{existing:'old.zip'},{}]){const s=setup(o),response=await s.route.POST(s.request('',Object.keys(o).length===0));assert.ok([400,409].includes(response.status));assert.ok(!s.calls.some(c=>c.upload));}
+test('composed products, stale mapping and unexpected JSON never upload',async()=>{
+ for(const o of [{bundle:true},{existing:'old.zip'},{}]){const s=setup(o),response=await s.route.POST(s.request('',Object.keys(o).length===0));assert.ok([400,409].includes(response.status));assert.ok(!s.calls.some(c=>c.upload));}
 });
 test('private installer upload uses new paths and verified identity with existing CAS writer',async()=>{
  const s=setup();const response=await s.route.POST(s.request());assert.equal(response.status,200);const upload=s.calls.find(c=>c.upload),rpc=s.calls.find(c=>c.rpc);assert.match(upload.upload,/^1\/[a-f0-9-]+\/qafit01-houdini22.zip$/);assert.equal(entries(upload.bytes).length,7);assert.equal(rpc.rpc,'set_product_download');assert.equal(rpc.args.p_admin_id,'verified-admin');assert.equal(rpc.args.p_expected_path,null);assert.equal(rpc.args.p_enabled,true);
@@ -43,3 +43,5 @@ test('public buckets and upload failures preserve current mapping; binding failu
  for(const options of [{publicBucket:true},{uploadError:true}]){const s=setup(options);const response=await s.route.POST(s.request());assert.equal(response.status,503);assert.ok(!s.calls.some(c=>c.rpc));}
  const s=setup({mappingFailure:true});assert.equal((await s.route.POST(s.request())).status,409);
 });
+
+test('published individual tools can prepare an immutable HDA replacement with shared JSON',async()=>{const s=setup({published:true,existing:'old.zip'});assert.equal((await s.route.POST(s.request('old.zip'))).status,200);const upload=s.calls.find(c=>c.upload);assert.ok(upload);assert.notEqual(upload.upload,'old.zip');assert.deepEqual(JSON.parse(entries(upload.bytes)[0].bytes.toString()),library.packageConfig);});

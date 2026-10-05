@@ -1,4 +1,5 @@
 "use client";
+import IncludedTools from "@/components/IncludedTools";
 import AccountName from "@/components/AccountName";
 
 import {
@@ -210,7 +211,7 @@ export default function ProductPage() {
 
       if (
         productError ||
-        !data
+        !data || data.price_eur === null
       ) {
         setError(
           "Product not found."
@@ -222,7 +223,7 @@ export default function ProductPage() {
       }
 
       setProduct(
-        data
+        {...data,price_eur:data.price_eur}
       );
 
       setLoading(false);
@@ -556,6 +557,7 @@ export default function ProductPage() {
               )}
             </div>
 
+            <IncludedTools key={product.id} productId={product.id}/>
             <div className="buy-row">
               <strong>
                 {formatPrice(

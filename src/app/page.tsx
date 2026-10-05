@@ -325,7 +325,7 @@ export default function Home() {
       }
 
       setProducts(
-        productsResult.data ?? []
+        (productsResult.data ?? []).filter((p): p is typeof p & {price_eur:number} => p.price_eur !== null)
       );
 
       setCategories(

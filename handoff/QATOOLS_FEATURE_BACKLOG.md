@@ -105,3 +105,7 @@ Admin Products/draft form deployed and visually checked by owner. Follow-up loca
 ## Inline artwork/download-count checkpoint — 2026-10-05
 
 Owner approved the deployed editor layout. Implemented locally: inline main-image picker/preview/click-to-replace with stale-edit protection, and durable admin free/paid/admin-granted download-link counts. Counts include repeats and start with this rollout; they classify acquisition source, not current price. No free orders added. Two migrations precede deployment; scoped files/checks in QATOOLS_PRODUCT_DRAFTS.md. Bundle ownership/refunds, separate source assets, project delivery, bulk selection and finance remain pending.
+
+## Stability-first editor/publication checkpoint — 2026-10-05
+
+Prepared locally: draft entry/card actions, integrated file/pricing controls, shared JSON, GIFs, editable prices, unfinished draft saves, automatic first release dates and provider-verified publication. Owner rollout requires 20261005120000_product_publication_workflow.sql. Next commercial batch: separate bundle/project ZIPs, pinned backend membership and purchase-source access contributions; refunding one purchase must preserve access from others. Detailed scope and checks in QATOOLS_PRODUCT_PUBLICATION.md.
