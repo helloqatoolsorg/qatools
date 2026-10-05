@@ -18,7 +18,7 @@ export function validPackageJson(bytes: Buffer): boolean {
 export function validHda(name: string, bytes: Buffer): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}\.(hda|hdalc|hdanc)$/i.test(name) && bytes.length > 24 && bytes.length <= 4 * 1024 * 1024 && bytes.toString("ascii",0,4) === "INDX";
 }
-function crc32(bytes: Buffer) {
+export function crc32(bytes: Buffer) {
   let crc = 0xffffffff;
   for (const byte of bytes) { crc ^= byte; for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0); }
   return (crc ^ 0xffffffff) >>> 0;

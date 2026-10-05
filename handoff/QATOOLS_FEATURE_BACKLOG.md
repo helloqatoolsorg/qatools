@@ -109,3 +109,10 @@ Owner approved the deployed editor layout. Implemented locally: inline main-imag
 ## Stability-first editor/publication checkpoint — 2026-10-05
 
 Prepared locally: draft entry/card actions, integrated file/pricing controls, shared JSON, GIFs, editable prices, unfinished draft saves, automatic first release dates and provider-verified publication. Owner rollout requires 20261005120000_product_publication_workflow.sql. Next commercial batch: separate bundle/project ZIPs, pinned backend membership and purchase-source access contributions; refunding one purchase must preserve access from others. Detailed scope and checks in QATOOLS_PRODUCT_PUBLICATION.md.
+
+
+## Bundle commercial batch — 2026-10-05
+
+PRODUCT-07 now has local bundle implementation: fixed separate price, private purchase-origin tracking, effective included-tool ownership, purchase-specific refunds, and pinned checkout/order membership. DOWNLOAD-03 now includes the bundle ZIP uploader and centrally rebuilt shared installer. Exact included-tool filenames are validated against the saved selection. Publication enforces readiness and the discounted bundle price; released composition is immutable. Unused bundle drafts with only their own package attestation can still be deleted, freeing their name.
+
+Projects and customer Download selection remain separate pending batches. No customer data, hosted catalog, uploads, payments or deployment were mutated in this batch. Owner-hosted purchase/refund/download/install verification remains pending after the new migration and deployment; follow QATOOLS_BUNDLE_OWNERSHIP_DELIVERY.md.

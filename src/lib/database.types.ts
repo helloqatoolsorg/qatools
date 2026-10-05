@@ -482,6 +482,10 @@ export type Database = {
             product: { id: number; name: string; slug: string } | null }[];
         }[] };
       };
+      set_bundle_download: {
+        Args: { p_admin_id:string; p_product_id:number; p_expected_path:string|null; p_file_path:string; p_file_name:string; p_tool_ids:number[] };
+        Returns: { ok:boolean; code?:string };
+      };
       set_product_download: {
         Args: { p_admin_id: string; p_product_id: number; p_expected_path: string | null; p_file_path: string | null; p_file_name: string | null; p_enabled: boolean };
         Returns: { ok: boolean; code?: string };

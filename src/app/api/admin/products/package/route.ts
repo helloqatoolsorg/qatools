@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/requireAdmin";
 import { privateJson } from "@/lib/activationHttp";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildHoudiniPackage, validHda, packageConfig } from "@/lib/houdiniPackage";
+import { bundleTools, type BundleTool } from "@/lib/bundlePackage";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
   try {
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
     const id = Number(rawId);
     const product = await supabaseAdmin.from("products").select("id,slug,product_type,published").eq("id",id).maybeSingle();
     if (product.error) return privateJson({ error: "Unable to verify tool." },503);
-    if (!product.data || product.data.product_type !== "tool") return privateJson({ error: "Choose an individual tool." },409);
+    if (!product.data || !["tool","bundle"].includes(product.data.product_type)) return privateJson({ error: "Choose an individual tool." },409);
     const current = await supabaseAdmin.from("product_downloads").select("file_path").eq("product_id",id).maybeSingle();
     if (current.error) return privateJson({ error: "Unable to verify current package." },503);
     if ((current.data?.file_path ?? "") !== expected) return privateJson({ error: "This package changed. Reload before uploading." },409);
@@ -22,18 +23,29 @@ export async function POST(request: Request) {
     let form: FormData;
     try { form = await new Request("http://localhost", { method:"POST", headers:{"Content-Type":request.headers.get("content-type")!}, body:Buffer.concat(chunks) }).formData(); } catch { return privateJson({ error:"Invalid file upload." },400); }
     const hda = form.get("tool");
+    const isBundle = product.data.product_type === "bundle";
     if (!(hda instanceof File) || form.getAll("tool").length !== 1 || [...form.keys()].some(k => k !== "tool")) return privateJson({ error:"Choose a Houdini HDA." },400);
     const toolBytes = Buffer.from(await hda.arrayBuffer()), jsonBytes = Buffer.from(JSON.stringify(packageConfig));
-    if (!validHda(hda.name,toolBytes)) return privateJson({ error:"Choose a Houdini HDA and the standard qatools.json package configuration." },400);
+    if (!isBundle && !validHda(hda.name,toolBytes)) return privateJson({ error:"Choose a Houdini HDA and the standard qatools.json package configuration." },400);
+    let tools:{name:string;bytes:Buffer}[] = [{name:hda.name,bytes:toolBytes}];
+    let included:BundleTool[]=[];
+    if(isBundle){
+      const members=await supabaseAdmin.from("product_members").select("tool_id").eq("product_id",id);
+      if(members.error || !members.data?.length || members.data.length>100)return privateJson({error:"Save the included tools before uploading a bundle ZIP."},409);
+      const selected=await supabaseAdmin.from("products").select("id,slug,product_type,published").in("id",members.data.map(m=>m.tool_id));
+      if(selected.error || selected.data?.length!==members.data.length || selected.data.some(t=>t.product_type!=="tool" || !t.published))return privateJson({error:"Choose published individual tools."},409);
+      included=selected.data.map(t=>({id:t.id,slug:t.slug})).sort((a,b)=>a.id-b.id);
+      try{tools=bundleTools(toolBytes,included);}catch(reason){return privateJson({error:reason instanceof Error?reason.message:"Invalid bundle ZIP."},400);}
+    }
     const bucket = await supabaseAdmin.storage.getBucket("qatools-downloads");
     if (bucket.error || bucket.data?.public !== false) return privateJson({ error:"Private package storage is unavailable." },503);
-    const bytes = await buildHoudiniPackage(jsonBytes,[{name:hda.name,bytes:toolBytes}]);
+    const bytes = await buildHoudiniPackage(jsonBytes,tools);
     const fileName = product.data.slug + "-houdini22.zip";
     if (!/^[a-z0-9][a-z0-9_-]{0,79}-houdini22\.zip$/.test(fileName)) return privateJson({error:"Check the product identifier."},400);
     const path = id + "/" + randomUUID() + "/" + fileName;
     const uploaded = await supabaseAdmin.storage.from("qatools-downloads").upload(path,bytes,{contentType:"application/zip",upsert:false});
     if (uploaded.error) return privateJson({error:"Unable to save installer. Existing download retained."},503);
-    const saved = await supabaseAdmin.rpc("set_product_download",{p_admin_id:auth.user.id,p_product_id:id,p_expected_path:expected || null,p_file_path:path,p_file_name:fileName,p_enabled:true});
+    const saved = await supabaseAdmin.rpc(isBundle ? "set_bundle_download" : "set_product_download",{p_admin_id:auth.user.id,p_product_id:id,p_expected_path:expected || null,p_file_path:path,p_file_name:fileName,...(isBundle ? {p_tool_ids:included.map(t=>t.id)} : {p_enabled:true})});
     if (saved.error || !saved.data?.ok) return privateJson({error:"Installer uploaded but could not be selected. Reload before retrying."},409);
     return privateJson({message:product.data.published ? "Installer replaced. Existing owners can download this release." : "Installer saved. It contains qatools.json, the tool and shared licensing files. Publishing is a separate action.",download:{file_name:fileName,file_path:path,enabled:true}});
   } catch { return privateJson({error:"Unable to prepare installer."},503); }
