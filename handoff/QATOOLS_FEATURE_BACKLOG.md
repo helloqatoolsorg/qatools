@@ -116,3 +116,13 @@ Prepared locally: draft entry/card actions, integrated file/pricing controls, sh
 PRODUCT-07 now has local bundle implementation: fixed separate price, private purchase-origin tracking, effective included-tool ownership, purchase-specific refunds, and pinned checkout/order membership. DOWNLOAD-03 now includes the bundle ZIP uploader and centrally rebuilt shared installer. Exact included-tool filenames are validated against the saved selection. Publication enforces readiness and the discounted bundle price; released composition is immutable. Unused bundle drafts with only their own package attestation can still be deleted, freeing their name.
 
 Projects and customer Download selection remain separate pending batches. No customer data, hosted catalog, uploads, payments or deployment were mutated in this batch. Owner-hosted purchase/refund/download/install verification remains pending after the new migration and deployment; follow QATOOLS_BUNDLE_OWNERSHIP_DELIVERY.md.
+
+
+## Prepared tool identity checkpoint — 2026-10-05
+
+Owner approved uploaded prepared ZIPs as the new-tool creation entry point. Local website import, immutable pretty label/stable underscore slug, visible retryable drafts, protected replacement uploads and reusable Houdini identity exporter are implemented. Existing qafit01 and all legacy slugs remain intact. Next: the self-service Prepare qatools tool shelf action, shared licensing bridge/License tab and safe guard validation. Then create real qanoise01/qaroad01 files and resume the unpublished qabundle01 owner test. See QATOOLS_PREPARED_TOOL_IDENTITY.md; migration and hosted rollout remain owner actions.
+
+
+## Self-service authoring checkpoint — 2026-10-05
+
+Local Prepare qatools tool helper and portable Houdini 22 authoring installer are ready for owner GUI review. Supports saved single-output SOP assets with preserved originals, standard License fields, guarded output, shared offline verification, automatic prepared ZIP/metadata and scene-wide refresh for prepared instances. Unsupported layouts/conflicting scripts are refused. Six real Houdini functional tests pass. Next owner actions: install/show shelf, create real tools, upload them as drafts, then resume qabundle01 end-to-end tests. No new SQL migration; see QATOOLS_TOOL_AUTHORING.md.

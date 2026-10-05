@@ -359,6 +359,7 @@ export type Database = {
       products: {
         Row: {
           product_type: "tool" | "bundle" | "project";
+          prepared_identity: import("./preparedTool").ToolIdentity | null;
           draft_request_id: string | null;
           id: number;
           created_at: string;
@@ -379,6 +380,7 @@ export type Database = {
         };
         Insert: {
           product_type?: "tool" | "bundle" | "project";
+          prepared_identity?: import("./preparedTool").ToolIdentity | null;
           draft_request_id?: string | null;
           id?: number;
           created_at?: string;
@@ -399,6 +401,7 @@ export type Database = {
         };
         Update: {
           product_type?: "tool" | "bundle" | "project";
+          prepared_identity?: import("./preparedTool").ToolIdentity | null;
           draft_request_id?: string | null;
           id?: number;
           created_at?: string;
@@ -468,6 +471,8 @@ export type Database = {
       read_admin_download_counts: { Args: { p_admin_id: string }; Returns: { free: number; paid: number; admin: number; total: number } };
       set_product_draft_card: { Args: { p_admin_id: string; p_product_id: number; p_expected_media_id: number | null; p_expected_updated_at: string; p_path: string }; Returns: { id: number; updated_at: string; media_id: number } };
       publish_product_draft: { Args: { p_admin_id: string; p_product_id: number; p_expected_updated_at: string; p_expected_price_id?: string | null }; Returns: { id: number; updated_at: string } };
+      replace_prepared_tool_download: { Args: {p_admin_id:string;p_product_id:number;p_expected_path:string|null;p_file_path:string;p_file_name:string;p_identity:import("./preparedTool").ToolIdentity}; Returns:{ok:boolean} };
+      import_prepared_tool: { Args: { p_admin_id:string; p_request_id:string; p_identity: import("./preparedTool").ToolIdentity }; Returns: {id:number;updated_at:string;name:string;slug:string} };
       save_product_draft: { Args: { p_admin_id: string; p_request_id: string; p_data: import("./productDraft").DraftInput; p_product_id?: number; p_expected_updated_at?: string }; Returns: { id: number; updated_at: string } };
       attach_product_draft_image: { Args: { p_admin_id: string; p_product_id: number; p_path: string }; Returns: { id: number; updated_at: string } };
       read_admin_orders: {

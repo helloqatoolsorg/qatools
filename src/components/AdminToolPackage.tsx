@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 async function token() { const result = await supabase.auth.getSession(); if (!result.data.session || result.error) throw new Error("Please log in again."); return result.data.session.access_token; }
 type Download = { file_path: string; file_name: string; enabled: boolean };
-export default function AdminToolPackage({ productId, disabled, onBusyChange, tool, onToolChange, ensureDraft, kind="tool" }: { kind?:"tool"|"bundle"; productId:number|null; disabled:boolean; onBusyChange:(busy:boolean)=>void; tool:File|null; onToolChange:(file:File|null)=>void; ensureDraft:()=>Promise<number> }) {
+export default function AdminToolPackage({ productId, disabled, onBusyChange, tool, onToolChange, ensureDraft, kind="tool", prepared=false }: { prepared?:boolean; kind?:"tool"|"bundle"; productId:number|null; disabled:boolean; onBusyChange:(busy:boolean)=>void; tool:File|null; onToolChange:(file:File|null)=>void; ensureDraft:()=>Promise<number> }) {
   const [download, setDownload] = useState<Download | null>(null), [loaded,setLoaded] = useState(false);
   const [busy,setBusy] = useState(false), [error,setError] = useState<string | null>(null), [message,setMessage] = useState<string | null>(null);
   const [revision,setRevision] = useState(0);
@@ -22,7 +22,7 @@ export default function AdminToolPackage({ productId, disabled, onBusyChange, to
     setBusy(true); onBusyChange(true); setError(null); setMessage(null);
     try {
       if (tool.size > 4 * 1024 * 1024 - 8192) throw new Error("Choose installer files totaling less than 4 MB.");
-      if(kind==="bundle" ? !/\.zip$/i.test(tool.name) : !/\.hda(lc|nc)?$/i.test(tool.name))throw new Error(kind==="bundle" ? "Choose a bundle ZIP." : "Choose a Houdini HDA, HDALC or HDANC file.");
+      if(kind==="bundle" || prepared ? !/\.zip$/i.test(tool.name) : !/\.hda(lc|nc)?$/i.test(tool.name))throw new Error(prepared ? "Choose a prepared tool ZIP." : kind==="bundle" ? "Choose a bundle ZIP." : "Choose a Houdini HDA, HDALC or HDANC file.");
       const targetId=await ensureDraft();
       let expectedPath=download?.file_path ?? "";
       if(!productId){const current=await fetch("/api/admin/downloads?productId="+targetId,{cache:"no-store",headers:{Authorization:"Bearer "+await token()}});const result=await current.json();if(!current.ok)throw new Error(result.error ?? "Unable to verify installer.");expectedPath=result.download?.file_path ?? "";}
@@ -36,7 +36,7 @@ export default function AdminToolPackage({ productId, disabled, onBusyChange, to
   }
   return <section className="admin-tool-package"><h2>Tool files</h2><p>{!productId && "Choose a file now; uploading saves an unpublished draft first. "}{kind==="bundle" ? "Upload a ZIP containing one HDA per included tool under qatools/otls/. Name each HDA after its tool slug; _online is also accepted. The shared installer files are included automatically." : "The installer includes one qatools.json, your HDA and the shared qatools licensing files."}</p>
     <fieldset disabled={disabled || busy}>
-      <label>{kind==="bundle" ? "Upload bundle ZIP" : "Upload Houdini tool"}<input key={revision} type="file" accept={kind==="bundle" ? ".zip" : ".hda,.hdalc,.hdanc"} onChange={e => { onToolChange(e.target.files?.[0] ?? null); setMessage(null); }} /></label>
+      <label>{prepared ? "Replace prepared tool ZIP" : kind==="bundle" ? "Upload bundle ZIP" : "Upload Houdini tool"}<input key={revision} type="file" accept={kind==="bundle" || prepared ? ".zip" : ".hda,.hdalc,.hdanc"} onChange={e => { onToolChange(e.target.files?.[0] ?? null); setMessage(null); }} /></label>
       {tool && <p>Selected: {tool.name} <button type="button" onClick={()=>onToolChange(null)}>Remove</button></p>}
       <p>qatools.json · included automatically</p>
       <p><a href="/qatools.json" download="qatools.json">Download standard qatools.json</a> · Use the portable package configuration.</p>

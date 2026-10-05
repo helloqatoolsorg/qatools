@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+ <toolshelf name="qatools_authoring" label="qatools authoring"><memberTool name="qatools_prepare_tool" /></toolshelf>
+ <tool name="qatools_prepare_tool" label="Prepare qatools tool" icon="MISC_python"><script scriptType="python"><![CDATA[from qatools_authoring.prepare_tool import shelf_action
+shelf_action()
+]]></script></tool>
+</shelfDocument>

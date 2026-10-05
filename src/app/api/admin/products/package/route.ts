@@ -1,3 +1,4 @@
+import { preparedTool, type ToolIdentity } from "@/lib/preparedTool";
 import { randomUUID } from "node:crypto";
 import { requireAdmin } from "@/lib/requireAdmin";
 import { privateJson } from "@/lib/activationHttp";
@@ -11,9 +12,10 @@ export async function POST(request: Request) {
     const params = new URL(request.url).searchParams, rawId = params.get("productId") ?? "", expected = params.get("expectedPath");
     if (!/^[1-9][0-9]*$/.test(rawId) || !Number.isSafeInteger(Number(rawId)) || expected === null || expected.length > 512 || !request.headers.get("content-type")?.startsWith("multipart/form-data;")) return privateJson({ error: "Choose a valid tool and installer files." },400);
     const id = Number(rawId);
-    const product = await supabaseAdmin.from("products").select("id,slug,product_type,published").eq("id",id).maybeSingle();
+    const product = await supabaseAdmin.from("products").select("id,slug,product_type,published,prepared_identity").eq("id",id).maybeSingle();
     if (product.error) return privateJson({ error: "Unable to verify tool." },503);
     if (!product.data || !["tool","bundle"].includes(product.data.product_type)) return privateJson({ error: "Choose an individual tool." },409);
+
     const current = await supabaseAdmin.from("product_downloads").select("file_path").eq("product_id",id).maybeSingle();
     if (current.error) return privateJson({ error: "Unable to verify current package." },503);
     if ((current.data?.file_path ?? "") !== expected) return privateJson({ error: "This package changed. Reload before uploading." },409);
@@ -26,8 +28,14 @@ export async function POST(request: Request) {
     const isBundle = product.data.product_type === "bundle";
     if (!(hda instanceof File) || form.getAll("tool").length !== 1 || [...form.keys()].some(k => k !== "tool")) return privateJson({ error:"Choose a Houdini HDA." },400);
     const toolBytes = Buffer.from(await hda.arrayBuffer()), jsonBytes = Buffer.from(JSON.stringify(packageConfig));
-    if (!isBundle && !validHda(hda.name,toolBytes)) return privateJson({ error:"Choose a Houdini HDA and the standard qatools.json package configuration." },400);
+    if (!isBundle && !product.data.prepared_identity && !validHda(hda.name,toolBytes)) return privateJson({ error:"Choose a Houdini HDA and the standard qatools.json package configuration." },400);
     let tools:{name:string;bytes:Buffer}[] = [{name:hda.name,bytes:toolBytes}];
+    let identity:ToolIdentity|null=null;
+    if(product.data.prepared_identity){
+      try{const prepared=preparedTool(toolBytes);identity=prepared.identity;tools=[prepared.tool];}catch(reason){return privateJson({error:reason instanceof Error?reason.message:"Choose a prepared tool ZIP."},400);}
+      const original=product.data.prepared_identity;
+      if(identity.label!==original.label || identity.slug!==original.slug || identity.internal_name!==original.internal_name || identity.file!==original.file)return privateJson({error:"Replacement must preserve the tool Asset Label, Internal Name and HDA filename."},409);
+    }
     let included:BundleTool[]=[];
     if(isBundle){
       const members=await supabaseAdmin.from("product_members").select("tool_id").eq("product_id",id);
@@ -45,7 +53,7 @@ export async function POST(request: Request) {
     const path = id + "/" + randomUUID() + "/" + fileName;
     const uploaded = await supabaseAdmin.storage.from("qatools-downloads").upload(path,bytes,{contentType:"application/zip",upsert:false});
     if (uploaded.error) return privateJson({error:"Unable to save installer. Existing download retained."},503);
-    const saved = await supabaseAdmin.rpc(isBundle ? "set_bundle_download" : "set_product_download",{p_admin_id:auth.user.id,p_product_id:id,p_expected_path:expected || null,p_file_path:path,p_file_name:fileName,...(isBundle ? {p_tool_ids:included.map(t=>t.id)} : {p_enabled:true})});
+    const saved = identity ? await supabaseAdmin.rpc("replace_prepared_tool_download",{p_admin_id:auth.user.id,p_product_id:id,p_expected_path:expected || null,p_file_path:path,p_file_name:fileName,p_identity:identity}) : await supabaseAdmin.rpc(isBundle ? "set_bundle_download" : "set_product_download",{p_admin_id:auth.user.id,p_product_id:id,p_expected_path:expected || null,p_file_path:path,p_file_name:fileName,...(isBundle ? {p_tool_ids:included.map(t=>t.id)} : {p_enabled:true})});
     if (saved.error || !saved.data?.ok) return privateJson({error:"Installer uploaded but could not be selected. Reload before retrying."},409);
     return privateJson({message:product.data.published ? "Installer replaced. Existing owners can download this release." : "Installer saved. It contains qatools.json, the tool and shared licensing files. Publishing is a separate action.",download:{file_name:fileName,file_path:path,enabled:true}});
   } catch { return privateJson({error:"Unable to prepare installer."},503); }

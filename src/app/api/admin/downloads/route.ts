@@ -41,9 +41,10 @@ export async function POST(request: Request) {
     const auth = await authorize(request); if (auth.response) return auth.response;
     const params = new URL(request.url).searchParams, value = params.get("productId"), id = Number(value), name = params.get("fileName"), expected = params.get("expectedPath");
     if (!value || !/^[1-9][0-9]*$/.test(value) || !productId(id) || !name || name.length > 128 || !/^[A-Za-z0-9][A-Za-z0-9._-]*\.zip$/i.test(name) || expected === null || expected.length > 512 || request.headers.get("content-type") !== "application/zip") return privateJson({ error: "Choose an item and a ZIP package with a simple filename." }, 400);
-    const product = await supabaseAdmin.from("products").select("id,product_type").eq("id", id).maybeSingle();
+    const product = await supabaseAdmin.from("products").select("id,product_type,prepared_identity").eq("id", id).maybeSingle();
     if (product.error) return privateJson({ error: "Unable to verify item." }, 503);
     if (!product.data) return privateJson({ error: "Item not found." }, 404);
+    if (product.data.prepared_identity) return privateJson({error:"Use the product editor to replace this tool with a matching prepared ZIP."},409);
     if (product.data.product_type !== "tool") return privateJson({error:"Use the product editor to upload and validate a bundle installer."},409);
     const current = await supabaseAdmin.from("product_downloads").select("file_path").eq("product_id", id).maybeSingle();
     if (current.error) return privateJson({ error: "Unable to verify current download." }, 503);

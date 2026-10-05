@@ -79,6 +79,33 @@ test('actual PostgreSQL bundle sources, pinned checkout, overlapping refunds and
  assert.equal((await db.query("SELECT set_bundle_download($1,30,NULL,$2,'package.zip',ARRAY[1,2]::bigint[]) r",[admin,path(30)])).rows[0].r.ok,true);
  const unusedStamp=(await db.query('SELECT updated_at FROM products WHERE id=30')).rows[0].updated_at;
  await db.query('SELECT delete_unused_product_draft($1,30,$2)',[admin,unusedStamp]);assert.equal((await db.query('SELECT count(*)::int n FROM bundle_releases WHERE product_id=30')).rows[0].n,0);
+ await db.exec("SELECT setval(pg_get_serial_sequence('public.products','id'),(SELECT max(id) FROM products),true)");
+ await db.exec(read('20261005150000_prepared_tool_identity.sql'));
+ const rid='00000000-0000-4000-8000-000000000080';
+ const identity={schema:1,label:'Beautiful Noise',internal_name:'Beautiful_Noise',slug:'beautiful_noise',file:'beautiful_noise.hda',sha256:'a'.repeat(64)};
+ const imported=(await db.query('SELECT import_prepared_tool($1,$2,$3) r',[admin,rid,identity])).rows[0].r;
+ assert.equal(imported.name,'Beautiful Noise');assert.equal(imported.slug,'beautiful_noise');
+ assert.deepEqual((await db.query('SELECT import_prepared_tool($1,$2,$3) r',[admin,rid,identity])).rows[0].r,imported);
+ await assert.rejects(db.query('SELECT import_prepared_tool($1,$2,$3)',[buyer,rid,identity]),/Admin access/);
+ await assert.rejects(db.query('SELECT import_prepared_tool($1,$2,$3)',[admin,rid,{...identity,sha256:'b'.repeat(64)}]),/request changed/);
+ await assert.rejects(db.query('SELECT import_prepared_tool($1,gen_random_uuid(),$2)',[admin,identity]),/duplicate key/);
+ const data={name:identity.label,slug:identity.slug,product_type:'tool',subtitle:'New subtitle',description:'',price_eur:null,compatibility:'',current_version:'',release_date:null,category_id:0,complexity_id:0,tool_ids:[]};
+ const updated=(await db.query('SELECT save_product_draft($1,$2,$3,$4,$5) r',[admin,rid,data,imported.id,imported.updated_at])).rows[0].r;
+ await assert.rejects(db.query('SELECT save_product_draft($1,$2,$3,$4,$5)',[admin,rid,{...data,name:'Changed Name'},imported.id,updated.updated_at]),/identity is locked/);
+ await assert.rejects(db.query('SELECT save_product_draft($1,$2,$3,$4,$5)',[admin,rid,{...data,slug:'other'},imported.id,updated.updated_at]),/identity is locked/);
+ await assert.rejects(db.query('SELECT save_product_draft($1,gen_random_uuid(),$2)',[admin,data]),/Upload a prepared tool/);
+ assert.equal((await db.query('SELECT name FROM products WHERE id=$1',[imported.id])).rows[0].name,identity.label);
+ assert.ok(!(await db.query('SELECT product_publication_checks($1,$2) r',[admin,imported.id])).rows[0].r.missing.includes('Valid title'));
+ const releasePath=path(imported.id);await db.query("INSERT INTO storage.objects VALUES('qatools-downloads',$1)",[releasePath]);
+ const nextIdentity={...identity,sha256:'b'.repeat(64)};
+ await assert.rejects(db.query("SELECT replace_prepared_tool_download($1,$2,NULL,$3,'package.zip',$4)",[admin,imported.id,releasePath,{...nextIdentity,label:'Wrong Tool'}]),/identity is locked/);
+ assert.equal((await db.query("SELECT replace_prepared_tool_download($1,$2,NULL,$3,'package.zip',$4) r",[admin,imported.id,releasePath,nextIdentity])).rows[0].r.ok,true);
+ await assert.rejects(db.query("SELECT replace_prepared_tool_download($1,$2,NULL,$3,'package.zip',$4)",[admin,imported.id,releasePath,nextIdentity]),/Download changed/);
+ assert.equal((await db.query('SELECT prepared_identity FROM products WHERE id=$1',[imported.id])).rows[0].prepared_identity.sha256,nextIdentity.sha256);
+ await db.query('SELECT delete_unused_product_draft($1,$2,$3)',[admin,imported.id,updated.updated_at]);
+ assert.ok((await db.query('SELECT import_prepared_tool($1,gen_random_uuid(),$2) r',[admin,identity])).rows[0].r.id);
+ assert.equal((await db.query('SELECT slug FROM products WHERE id=1')).rows[0].slug,'one');
+ assert.equal((await db.query("SELECT has_function_privilege('service_role','save_product_draft_legacy(uuid,uuid,jsonb,bigint,timestamptz)','EXECUTE') allowed")).rows[0].allowed,false);
  for(const role of ['anon','authenticated']){assert.equal((await db.query("SELECT has_table_privilege($1,'entitlement_origins','INSERT,UPDATE,DELETE,TRUNCATE') allowed",[role])).rows[0].allowed,false);assert.equal((await db.query("SELECT has_function_privilege($1,'set_bundle_download(uuid,bigint,text,text,text,bigint[])','EXECUTE') allowed",[role])).rows[0].allowed,false);}
  }finally{await db.close();}
 });
@@ -87,7 +114,7 @@ test('actual PostgreSQL bundle sources, pinned checkout, overlapping refunds and
 function routeSetup(options={}){
  const calls=[],zip=pack.makePackageZip(options.missing?[good[0]]:good);
  const db={from(table){const q={select(){return q;},eq(){return q;},async maybeSingle(){return {data:table==='products'?{id:10,slug:'bundle-a',product_type:options.project?'project':'bundle',published:false}:null,error:null};},async in(){return {data:tools.map(t=>({...t,product_type:'tool',published:true})),error:null};},then(resolve,reject){return Promise.resolve({data:tools.map(t=>({tool_id:t.id})),error:null}).then(resolve,reject);}};return q;},storage:{async getBucket(){return {data:{public:false},error:null};},from(){return {async upload(path,bytes){calls.push({path,bytes});return {error:null};}};}},async rpc(name,args){calls.push({name,args});return {data:{ok:!options.conflict},error:null};}};
- const route=load('src/app/api/admin/products/package/route.ts',{'@/lib/requireAdmin':{requireAdmin:async()=>options.denied?{response:Response.json({error:'denied'},{status:403})}:{user:{id:'trusted-admin'}}},'@/lib/activationHttp':{privateJson:(v,status=200)=>Response.json(v,{status,headers:{'Cache-Control':'no-store'}})},'@/lib/supabaseAdmin':{supabaseAdmin:db},'@/lib/houdiniPackage':pack,'@/lib/bundlePackage':bundle});
+ const route=load('src/app/api/admin/products/package/route.ts',{'@/lib/requireAdmin':{requireAdmin:async()=>options.denied?{response:Response.json({error:'denied'},{status:403})}:{user:{id:'trusted-admin'}}},'@/lib/activationHttp':{privateJson:(v,status=200)=>Response.json(v,{status,headers:{'Cache-Control':'no-store'}})},'@/lib/supabaseAdmin':{supabaseAdmin:db},'@/lib/houdiniPackage':pack,'@/lib/preparedTool':{preparedTool(){throw Error('Use prepared ZIP')}},'@/lib/bundlePackage':bundle});
  const form=new FormData();form.set('tool',new File([zip],'bundle.zip'));
  return {calls,post:()=>route.POST(new Request('http://localhost/api/admin/products/package?productId=10&expectedPath=',{method:'POST',body:form}))};
 }

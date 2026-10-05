@@ -17,13 +17,14 @@ export async function GET(request: Request) {
     const auth = await requireAdmin(request);
     if (auth.response) { auth.response.headers.set("Cache-Control", "no-store"); return auth.response; }
     const results = await Promise.all([
-      supabaseAdmin.from("products").select("id,name,slug,subtitle,description,price_eur,compatibility,current_version,release_date,category_id,complexity_id,product_type,published,updated_at,product_media(id,file_path,role,sort_order)").order("id", { ascending: false }).limit(501),
+      supabaseAdmin.from("products").select("id,name,slug,subtitle,description,price_eur,compatibility,current_version,release_date,category_id,complexity_id,product_type,published,updated_at,draft_request_id,prepared_identity,product_media(id,file_path,role,sort_order)").order("id", { ascending: false }).limit(501),
       supabaseAdmin.from("category").select("id,name,active,sort_order").order("sort_order"),
       supabaseAdmin.from("complexity").select("id,name,active,sort_order").order("sort_order"),
+      supabaseAdmin.from("product_downloads").select("product_id,file_path").limit(501),
       supabaseAdmin.from("product_members").select("product_id,tool_id", { count: "exact" }).limit(1000),
     ]);
-    if (results.some(r => r.error) || !results[0].data || results[0].data.length > 500 || results[3].count !== results[3].data?.length) return json({ error: "Unable to load the complete catalog. Please contact support." }, 503);
-    return json({ products: results[0].data.map(p => ({ ...p, tool_ids: (results[3].data ?? []).filter(m => m.product_id === p.id).map(m => m.tool_id) })), categories: results[1].data, complexities: results[2].data });
+    if (results.some(r => r.error) || !results[0].data || results[0].data.length > 500 || results[3].data?.length === 501 || results[4].count !== results[4].data?.length) return json({ error: "Unable to load the complete catalog. Please contact support." }, 503);
+    return json({ products: results[0].data.map(p => ({ ...p, has_installer:(results[3].data ?? []).some(d=>d.product_id===p.id && d.file_path), tool_ids: (results[4].data ?? []).filter(m => m.product_id === p.id).map(m => m.tool_id) })), categories: results[1].data, complexities: results[2].data });
   } catch { return json({ error: "Unable to load products." }, 503); }
 }
 export async function POST(request: Request) {
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
       if (error.code === "23505") {
         // A duplicate primary key is not a duplicate name. Resolve the actual
         // slug against the complete private catalog before describing a conflict.
-        const existing = await supabaseAdmin.from("products").select("id,name,slug,published").eq("slug",body.data.name).maybeSingle();
+        const existing = await supabaseAdmin.from("products").select("id,name,slug,published").eq("slug",body.data.slug ?? body.data.name).maybeSingle();
         if (!existing.error && existing.data && existing.data.id !== body.productId) return json({ error: "That name belongs to an existing product. Open it to continue editing or delete its unused draft.", existingProduct: { id: existing.data.id, name: existing.data.name, published: existing.data.published } },409);
         if (!existing.error && /products_pkey|Key \(id\)/.test((error.message ?? "")+" "+(error.details ?? ""))) return json({ error: "The product ID counter needs checking. This name has not been reserved. Apply the product draft identity migration before trying again." },503);
         return json({error:"Unable to save draft. No product name conflict was found. Please retry or contact support."},503);
