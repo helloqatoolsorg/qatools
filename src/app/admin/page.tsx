@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import AdminProducts from "@/components/AdminProducts";
 import PublicationState from "@/components/PublicationState";
+import AdminDownloadCounts from "@/components/AdminDownloadCounts";
 import AdminOrders from "@/components/AdminOrders";
 import AdminPaymentReview from "@/components/AdminPaymentReview";
 import AdminDownloads from "@/components/AdminDownloads";
@@ -914,6 +915,7 @@ export default function AdminPage() {
             }}
           >
             <div hidden={adminSection !== "dashboard"}>
+            <AdminDownloadCounts key={user.id} />
             <div
               style={{
                 display:

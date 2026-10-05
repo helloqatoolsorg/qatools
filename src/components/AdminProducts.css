@@ -61,3 +61,11 @@
 .admin-bundle-filter summary{list-style:none}
 .admin-bundle-filter summary::-webkit-details-marker{display:none}
 .admin-products .admin-included-tool{color:#999;border-color:#2a2a2a}
+
+.admin-artwork-input{display:none}
+.admin-products .admin-main-artwork{position:relative;display:block;width:100%;padding:0;border:0;text-align:center;overflow:hidden}
+.admin-main-artwork .admin-hero-placeholder{display:grid;width:100%;background:#121212;color:#aaa;font:14px monospace}
+.admin-main-artwork img{width:100%;display:block}
+.admin-artwork-overlay{position:absolute;bottom:0;left:0;right:0;padding:14px;background:rgba(0,0,0,.6);color:#ddd;font:11px monospace;opacity:0;transition:opacity .15s}
+.admin-main-artwork:hover .admin-artwork-overlay,.admin-main-artwork:focus-visible .admin-artwork-overlay{opacity:1}
+@media(hover:none){.admin-artwork-overlay{opacity:1}}

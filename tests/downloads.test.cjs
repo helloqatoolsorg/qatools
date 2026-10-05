@@ -1,11 +1,11 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
 function setup(o={}) {
  const calls=[],modules=new Map();
- const db={from(table){calls.push({table});const q={select(columns){calls.push({columns});return q;},eq(key,value){calls.push({key,value});return q;},async maybeSingle(){return table==='entitlements'?{data:o.unowned?null:{id:1},error:o.ownershipError?{message:'private diagnostic'}:null}:{data:o.missingFile?null:{file_path:'qanoise01/release.zip',file_name:'qanoise01.zip'},error:o.fileError?{}:null};}};return q;},storage:{async getBucket(id){calls.push({bucketCheck:id});return {data:o.missingBucket?null:{public:o.publicBucket?true:false},error:o.bucketError?{}:null};},from(bucket){calls.push({bucket});return {async createSignedUrl(path,seconds,options){calls.push({path,seconds,options});return {data:o.missingUrl?null:{signedUrl:'https://example.invalid/signed-file'},error:o.storageError?{message:'private diagnostic'}:null};}};}}};
+ const db={async rpc(name,args){calls.push({rpc:name,args});return {data:o.recordDenied?false:true,error:o.recordError?{message:'private diagnostic'}:null};},from(table){calls.push({table});const q={select(columns){calls.push({columns});return q;},eq(key,value){calls.push({key,value});return q;},async maybeSingle(){return table==='entitlements'?{data:o.unowned?null:{id:1},error:o.ownershipError?{message:'private diagnostic'}:null}:{data:o.missingFile?null:{file_path:'qanoise01/release.zip',file_name:'qanoise01.zip'},error:o.fileError?{}:null};}};return q;},storage:{async getBucket(id){calls.push({bucketCheck:id});return {data:o.missingBucket?null:{public:o.publicBucket?true:false},error:o.bucketError?{}:null};},from(bucket){calls.push({bucket});return {async createSignedUrl(path,seconds,options){calls.push({path,seconds,options});return {data:o.missingUrl?null:{signedUrl:'https://example.invalid/signed-file'},error:o.storageError?{message:'private diagnostic'}:null};}};}}};
  function load(file){if(modules.has(file))return modules.get(file);const mod={exports:{}};
  vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{
  exports:mod.exports,Buffer,process:{env:{NEXT_PUBLIC_SUPABASE_URL:'https://example.invalid',NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'test'}},
- require(name){if(name==='server-only')return {};if(name==='next/server')return {NextResponse:{json:Response.json}};
+ require(name){if(name==='node:crypto')return require(name);if(name==='server-only')return {};if(name==='next/server')return {NextResponse:{json:Response.json}};
  if(name==='@/lib/supabaseAdmin')return {supabaseAdmin:db};if(name==='@/lib/requireAccount')return load('src/lib/requireAccount.ts');if(name==='@/lib/activationHttp')return load('src/lib/activationHttp.ts');
  if(name==='@supabase/supabase-js')return {createClient:()=>({auth:{getUser:async()=>({data:{user:o.invalidToken?null:{id:'verified-user',email_confirmed_at:o.unconfirmed?null:'2026-10-03'}},error:o.invalidToken?{}:null})}})};throw Error(name);}
  });modules.set(file,mod.exports);return mod.exports;}
@@ -43,4 +43,11 @@ test('migration isolates files despite broad existing storage policies',{skip:!p
  for(const filePath of ['../secret','item/../secret','/root.zip','item//file.zip','https://example.invalid/file','item/'])await assert.rejects(db.query('INSERT INTO public.product_downloads(product_id,file_path,file_name) VALUES(1,$1,$2)',[filePath,'release.zip']),/check constraint/);
  await db.exec("INSERT INTO public.product_downloads(product_id,file_path,file_name) VALUES(1,'item/1.0/release.zip','release.zip'); SET ROLE service_role;");assert.equal((await db.query('SELECT enabled FROM public.product_downloads')).rows[0].enabled,false);assert.equal((await db.query('SELECT * FROM storage.objects')).rows.length,2);
  }finally{await db.close();}
+});
+
+test('download counts use verified ownership and fail closed if recording fails',async()=>{
+ const s=setup();await s.post({productId:1,userId:'victim',source:'free'});await s.post();
+ const rows=s.calls.filter(c=>c.rpc);assert.equal(rows.length,2);assert.equal(rows[0].rpc,'record_product_download');assert.equal(rows[0].args.p_user_id,'verified-user');assert.equal(rows[0].args.p_file_path,'qanoise01/release.zip');assert.equal(rows[0].args.source,undefined);assert.notEqual(rows[0].args.p_request_id,rows[1].args.p_request_id);
+ for(const o of [{recordDenied:true},{recordError:true}]){const r=await setup(o).post();assert.equal(r.status,503);assert.ok(!(await r.text()).includes('signed-file'));}
+ const failed=setup({storageError:true});await failed.post();assert.equal(failed.calls.filter(c=>c.rpc).length,0);
 });

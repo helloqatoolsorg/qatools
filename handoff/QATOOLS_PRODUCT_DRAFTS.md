@@ -60,3 +60,19 @@ The shared builder supports multiple HDAs and rejects case-insensitive duplicate
 Seven packaging/route checks passed, including real HDA preservation, single/multiple tool structure, shared runtime, JSON restrictions, private bucket, admin authorization, stale mapping and failed-save behavior. The generated archive was independently opened and every entry read with .NET ZIP APIs. Build output tracing includes runtime files for Vercel, excludes Python caches; production build/TypeScript and scoped lint results are recorded in the conversation. Live upload/download/Houdini installation is still pending owner verification.
 
 Additional scoped deployment files: next.config.ts; public/qatools.json; src/components/AdminNavigation.tsx; src/components/PublicationState.tsx; src/components/AdminToolPackage.tsx; src/components/AdminDownloads.tsx; src/components/AdminPrices.tsx; src/lib/houdiniPackage.ts; src/app/api/admin/products/package/route.ts; tests/houdini-package.test.cjs. Also include the approved public domain/dialog label updates in houdini/python/qatools_licensing/config.py and houdini_ui.py so server-generated installers use current configuration/text. Leave unrelated HDA binaries, security files, old handoffs and Python tests unstaged.
+
+## Inline main artwork and download counts — 2026-10-05
+
+Owner confirmed the deployed editor layout is suitable. The follow-up adds the main media control inside the first image area. Selecting an image previews it immediately; saving a new or edited draft uploads the selection. Clicking the saved image replaces the same primary media row. Replacement uses product timestamp/media-ID checks, unique storage paths and verified admin identity; stale edits cannot overwrite newer artwork. Other gallery images remain intact. Failed uploads retain the selection and show the error. Published editing remains deferred.
+
+The admin dashboard now has Free, Paid, Admin-granted and Total download counts. A count means a successfully authorized download-link request, including repeats, not a confirmed completed transfer. Counts begin with deployment; no historical numbers are invented. Acquisition source is captured from active entitlements, independent of later price changes. No free acquisition orders are created. Recording is service-only, rechecks confirmed/unbanned ownership and the enabled release mapping, and must succeed before a signed URL is returned. Raw event rows contain no user email/ID. Bundle/bulk downloads remain deferred.
+
+Apply both migrations before deploying this batch:
+- 20261005110000_product_main_image.sql
+- 20261005111000_download_request_counts.sql
+
+Scoped files for this follow-up: src/components/AdminProducts.tsx; src/components/AdminProducts.css; src/components/AdminDownloadCounts.tsx; src/app/admin/page.tsx; src/app/globals.css; src/app/api/admin/products/media/route.ts; src/app/api/admin/download-counts/route.ts; src/app/api/account/download/route.ts; src/lib/database.types.ts; tests/product-drafts.test.cjs; tests/downloads.test.cjs; tests/download-counts.test.cjs; the two migrations above; handoff/QATOOLS_PRODUCT_DRAFTS.md; handoff/QATOOLS_FEATURE_BACKLOG.md; handoff/QATOOLS_DEFERRED_ACTIONS.md. Leave unrelated existing changes unstaged.
+
+Verification: 20 targeted route/PostgreSQL tests passed with zero skips, including stable primary-image replacement, gallery preservation, stale edit rejection, authorization, orphan-upload cleanup, source snapshots, retry idempotence and fail-closed counting. Scoped lint passed. Production build and hosted owner checks are recorded separately; no remote upload, migration, commit or deployment was performed by the agent.
+
+Final local verification for this batch: production build/TypeScript passed, scoped lint passed, and scoped git diff --check passed. Hosted image upload/replacement and download-count checks await owner migration/deployment.

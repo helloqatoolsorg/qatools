@@ -7,7 +7,7 @@ const lib=load('src/lib/productDraft.ts');
 const mediaLib=load('src/lib/productMedia.ts',{'server-only':{}});
 function setup(options={}) {
  const calls=[];
- const db={from(table){calls.push({table});const q={select(){return q;},eq(){return q;},order(){return q;},limit(){return q;},maybeSingle(){return Promise.resolve({data:options.published?{id:1,published:true}:{id:1,published:false},error:null});},then(resolve,reject){const data=table==='products'?[{id:1,name:'tool',tool_ids:[]}]:[];return Promise.resolve({data,count:data.length,error:options.readError?{message:'secret'}:null}).then(resolve,reject);}};return q;},async rpc(name,args){calls.push({rpc:name,args});return {data:{id:10,updated_at:'2026-10-05T01:00:00Z'},error:options.rpcError?{code:options.rpcError,message:'secret details'}:null};},storage:{async getBucket(){return {data:{public:true},error:null};},from(bucket){return {async upload(file,bytes){calls.push({bucket,upload:file,bytes});return {error:null};},async remove(files){calls.push({remove:files});return {error:null};}};}}};
+ const db={from(table){calls.push({table});const q={select(){return q;},eq(){return q;},order(){return q;},limit(){return q;},maybeSingle(){return Promise.resolve({data:options.published?{id:1,published:true}:{id:1,published:false},error:null});},then(resolve,reject){const data=table==='products'?[{id:1,name:'tool',tool_ids:[]}]:[];return Promise.resolve({data,count:data.length,error:options.readError?{message:'secret'}:null}).then(resolve,reject);}};return q;},async rpc(name,args){calls.push({rpc:name,args});return {data:{id:10,media_id:20,updated_at:'2026-10-05T01:00:00Z'},error:options.rpcError?{code:options.rpcError,message:'secret details'}:null};},storage:{async getBucket(){return {data:{public:true},error:null};},from(bucket){return {async upload(file,bytes){calls.push({bucket,upload:file,bytes});return {error:null};},async remove(files){calls.push({remove:files});return {error:null};}};}}};
  const route=load('src/app/api/admin/products/route.ts',{'@/lib/requireAdmin':{async requireAdmin(){return options.denied?{response:Response.json({error:'Denied'},{status:403})}:{user:{id:admin}};}},'@/lib/supabaseAdmin':{supabaseAdmin:db},'@/lib/productDraft':lib});
  const media=load('src/app/api/admin/products/media/route.ts',{'@/lib/requireAdmin':{async requireAdmin(){return options.denied?{response:Response.json({error:'Denied'},{status:403})}:{user:{id:admin}};}},'@/lib/supabaseAdmin':{supabaseAdmin:db},'@/lib/productMedia':mediaLib});
  const request=data=>new Request('http://localhost/api/admin/products',{method:'POST',body:JSON.stringify(data)});
@@ -54,6 +54,7 @@ test('actual PostgreSQL draft lifecycle, retry, composition, isolation and stale
  await db.exec("ALTER TABLE products ENABLE ROW LEVEL SECURITY; GRANT SELECT ON products TO anon,authenticated; CREATE POLICY published_read ON products FOR SELECT TO anon,authenticated USING(published); INSERT INTO category VALUES(1,true),(2,false); INSERT INTO complexity VALUES(1,true); INSERT INTO products(name,slug,price_eur,current_version,category_id,complexity_id,published) VALUES('qafit01','qafit01',5,'1',1,1,true),('qaroad01','qaroad01',30,'1',1,1,true);");
  await db.query('INSERT INTO auth.users VALUES($1,now(),NULL),($2,now(),NULL)',[admin,other]);await db.query('INSERT INTO admin_users VALUES($1)',[admin]);
  await db.exec(fs.readFileSync('supabase/migrations/20261005100000_product_drafts.sql','utf8'));
+ await db.exec(fs.readFileSync('supabase/migrations/20261005110000_product_main_image.sql','utf8'));
  async function save(d=valid,request=other,id=null,stamp=null,who=admin){return (await db.query('SELECT public.save_product_draft($1,$2,$3,$4,$5) result',[who,request,d,id,stamp])).rows[0].result;}
  const first=await save();assert.equal(first.id,3);assert.deepEqual(await save(),first);assert.equal((await db.query('SELECT count(*)::int n FROM products')).rows[0].n,3);
  const row=(await db.query('SELECT * FROM products WHERE id=3')).rows[0];assert.equal(row.published,false);assert.equal(row.name,row.slug);assert.equal(row.product_type,'tool');
@@ -66,10 +67,19 @@ test('actual PostgreSQL draft lifecycle, retry, composition, isolation and stale
  for(const tool_ids of [[1,1],[3],[999],[b.id]])await assert.rejects(save({...bundle,name:'qabad01',tool_ids},'00000000-0000-0000-0000-000000000005'),/Invalid composition/);
  await assert.rejects(save({...bundle,name:'qabad01',price_eur:35},'00000000-0000-0000-0000-000000000005'),/Invalid composition/);
  await assert.rejects(db.query('UPDATE products SET published=true WHERE id=$1',[b.id]),/composed_products_remain_drafts/);
- const image=(await db.query("SELECT public.attach_product_draft_image($1,$2,'drafts/3/00000000-0000-0000-0000-000000000009.png') result",[admin,first.id])).rows[0].result;assert.notEqual(image.updated_at,updated.updated_at);assert.equal((await db.query('SELECT role FROM product_media WHERE product_id=3')).rows[0].role,'card');
+ let image=(await db.query("SELECT public.attach_product_draft_image($1,$2,'drafts/3/00000000-0000-0000-0000-000000000009.png') result",[admin,first.id])).rows[0].result;assert.notEqual(image.updated_at,updated.updated_at);assert.equal((await db.query('SELECT role FROM product_media WHERE product_id=3')).rows[0].role,'card');
  await assert.rejects(db.query("SELECT public.attach_product_draft_image($1,1,'drafts/1/00000000-0000-0000-0000-000000000009.png')",[admin]),/Unpublished draft/);
  await assert.rejects(db.query('SELECT public.publish_product_draft($1,$2,$3)',[admin,3,image.updated_at]),/Tool artwork and enabled download/);
  await assert.rejects(db.query('SELECT public.publish_product_draft($1,$2,$3)',[admin,b.id,b.updated_at]),/Tool artwork and enabled download/);
+
+ const card=(await db.query('SELECT id FROM product_media WHERE product_id=3')).rows[0].id;
+ async function replace(stamp=image.updated_at,media=card,who=admin,path='drafts/3/00000000-0000-0000-0000-000000000010.png'){return (await db.query('SELECT public.set_product_draft_card($1,3,$2,$3,$4) result',[who,media,stamp,path])).rows[0].result;}
+ await db.exec("INSERT INTO product_media(product_id,media_type,file_path,role,sort_order) VALUES(3,'image','old.png','main',1),(3,'image','gallery.png','gallery',2)");
+ await assert.rejects(replace(image.updated_at,null),/Image changed/);await assert.rejects(replace(image.updated_at,card,other),/Admin access/);await assert.rejects(replace(image.updated_at,card,admin,'unsafe.png'),/Invalid media path/);
+ const oldStamp=image.updated_at;image=await replace();assert.equal(image.media_id,card);assert.equal((await db.query('SELECT count(*)::int n FROM product_media WHERE product_id=3')).rows[0].n,3);assert.equal((await db.query("SELECT count(*)::int n FROM product_media WHERE product_id=3 AND role IN ('card','main')")).rows[0].n,1);await assert.rejects(replace(oldStamp),/Draft changed/);
+ image=await replace();assert.equal(image.media_id,card);
+ const fresh=await save({...valid,name:'qapreview01'},'00000000-0000-0000-0000-000000000006');
+ const created=(await db.query('SELECT public.set_product_draft_card($1,$2,NULL,$3,$4) result',[admin,fresh.id,fresh.updated_at,'drafts/'+fresh.id+'/00000000-0000-0000-0000-000000000010.png'])).rows[0].result;assert.ok(created.media_id);
  await db.exec("INSERT INTO product_downloads VALUES(3,'3/release.zip',true)");
  const published=(await db.query('SELECT public.publish_product_draft($1,$2,$3) result',[admin,3,image.updated_at])).rows[0].result;assert.equal(published.id,3);
  await assert.rejects(save(valid,other,3,published.updated_at),/Draft changed/);
@@ -77,4 +87,10 @@ test('actual PostgreSQL draft lifecycle, retry, composition, isolation and stale
  await db.exec('SET ROLE anon');assert.equal((await db.query('SELECT * FROM products')).rows.length,3);await assert.rejects(db.exec('SELECT * FROM product_members'),/permission denied/);await db.exec('RESET ROLE');
  await db.query("UPDATE auth.users SET banned_until=now()+interval '1 day' WHERE id=$1",[admin]);await assert.rejects(save(),/Admin access/);
  } finally {await db.close();}
+});
+
+test('main image route requires stale-edit protection and returns the replaced preview',async()=>{
+ const png=Buffer.alloc(24);Buffer.from([137,80,78,71,13,10,26,10]).copy(png);png.write('IHDR',12);png.writeUInt32BE(1,16);png.writeUInt32BE(1,20);
+ const bad=setup();assert.equal((await bad.media.POST(new Request('http://localhost/api/admin/products/media?productId=1&role=card',{method:'POST',body:png}))).status,400);assert.equal(bad.calls.length,0);
+ const s=setup();const r=await s.media.POST(new Request('http://localhost/api/admin/products/media?productId=1&role=card&expectedMediaId=20&expectedUpdatedAt=2026-10-05T00:00:00Z',{method:'POST',body:png}));assert.equal(r.status,200);const row=s.calls.find(c=>c.rpc);assert.equal(row.rpc,'set_product_draft_card');assert.equal(row.args.p_expected_media_id,20);assert.equal(row.args.p_admin_id,admin);assert.equal((await r.json()).media.id,20);
 });

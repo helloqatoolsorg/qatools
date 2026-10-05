@@ -2388,3 +2388,12 @@ body:not(.products-page) .cart-overlay{
 /* Match publication states throughout admin controls. */
 .publication-state.published,.publication-option-published{color:#80bd90!important}
 .publication-state.unpublished,.publication-option-unpublished{color:#e56b6b!important}
+
+.admin-download-counts{font:11px monospace;border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:26px}
+.admin-count-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.admin-count-heading h2{font:16px monospace}
+.admin-count-heading button{font:10px monospace;background:none;color:#aaa;border:1px solid #333;padding:8px;cursor:pointer}
+.admin-count-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin:20px 0}
+.admin-count-grid>div{padding:16px;background:#141414;border:1px solid var(--line)}
+.admin-count-grid span{color:#888}
+.admin-count-grid strong{display:block;font:24px monospace;margin-top:12px}

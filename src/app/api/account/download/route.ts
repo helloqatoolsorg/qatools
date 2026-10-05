@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { requireAccount } from "@/lib/requireAccount";
 import { privateJson, readActivationBody } from "@/lib/activationHttp";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -26,6 +27,8 @@ export async function POST(request: Request) {
     const result = await supabaseAdmin.storage.from("qatools-downloads")
       .createSignedUrl(file.data.file_path, 120, { download: file.data.file_name });
     if (result.error || !result.data?.signedUrl) return privateJson({ error: "Unable to prepare this download. Please try again later." }, 503);
+    const counted = await supabaseAdmin.rpc("record_product_download", { p_request_id: randomUUID(), p_user_id: authorization.user.id, p_product_id: id, p_file_path: file.data.file_path });
+    if (counted.error || counted.data !== true) return privateJson({ error: "Unable to prepare this download. Please try again later." }, 503);
     return privateJson({ url: result.data.signedUrl });
   } catch { return privateJson({ error: "Download service unavailable. Please try again later." }, 503); }
 }

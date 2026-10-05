@@ -459,6 +459,9 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      record_product_download: { Args: { p_request_id: string; p_user_id: string; p_product_id: number; p_file_path: string }; Returns: boolean };
+      read_admin_download_counts: { Args: { p_admin_id: string }; Returns: { free: number; paid: number; admin: number; total: number } };
+      set_product_draft_card: { Args: { p_admin_id: string; p_product_id: number; p_expected_media_id: number | null; p_expected_updated_at: string; p_path: string }; Returns: { id: number; updated_at: string; media_id: number } };
       publish_product_draft: { Args: { p_admin_id: string; p_product_id: number; p_expected_updated_at: string }; Returns: { id: number; updated_at: string } };
       save_product_draft: { Args: { p_admin_id: string; p_request_id: string; p_data: import("./productDraft").DraftInput; p_product_id?: number; p_expected_updated_at?: string }; Returns: { id: number; updated_at: string } };
       attach_product_draft_image: { Args: { p_admin_id: string; p_product_id: number; p_path: string }; Returns: { id: number; updated_at: string } };

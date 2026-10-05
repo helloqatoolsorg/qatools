@@ -8,7 +8,10 @@ export async function POST(request: Request) {
   try {
     const auth = await requireAdmin(request);
     if (auth.response) { auth.response.headers.set("Cache-Control", "no-store"); return auth.response; }
-    const rawId = new URL(request.url).searchParams.get("productId") ?? "";
+    const params = new URL(request.url).searchParams;
+    const rawId = params.get("productId") ?? "";
+    const card = params.get("role") === "card", rawMedia = params.get("expectedMediaId") ?? "", expectedStamp = params.get("expectedUpdatedAt");
+    if ((params.has("role") && !card) || (card && (expectedStamp === null || !Number.isFinite(Date.parse(expectedStamp)) || (rawMedia !== "" && (!/^[1-9][0-9]*$/.test(rawMedia) || !Number.isSafeInteger(Number(rawMedia))))))) return json({error:"Reload the draft before changing its main image."},400);
     if (!/^[1-9][0-9]{0,14}$/.test(rawId) || !Number.isSafeInteger(Number(rawId))) return json({ error: "Invalid product." }, 400);
     const id = Number(rawId);
     const { data: product, error: readError } = await supabaseAdmin.from("products").select("id,published").eq("id", id).maybeSingle();
@@ -25,8 +28,11 @@ export async function POST(request: Request) {
     const path = "drafts/" + id + "/" + randomUUID() + "." + format;
     const { error: uploadError } = await supabaseAdmin.storage.from("product-media").upload(path, bytes, { contentType: "image/" + (format === "jpg" ? "jpeg" : format), upsert: false });
     if (uploadError) return json({ error: "Unable to upload image." }, 503);
-    const { data, error } = await supabaseAdmin.rpc("attach_product_draft_image", { p_admin_id: auth.user.id, p_product_id: id, p_path: path });
+    const result = card
+      ? await supabaseAdmin.rpc("set_product_draft_card", { p_admin_id: auth.user.id, p_product_id: id, p_expected_media_id: rawMedia === "" ? null : Number(rawMedia), p_expected_updated_at: expectedStamp!, p_path: path })
+      : await supabaseAdmin.rpc("attach_product_draft_image", { p_admin_id: auth.user.id, p_product_id: id, p_path: path });
+    const { data, error } = result;
     if (error) { await supabaseAdmin.storage.from("product-media").remove([path]); return json({ error: "Unable to attach image. Reload the draft and check its media limit." }, 409); }
-    return json({ draft: data, message: "Image added. Draft media is publicly accessible by URL; upload product artwork only." });
+    return json({ draft: data, media: card && data && "media_id" in data ? { id: data.media_id, file_path: path, role: "card", sort_order: 0 } : null, message: card ? "Main image updated." : "Gallery image added." });
   } catch { return json({ error: "Unable to upload image." }, 503); }
 }

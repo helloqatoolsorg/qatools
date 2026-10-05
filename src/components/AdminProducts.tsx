@@ -36,6 +36,9 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   const [dirty, setDirty] = useState(false);
   const [revision, setRevision] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const artworkInput = useRef<HTMLInputElement>(null);
+  const [pendingArtwork, setPendingArtwork] = useState<{file:File;url:string} | null>(null);
+  useEffect(() => () => { if (pendingArtwork) URL.revokeObjectURL(pendingArtwork.url); }, [pendingArtwork]);
   const requestId = useRef<string | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -78,7 +81,9 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
       if (!response.ok) throw new Error(body.error ?? "Unable to save draft.");
       setId(body.draft.id); setUpdatedAt(body.draft.updated_at); setDirty(false); setMessage(body.message);
       window.history.replaceState(null, "", "/admin/products/edit?id=" + body.draft.id);
-      setRevision(v => v + 1);
+      if (pendingArtwork) {
+        if (!await upload(pendingArtwork.file, true, { id: body.draft.id, updatedAt: body.draft.updated_at, mediaId: selected?.product_media.find(m => m.role === "card")?.id ?? null })) return;
+      } else setRevision(v => v + 1);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save draft."); }
     finally { setBusy(false); }
   }
@@ -93,16 +98,29 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to publish tool."); }
     finally { setBusy(false); }
   }
-  async function upload(file: File | undefined) {
-    if (!file || !id || busy || dirty || readOnly) return;
+  async function upload(file: File | undefined, main = false, target?: {id:number;updatedAt:string;mediaId:number|null}) {
+    const targetId = target?.id ?? id;
+    if (!file || !targetId || (!target && (busy || packageBusy || dirty || readOnly))) return false;
     setBusy(true); setError(null); setMessage(null);
     try {
       if (file.size > 4 * 1024 * 1024) throw new Error("Choose an image up to 4 MB.");
-      const response = await fetch("/api/admin/products/media?productId=" + id, { method: "POST", headers: { Authorization: "Bearer " + await access(), "Content-Type": "application/octet-stream" }, body: file });
+      const params = new URLSearchParams({productId:String(targetId)});
+      if (main) { params.set("role","card"); params.set("expectedUpdatedAt",target?.updatedAt ?? updatedAt ?? ""); params.set("expectedMediaId",String(target ? target.mediaId ?? "" : selected?.product_media.find(m => m.role === "card")?.id ?? "")); }
+      const response = await fetch("/api/admin/products/media?" + params, { method: "POST", headers: { Authorization: "Bearer " + await access(), "Content-Type": "application/octet-stream" }, body: file });
       const body = await response.json(); if (!response.ok) throw new Error(body.error ?? "Unable to upload image.");
-      setUpdatedAt(body.draft.updated_at); setMessage(body.message); setRevision(v => v + 1);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to upload image."); }
+      if (main && body.media) {
+        setCatalog(c => c ? {...c,products:c.products.map(p => p.id !== targetId ? p : {...p,updated_at:body.draft.updated_at,product_media:[...p.product_media.filter(m => m.id !== body.media.id).map(m => ["main","card"].includes(m.role) ? {...m,role:"gallery"} : m),body.media]})} : c);
+        setPendingArtwork(null);
+      }
+      setUpdatedAt(body.draft.updated_at); setMessage(body.message); setRevision(v => v + 1); return true;
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to upload image."); return false; }
     finally { setBusy(false); }
+  }
+  function chooseArtwork(file: File | undefined) {
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024 || !["image/png","image/jpeg","image/webp"].includes(file.type)) { setError("Choose a PNG, JPG or WebP up to 4 MB."); return; }
+    setError(null); setPendingArtwork({file,url:URL.createObjectURL(file)});
+    if (id && !dirty) void upload(file,true);
   }
   if (authLoading || (!loaded && user)) return <p>Loading products...</p>;
   if (!user) return <p><a href="/user">Log in</a> with your admin account to manage products.</p>;
@@ -121,7 +139,13 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
     {error && <p role="alert" className="admin-product-error">{error}</p>}{message && <p role="status">{message}</p>}
     {!draft ? <div className="admin-type-choice" role="dialog" aria-modal="false" aria-labelledby="product-type-title"><h2 id="product-type-title">Choose product type</h2>{productTypes.map(t => <button key={t} type="button" onClick={() => choose(t)}>{t.toUpperCase()}</button>)}</div> : <>
       {readOnly && <p>This product is published. This editor currently saves unpublished drafts only. <a href={"/product?slug=" + selected?.slug}>View product</a></p>}
-      <div className="product-hero admin-product-hero"><div className="admin-product-media-column">      <section className="admin-product-media"><div className="product-media">{selected && artwork(selected) ? <Image src={artwork(selected)!} alt="Product preview" width={960} height={600} unoptimized /> : <div className="admin-hero-placeholder">Add product artwork</div>}</div><h2>Media</h2><p>The first image becomes the card artwork. Save the draft before adding images. PNG, JPG or WebP up to 4 MB; product artwork only.</p><div className="admin-media-grid">{selected?.product_media.map(m => { const url = mediaUrl(m); return url ? <div key={m.id}><Image src={url} alt="Product artwork" width={640} height={360} unoptimized /><small>{m.role}</small></div> : null; })}</div><label className="admin-media-upload">Add media<input type="file" accept="image/png,image/jpeg,image/webp" disabled={!id || busy || dirty || readOnly} onChange={e => { void upload(e.target.files?.[0]); e.target.value=""; }} /></label>{dirty && id && <p>Save your changes before adding media.</p>}</section>{draft.product_type === "tool" && <AdminToolPackage key={id ?? "new"} productId={id} disabled={busy || dirty || readOnly} onBusyChange={setPackageBusy} />}</div><div className="product-info admin-product-info"><form onSubmit={save}><fieldset disabled={busy || packageBusy || readOnly}><div className="admin-product-fields">
+      <div className="product-hero admin-product-hero"><div className="admin-product-media-column">      <section className="admin-product-media"><input ref={artworkInput} className="admin-artwork-input" type="file" accept="image/png,image/jpeg,image/webp" disabled={busy || packageBusy || readOnly} onChange={e => { chooseArtwork(e.target.files?.[0]); e.target.value=""; }} />
+          <button type="button" className="product-media admin-main-artwork" disabled={busy || packageBusy || readOnly} onClick={() => artworkInput.current?.click()} aria-label={pendingArtwork || (selected && artwork(selected)) ? "Change main image" : "Upload main image"}>
+            {pendingArtwork || (selected && artwork(selected)) ? <Image src={pendingArtwork?.url ?? artwork(selected!)!} alt="Product preview" width={960} height={600} unoptimized /> : <span className="admin-hero-placeholder">＋ Add media</span>}
+            <span className="admin-artwork-overlay">{busy ? "Uploading..." : pendingArtwork || (selected && artwork(selected)) ? "Click to change image" : "PNG · JPG · WebP"}</span>
+          </button>
+          {pendingArtwork && <p>{dirty || !id ? "Image selected. Save the draft to upload it." : "Image selected."}</p>}
+          <h2>Gallery</h2><p>PNG, JPG or WebP up to 4 MB.</p><div className="admin-media-grid">{selected?.product_media.filter(m => m.role !== "card" && m.role !== "main").map(m => { const url = mediaUrl(m); return url ? <div key={m.id}><Image src={url} alt="Product artwork" width={640} height={360} unoptimized /><small>{m.role}</small></div> : null; })}</div><label className="admin-media-upload">Add gallery image<input type="file" accept="image/png,image/jpeg,image/webp" disabled={!id || busy || dirty || readOnly} onChange={e => { void upload(e.target.files?.[0]); e.target.value=""; }} /></label>{dirty && id && <p>Save your changes before adding media.</p>}</section>{draft.product_type === "tool" && <AdminToolPackage key={id ?? "new"} productId={id} disabled={busy || dirty || readOnly} onBusyChange={setPackageBusy} />}</div><div className="product-info admin-product-info"><form onSubmit={save}><fieldset disabled={busy || packageBusy || readOnly}><div className="admin-product-fields">
         <label>Title<input required pattern="[a-z0-9][a-z0-9_-]{0,79}" maxLength={80} value={draft.name} onChange={e => change("name",e.target.value)} placeholder="qatool01" /><small>Lowercase letters, numbers, underscores or hyphens. Slug matches the title.</small></label>
         <label>Type<input value={draft.product_type} readOnly /></label>
         <label className="admin-product-wide">Subtitle<input required maxLength={200} value={draft.subtitle} onChange={e => change("subtitle",e.target.value)} /></label>
