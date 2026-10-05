@@ -286,7 +286,7 @@ export function QAToolsStateProvider({
             "entitlements"
           )
           .select(`
-            products (
+            products!entitlements_product_id_fkey (
               slug
             )
           `)

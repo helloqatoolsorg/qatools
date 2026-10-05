@@ -115,3 +115,21 @@ git add supabase/migrations/20261005190000_independent_bundle_pricing.sql tests/
 git commit -m "Keep bundle prices independent from included tools"
 git push
 ```
+
+
+## Purchased-products relationship fix — 2026-10-05
+
+Confirmed remotely with a read-only zero-row request: the unqualified entitlements/products embed returns PGRST201 because entitlement_origins introduces a second relationship. Purchased products, global owned/cart state and two admin entitlement reads now explicitly use products!entitlements_product_id_fkey. No grants, RLS, ownership, payment records or activation state were changed. Full purchase/product/category and admin purchase/activation joins, plus account-machine fields, resolve with HTTP 200 against the live schema using zero-row requests.
+
+Production build/TypeScript and admin-route lint passed. Existing context lint still reports two pre-existing set-state-in-effect errors and a dependency warning on unchanged lines; no unrelated React refactor was made. Admin, download and licensing security tests passed; the storage SQL test was then rerun with isolated PostgreSQL enabled.
+
+No migration required. Deploy:
+
+```bat
+cd /d D:\qatools\qatools
+git add src/context/QAToolsState.tsx src/app/user/page.tsx src/app/api/admin/customers/route.ts src/app/api/admin/entitlements/grant/route.ts handoff/QATOOLS_BUNDLE_OWNERSHIP_DELIVERY.md
+git commit -m "Disambiguate product ownership queries"
+git push
+```
+
+After Ready: refresh the customer account, verify the purchased bundle and included tools, download the saved bundle and continue Houdini installation/activation. No repeat payment is required to verify this fix. Hosted user verification remains pending.

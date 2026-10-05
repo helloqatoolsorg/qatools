@@ -224,7 +224,7 @@ export async function POST(
           status,
           granted_at,
 
-          products (
+          products!entitlements_product_id_fkey (
             id,
             name,
             slug
