@@ -5,6 +5,7 @@ import AdminDownloads from "@/components/AdminDownloads";
 import AdminToolPackage from "@/components/AdminToolPackage";
 import PublicationState from "@/components/PublicationState";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -22,6 +23,7 @@ async function access() {
 function mediaUrl(p: Media) { return p.file_path ? supabase.storage.from("product-media").getPublicUrl(p.file_path).data.publicUrl : null; }
 function artwork(p: Product) { const sorted = [...p.product_media].sort((a,b) => a.sort_order-b.sort_order); const m = sorted.find(v => v.role === "card") ?? sorted[0]; return m ? mediaUrl(m) : null; }
 export default function AdminProducts({ editor = false }: { editor?: boolean }) {
+  const router=useRouter();
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id;
   const [catalog, setCatalog] = useState<Catalog | null>(null);
@@ -34,6 +36,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   const [typeFilter, setTypeFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [existingProductId,setExistingProductId]=useState<number|null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [packageBusy, setPackageBusy] = useState(false);
@@ -80,12 +83,12 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
     event.preventDefault(); if (!draft || busy || packageBusy || readOnly) return;
     if(priceText!=="" && !/^(0|[1-9][0-9]{0,5})([.,][0-9]{1,2})?$/.test(priceText)){setError("Enter a price with at most two decimal places.");return;}
     const amount=priceText===""?null:Number(priceText.replace(",","."));
-    setBusy(true); setError(null); setMessage(null);
+    setBusy(true); setError(null); setMessage(null); setExistingProductId(null);
     try {
       requestId.current ??= crypto.randomUUID();
       const response = await fetch("/api/admin/products", { method: "POST", headers: { Authorization: "Bearer " + await access(), "Content-Type": "application/json" }, body: JSON.stringify({ requestId: requestId.current, data: {...draft,price_eur:amount}, ...(id ? { productId: id, expectedUpdatedAt: updatedAt } : {}) }) });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? "Unable to save draft.");
+      if (!response.ok) { setExistingProductId(body.existingProduct?.id ?? null); throw new Error(body.error ?? "Unable to save draft."); }
       setId(body.draft.id); setUpdatedAt(body.draft.updated_at); setDirty(false); setMessage(body.message);
       window.history.replaceState(null, "", "/admin/products/edit?id=" + body.draft.id);
       if (pendingArtwork) {
@@ -93,6 +96,17 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
       } else setRevision(v => v + 1);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save draft."); }
     finally { setBusy(false); }
+  }
+  async function discardDraft() {
+    if (!id || !updatedAt || busy || packageBusy || readOnly) return;
+    if (!window.confirm("Delete this unused draft and discard any unsaved changes? Its name will become available again. Products with release history or linked records cannot be deleted.")) return;
+    setBusy(true); setError(null);
+    try {
+      const response=await fetch("/api/admin/products",{method:"DELETE",headers:{Authorization:"Bearer "+await access(),"Content-Type":"application/json"},body:JSON.stringify({productId:id,expectedUpdatedAt:updatedAt})});
+      const body=await response.json(); if(!response.ok) throw new Error(body.error ?? "Unable to delete draft.");
+      router.push("/admin?section=products");
+    } catch(reason) { setError(reason instanceof Error ? reason.message : "Unable to delete draft."); }
+    finally {setBusy(false);}
   }
   async function upload(file: File | undefined, main = false, target?: {id:number;updatedAt:string;mediaId:number|null}) {
     const targetId = target?.id ?? id;
@@ -127,13 +141,13 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
     <div className="admin-product-filters"><label>State<select value={stateFilter} onChange={e => setStateFilter(e.target.value)}><option value="all">All</option><option value="published">Published</option><option value="draft">Unpublished</option></select></label><label>Type<select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}><option value="all">All</option>{productTypes.map(t => <option key={t}>{t}</option>)}</select></label><label>Search<input value={query} onChange={e => setQuery(e.target.value)} /></label></div>
     <div className="admin-product-entry-actions"><a className="card admin-new-product" href="/admin/products/edit">＋ New product</a><button type="button" className="card admin-new-product" disabled={!catalog.products.some(p=>!p.published)} onClick={()=>{setStateFilter("draft");setTypeFilter("all");setQuery("");}}>Continue editing</button></div>
     <div className="product-grid admin-product-grid">
-      {catalog.products.filter(p => (stateFilter === "all" || p.published === (stateFilter === "published")) && (typeFilter === "all" || p.product_type === typeFilter) && (p.name + " " + p.subtitle).toLowerCase().includes(query.toLowerCase())).map(p => {
+      {catalog.products.filter(p => (stateFilter === "all" || p.published === (stateFilter === "published")) && (typeFilter === "all" || p.product_type === typeFilter) && (p.name + " " + p.slug + " " + p.subtitle).toLowerCase().includes(query.toLowerCase())).map(p => {
         const image = artwork(p); return <article key={p.id} className="product-card admin-product-card"><a href={"/admin/products/edit?id="+p.id}>{image ? <div className="media-frame"><Image src={image} alt={p.name} width={640} height={360} unoptimized /></div> : <div className="admin-product-artwork">No artwork</div>}<div className="card-info"><h3>{p.name}</h3><p>{p.subtitle}</p><div className="tags"><span className="card-tag">{p.product_type.toUpperCase()}</span><PublicationState published={p.published}/></div><p>{p.price_eur===null?"Price not set":"€"+Number(p.price_eur).toFixed(2)}</p></div></a>{!p.published&&<div className="admin-card-actions"><a className="admin-card-action" href={"/admin/products/edit?id="+p.id}>Edit</a><a className="admin-card-action" href={"/admin/products/edit?id="+p.id+"&publish=1"}>Publish</a></div>}</article>;
       })}
     </div>
   </section>;
   return <section className="admin-products admin-product-editor"><a href="/admin?section=products">← Admin products</a><div className="admin-product-title"><h1>{id ? draft?.name : "New product"}</h1><PublicationState published={readOnly} /></div>
-    {error && <p role="alert" className="admin-product-error">{error}</p>}{message && <p role="status">{message}</p>}
+    {error && <p role="alert" className="admin-product-error">{error}</p>}{existingProductId && <p><a href={"/admin/products/edit?id="+existingProductId}>Open existing product</a></p>}{message && <p role="status">{message}</p>}
     {!draft ? <div className="admin-type-choice" role="dialog" aria-modal="false" aria-labelledby="product-type-title"><h2 id="product-type-title">Choose product type</h2>{productTypes.map(t => <button key={t} type="button" onClick={() => choose(t)}>{t.toUpperCase()}</button>)}</div> : <>
       {readOnly && <p>This product is published. This editor currently saves unpublished drafts only. <a href={"/product?slug=" + selected?.slug}>View product</a></p>}
       <div className="product-hero admin-product-hero"><div className="admin-product-media-column">      <section className="admin-product-media"><input ref={artworkInput} className="admin-artwork-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy || packageBusy || readOnly} onChange={e => { chooseArtwork(e.target.files?.[0]); e.target.value=""; }} />
@@ -165,6 +179,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
 
       <button type="submit">{busy ? "Saving..." : "Accept · save unpublished draft"}</button></fieldset></form></div></div>
 
+      {id && !readOnly && <button type="button" disabled={busy || packageBusy} onClick={()=>void discardDraft()}>Delete unused draft</button>}
       {id && readOnly && <section><h2>Paddle price</h2><PriceEditor key={id} productId={id}/></section>}
       {id && !readOnly && <ProductPublication productId={id} updatedAt={updatedAt} disabled={dirty || busy || packageBusy} onPublished={()=>setRevision(v=>v+1)} />}
       {draft.product_type === "project" && <p>Project files and publishing will be connected in the next product-management batch. This draft is kept unpublished.</p>}

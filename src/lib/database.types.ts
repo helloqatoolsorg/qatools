@@ -462,6 +462,7 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      delete_unused_product_draft: { Args: { p_admin_id: string; p_product_id: number; p_expected_updated_at: string }; Returns: { id: number } };
       product_publication_checks: { Args: { p_admin_id: string; p_product_id: number }; Returns: { missing: string[]; ready: boolean; updated_at: string } };
       record_product_download: { Args: { p_request_id: string; p_user_id: string; p_product_id: number; p_file_path: string }; Returns: boolean };
       read_admin_download_counts: { Args: { p_admin_id: string }; Returns: { free: number; paid: number; admin: number; total: number } };

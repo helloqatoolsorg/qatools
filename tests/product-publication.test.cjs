@@ -12,6 +12,20 @@ test('actual SQL unfinished drafts, GIF attachments, publication checks and draf
  await db.exec(table('products')+table('product_media'));await db.query('INSERT INTO auth.users VALUES($1,now(),NULL),($2,now(),NULL)',[admin,other]);await db.query('INSERT INTO admin_users VALUES($1)',[admin]);
  const pricing=fs.readFileSync('supabase/migrations/20261004190000_admin_paddle_catalog_setup.sql','utf8');await db.exec(pricing.slice(pricing.indexOf('CREATE FUNCTION public.advance_sandbox_catalog_setup'),pricing.indexOf('CREATE FUNCTION public.complete_sandbox_catalog_setup')));
  for(const file of ['20261005100000_product_drafts.sql','20261005110000_product_main_image.sql','20261005120000_product_publication_workflow.sql'])await db.exec(fs.readFileSync('supabase/migrations/'+file,'utf8'));
+ await db.exec("ALTER TABLE product_downloads ADD FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE; CREATE TABLE test_commercial_records(product_id bigint REFERENCES products(id));");
+ await db.exec("INSERT INTO products(id,name,slug,price_eur,current_version,published) VALUES(20,'manual','manual',NULL,'',false)");
+ await db.exec(fs.readFileSync('supabase/migrations/20261005130000_product_draft_identity.sql','utf8'));
+ assert.equal((await db.query("SELECT nextval(pg_get_serial_sequence('public.products','id')) id")).rows[0].id,21);
+ const temporary=(await db.query("INSERT INTO products(name,slug,current_version,published) VALUES('qatesta01','qatesta01','',false) RETURNING id,updated_at")).rows[0];
+ const discard=(who=admin,stamp=temporary.updated_at)=>db.query('SELECT delete_unused_product_draft($1,$2,$3)',[who,temporary.id,stamp]);
+ await assert.rejects(discard(other),/Admin access/);await assert.rejects(discard(admin,'2000-01-01'),/Draft changed/);
+ await db.query('INSERT INTO test_commercial_records VALUES($1)',[temporary.id]);await assert.rejects(discard(),/linked records/);await db.exec('DELETE FROM test_commercial_records');
+ await db.query("INSERT INTO product_members VALUES(20,$1)",[temporary.id]);await assert.rejects(discard(),/linked records/);await db.exec('DELETE FROM product_members');
+ await db.query("UPDATE products SET initial_release_date=current_date WHERE id=$1",[temporary.id]);await assert.rejects(discard(),/Previously released/);await db.query('UPDATE products SET initial_release_date=NULL WHERE id=$1',[temporary.id]);
+ await db.query("INSERT INTO product_downloads VALUES($1,'unused.zip',true)",[temporary.id]);await discard();
+ assert.equal((await db.query('SELECT count(*)::int n FROM product_downloads WHERE product_id=$1',[temporary.id])).rows[0].n,0);
+ await db.exec("INSERT INTO products(name,slug,current_version,published) VALUES('qatesta01','qatesta01','',false)");
+ for(const role of ['anon','authenticated','service_role'])assert.equal((await db.query("SELECT has_function_privilege($1,'delete_unused_product_draft(uuid,bigint,timestamptz)','EXECUTE') a",[role])).rows[0].a,role==='service_role');
  const draft={name:'qatest01',product_type:'tool',subtitle:'',description:'',price_eur:null,compatibility:'',current_version:'',release_date:null,category_id:0,complexity_id:0,tool_ids:[]};
  async function save(data=draft,id=null,stamp=null){return (await db.query('SELECT save_product_draft($1,$2,$3,$4,$5) r',[admin,other,data,id,stamp])).rows[0].r;}
  let saved=await save();assert.deepEqual(await save(),saved);const row=(await db.query('SELECT * FROM products WHERE id=$1',[saved.id])).rows[0];assert.equal(row.category_id,null);assert.equal(row.price_eur,null);

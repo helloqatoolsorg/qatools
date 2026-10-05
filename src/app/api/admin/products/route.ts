@@ -40,7 +40,14 @@ export async function POST(request: Request) {
     const { data, error } = await supabaseAdmin.rpc("save_product_draft", { p_admin_id: auth.user.id, p_request_id: body.requestId, p_data: body.data,
       ...(body.productId === undefined ? {} : { p_product_id: body.productId, p_expected_updated_at: body.expectedUpdatedAt }) });
     if (error) {
-      if (error.code === "23505") return json({ error: "That product name is already in use." }, 409);
+      if (error.code === "23505") {
+        // A duplicate primary key is not a duplicate name. Resolve the actual
+        // slug against the complete private catalog before describing a conflict.
+        const existing = await supabaseAdmin.from("products").select("id,name,slug,published").eq("slug",body.data.name).maybeSingle();
+        if (!existing.error && existing.data && existing.data.id !== body.productId) return json({ error: "That name belongs to an existing product. Open it to continue editing or delete its unused draft.", existingProduct: { id: existing.data.id, name: existing.data.name, published: existing.data.published } },409);
+        if (!existing.error && /products_pkey|Key \(id\)/.test((error.message ?? "")+" "+(error.details ?? ""))) return json({ error: "The product ID counter needs checking. This name has not been reserved. Apply the product draft identity migration before trying again." },503);
+        return json({error:"Unable to save draft. No product name conflict was found. Please retry or contact support."},503);
+      }
       if (error.code === "40001") return json({ error: "This draft changed or is already published. Reload before editing." }, 409);
       if (["22023", "22P02", "22003", "22007"].includes(error.code ?? "")) return json({ error: "Check the entered values and selected tools." }, 400);
       return json({ error: "Unable to save draft." }, 503);
@@ -77,4 +84,19 @@ export async function PATCH(request: Request) {
     if (error) return json({ error: "Unable to publish tool." }, 503);
     return json({ draft: data, message: "Product published." });
   } catch { return json({ error: "Unable to publish tool." }, 503); }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const auth = await requireAdmin(request);
+    if (auth.response) { auth.response.headers.set("Cache-Control","no-store"); return auth.response; }
+    const raw = await readText(request,1000);
+    let body; try { body=JSON.parse(raw ?? ""); } catch { return json({error:"Invalid draft deletion request."},400); }
+    if (!body || typeof body!=="object" || Object.keys(body).some(k=>!["productId","expectedUpdatedAt"].includes(k)) || !Number.isSafeInteger(body.productId) || body.productId<1 || typeof body.expectedUpdatedAt!=="string" || !Number.isFinite(Date.parse(body.expectedUpdatedAt))) return json({error:"Invalid draft deletion request."},400);
+    const result=await supabaseAdmin.rpc("delete_unused_product_draft",{p_admin_id:auth.user.id,p_product_id:body.productId,p_expected_updated_at:body.expectedUpdatedAt});
+    if(result.error?.code==="40001") return json({error:"This draft changed. Reload it before deleting."},409);
+    if(result.error && ["22023","23503"].includes(result.error.code)) return json({error:"This product has release history or linked records, such as purchases, Paddle setup or another bundle. It cannot be deleted."},409);
+    if(result.error) return json({error:"Unable to delete draft."},503);
+    return json({message:"Draft deleted. Its name is available again."});
+  } catch { return json({error:"Unable to delete draft."},503); }
 }
