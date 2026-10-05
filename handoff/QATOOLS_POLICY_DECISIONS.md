@@ -282,3 +282,8 @@ Approved: a fully refunded product returns to the unowned storefront state and m
 Implemented locally in 20261005160000_refunded_product_repurchase.sql: cart and retained single-item checkout accept refunded entitlement rows; only a new verified provider payment restores ownership. Each payment creates its own order and order item. Old refund deliveries remain tied to their original item and cannot remove the new purchase. Bundle repurchases restore the pinned included tools; independent purchases survive bundle refunds.
 
 Verified using actual PostgreSQL migration execution: individual and bundle repurchases, old refund replay, repeated refunds, active/revoked blocking and legacy checkout. Remote migration/deployment and owner testing remain pending. Supersedes earlier deferral of repurchase after refund only; revocation, disputes and partial monetary refund exceptions remain deferred.
+
+
+## 2026-10-05: independent bundle prices
+
+Owner supersedes the earlier mandatory discount comparison: each bundle has its own fixed positive price, with no comparison to a constituent-tool price total. Existing ownership still does not reduce that price. Publication verifies a valid positive bundle price and the existing server-verified Paddle mapping; no ownership, refunds or checkout verification rules change. Locally implemented in 20261005190000_independent_bundle_pricing.sql. Remote application pending.

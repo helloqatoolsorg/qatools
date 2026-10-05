@@ -134,6 +134,18 @@ test('actual PostgreSQL bundle sources, pinned checkout, overlapping refunds and
  await assert.rejects(db.query('SELECT save_product_draft($1,$2,$3,$4,$5)',[admin,bundleRequest,{...emptyBundle,slug:'different'},pretty.id,renamed.updated_at]),/slug is locked/);
  await assert.rejects(db.query('SELECT save_product_draft($1,gen_random_uuid(),$2)',[buyer,emptyBundle]),/Admin access/);
  await assert.rejects(db.query('SELECT save_product_draft($1,gen_random_uuid(),$2)',[admin,emptyBundle]),/duplicate key/);
+ // Standalone bundle pricing has no dependency on constituent prices.
+ await db.exec(read('20261005190000_independent_bundle_pricing.sql'));
+ for(const price of [12,20]){
+  await db.query('UPDATE products SET price_eur=$1 WHERE id=10',[price]);
+  const checklist=(await db.query('SELECT product_publication_checks($1,10) r',[admin])).rows[0].r;
+  assert.equal(checklist.ready,true);assert.ok(!checklist.missing.some(x=>x.includes('tools total')));
+ }
+ await db.exec('UPDATE products SET price_eur=0 WHERE id IN (1,2)');
+ assert.equal((await db.query('SELECT product_publication_checks($1,10) r',[admin])).rows[0].r.ready,true);
+ await db.exec('UPDATE products SET price_eur=0 WHERE id=10');
+ assert.ok((await db.query('SELECT product_publication_checks($1,10) r',[admin])).rows[0].r.missing.includes('Bundle price greater than zero'));
+ await db.exec('UPDATE products SET price_eur=9 WHERE id=10');
  const rid='00000000-0000-4000-8000-000000000080';
  const identity={schema:1,label:'Beautiful Noise',internal_name:'Beautiful_Noise',slug:'beautiful_noise',file:'beautiful_noise.hda',sha256:'a'.repeat(64)};
  const imported=(await db.query('SELECT import_prepared_tool($1,$2,$3) r',[admin,rid,identity])).rows[0].r;

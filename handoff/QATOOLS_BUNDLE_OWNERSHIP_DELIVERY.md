@@ -4,7 +4,7 @@
 
 ## Behavior
 
-- Bundles are separate paid catalog products. Their fixed price must be positive and below the sum of their selected individual tools. Existing ownership does not reduce the bundle price.
+- Bundles are separate paid catalog products. Their fixed price must be positive and is independent of individual tool prices. Existing ownership does not reduce the bundle price.
 - Buying a bundle grants its product download and missing included tools. Existing independent ownership stays intact. Account-wide activation/refresh includes active included tools through the existing entitlements query; no cryptography or machine-ID changes.
 - Each checkout pins selected tool IDs; order items retain that snapshot. The private entitlement_origins ledger records each root grant separately. entitlements remains the active ownership projection, with one account/product row. Refunds and replays update only their originating purchase. Access remains active if another source still supplies it. Explicit revoked tool rows stay blocked.
 - Publication checks a validated bundle release matching the selected tools, metadata, main image, price and verified Paddle mapping. Released composition is immutable, including after unpublishing. Package contents may be replaced for the same selected tools.
@@ -45,7 +45,7 @@ Wait for the matching Vercel deployment to be Ready. This batch does not change 
 
 ## Hosted verification
 
-1. Create an unpublished bundle, choose real published tools, upload its matching ZIP, and set a discounted fixed price. Use the existing price panel/publication dialog to create or verify its sandbox Paddle price.
+1. Create an unpublished bundle, choose real published tools, upload its matching ZIP, and set its fixed price. Use the existing price panel/publication dialog to create or verify its sandbox Paddle price.
 2. Check missing-field and mismatched-ZIP errors, then publish when the readiness checks pass.
 3. Use a test account with an independently purchased included tool. Buy the bundle at the full fixed bundle price. Confirm the new tools and bundle appear once, and download/install its prepared ZIP.
 4. Refresh the existing account license in Houdini; confirm included tools work with the same account/machine activation.
@@ -69,7 +69,7 @@ git commit -m "Build bundle installers from selected tools"
 git push
 ```
 
-After Ready: open qabundle01, select real published tools with uploaded installers, build, set/verify its discounted Paddle price and publish. Download/install the built archive, verify each included tool uses account activation, then run purchase/refund/repurchase checks. Refund a bundle containing a separately purchased tool and confirm that tool stays active. These owner-hosted tests remain pending.
+After Ready: open qabundle01, select real published tools with uploaded installers, build, set/verify its Paddle price and publish. Download/install the built archive, verify each included tool uses account activation, then run purchase/refund/repurchase checks. Refund a bundle containing a separately purchased tool and confirm that tool stays active. These owner-hosted tests remain pending.
 
 Local checks: six targeted tests pass (including actual PostgreSQL migration execution), assembly authorization and failure cases, preserved bundle/payment ownership tests. Production build/TypeScript, changed-source lint and diff check passed. No hosted products, source HDAs or installed Houdini licensing caches were changed.
 
@@ -100,5 +100,18 @@ No migration is needed. Deploy only:
 cd /d D:\qatools\qatools
 git add src/app/api/admin/products/assemble/route.ts tests/automatic-bundle-assembly.test.cjs handoff/QATOOLS_BUNDLE_OWNERSHIP_DELIVERY.md
 git commit -m "Accept empty POST streams for bundle assembly"
+git push
+```
+
+
+## Independent bundle pricing rollout — 2026-10-05
+
+The constituent-price-total requirement has been removed. Bundles retain their own positive price; included-tool prices may be free or differ without affecting the bundle. Apply 20261005190000_independent_bundle_pricing.sql before reloading readiness. No frontend change is needed. Tests cover equal/higher pricing, free constituent tools and invalid zero bundle price.
+
+```bat
+cd /d D:\qatools\qatools
+supabase db push
+git add supabase/migrations/20261005190000_independent_bundle_pricing.sql tests/bundle-ownership.test.cjs handoff/QATOOLS_POLICY_DECISIONS.md handoff/QATOOLS_BUNDLE_OWNERSHIP_DELIVERY.md
+git commit -m "Keep bundle prices independent from included tools"
 git push
 ```
