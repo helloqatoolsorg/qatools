@@ -7,7 +7,7 @@ function setup(options={}){
  const mappings=entries.filter(t=>!options.missing || t.id!==2).map(t=>({product_id:t.id,enabled:!options.disabled,file_path:t.id+'/source/package.zip'}));
  const db={from(table){let id;const q={select(){return q;},eq(k,v){id=v;return q;},async maybeSingle(){return {data:table==='products'?{id,slug:'bundle',product_type:options.project?'project':'bundle'}:null,error:options.database ? {}:null};},async in(){return {data:table==='products'?entries:mappings,error:null};},then(resolve,reject){return Promise.resolve({data:[{tool_id:1},{tool_id:2}],error:null}).then(resolve,reject);}};return q;},storage:{async getBucket(){return {data:{public:!!options.public},error:null};},from(){return {async download(path){calls.push({download:path});const id=Number(path.split('/')[0]),slug=id===1?'one':'two';return {data:options.unavailable?null:new Blob([options.corrupt?Buffer.from('broken'):pack.makePackageZip([{name:'qatools/otls/'+slug+'.hda',bytes:hda},{name:'qatools.json',bytes:Buffer.from('old config')}])]),error:null};},async upload(path,bytes){calls.push({upload:path,bytes});return {error:options.upload ? {}:null};}};}},async rpc(name,args){calls.push({name,args});return {data:{ok:!options.conflict},error:null};}};
  const route=load('src/app/api/admin/products/assemble/route.ts',{'@/lib/requireAdmin':{requireAdmin:async()=>options.denied?{response:Response.json({error:'denied'},{status:403})}:{user:{id:'trusted-admin'}}},'@/lib/activationHttp':{privateJson:(v,status=200)=>Response.json(v,{status,headers:{'Cache-Control':'no-store'}})},'@/lib/supabaseAdmin':{supabaseAdmin:db},'@/lib/houdiniPackage':pack,'@/lib/bundlePackage':bundle});
- return {calls,post:(body)=>route.POST(new Request('http://localhost/api/admin/products/assemble?productId=10&expectedPath=',{method:'POST',...(body?{body}: {})}))};
+ return {calls,post:(body)=>route.POST(new Request('http://localhost/api/admin/products/assemble?productId=10&expectedPath=',{method:'POST',...(body!==undefined?{body}: {})}))};
 }
 test('assembly reads only selected private installers and writes one independent shared-runtime release',async()=>{
  const s=setup(),r=await s.post();assert.equal(r.status,200);assert.equal(r.headers.get('Cache-Control'),'no-store');
@@ -22,4 +22,11 @@ test('failed assembly preserves current mapping and reports the failing precondi
   const s=setup({[option]:true});assert.equal((await s.post()).status,status,option);if(!['upload','conflict'].includes(option))assert.ok(!s.calls.some(c=>c.upload),option);if(option!=='conflict')assert.ok(!s.calls.some(c=>c.name),option);
  }
  const s=setup();assert.equal((await s.post('untrusted input')).status,400);assert.equal(s.calls.length,0);
+});
+
+
+test('empty POST stream is accepted, while real payload bytes are rejected before storage access',async()=>{
+ const request=new Request('http://localhost',{method:'POST',body:''});assert.notEqual(request.body,null);
+ const empty=setup();assert.equal((await empty.post('')).status,200);assert.ok(empty.calls.some(c=>c.name==='set_assembled_bundle_download'));
+ for(const payload of [' ', '{}','file bytes']){const s=setup();const response=await s.post(payload);assert.equal(response.status,400);assert.match((await response.json()).error,/uploaded content/);assert.equal(s.calls.length,0);}
 });

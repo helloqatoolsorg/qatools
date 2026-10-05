@@ -88,3 +88,17 @@ git push
 ```
 
 Owner check after Ready: title a bundle QA Test Bundle, confirm the slug qa_test_bundle, save an unfinished draft, reload, complete its included-tool selection and build. Confirm selected options brighten. Rename a saved draft and confirm its slug remains unchanged. Publication checks remain separate.
+
+
+## Empty POST transport fix — 2026-10-05
+
+The assembly endpoint now accepts empty POST streams as well as null bodies. The previous body-presence check incorrectly rejected an empty request stream as an invalid saved bundle. Any actual payload bytes are still rejected before catalog/storage work; included tools always come from saved database metadata. Regression coverage checks an empty non-null stream and rejects whitespace, JSON and file bytes.
+
+No migration is needed. Deploy only:
+
+```bat
+cd /d D:\qatools\qatools
+git add src/app/api/admin/products/assemble/route.ts tests/automatic-bundle-assembly.test.cjs handoff/QATOOLS_BUNDLE_OWNERSHIP_DELIVERY.md
+git commit -m "Accept empty POST streams for bundle assembly"
+git push
+```

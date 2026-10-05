@@ -9,7 +9,14 @@ export async function POST(request: Request) {
  try {
   const auth = await requireAdmin(request); if (auth.response) { auth.response.headers.set("Cache-Control","no-store"); return auth.response; }
   const params=new URL(request.url).searchParams, raw=params.get("productId") ?? "", expected=params.get("expectedPath");
-  if(!/^[1-9][0-9]*$/.test(raw) || !Number.isSafeInteger(Number(raw)) || expected===null || expected.length>512 || request.body!==null)return privateJson({error:"Choose a saved bundle."},400);
+  if(!/^[1-9][0-9]*$/.test(raw) || !Number.isSafeInteger(Number(raw)) || expected===null || expected.length>512)return privateJson({error:"Choose a saved bundle."},400);
+  // Servers may represent an empty POST as a non-null stream. Reject bytes,
+  // not the presence of a stream; the selection comes only from saved metadata.
+  const reader=request.body?.getReader();
+  if(reader){
+   try{while(true){const part=await reader.read();if(part.done)break;if(part.value.byteLength){await reader.cancel();return privateJson({error:"Bundle assembly does not accept uploaded content."},400);}}}
+   finally{reader.releaseLock();}
+  }
   const id=Number(raw), product=await supabaseAdmin.from("products").select("id,slug,product_type,published").eq("id",id).maybeSingle();
   if(product.error)return privateJson({error:"Unable to load bundle."},503);
   if(!product.data || product.data.product_type!=="bundle")return privateJson({error:"Choose a bundle."},409);
