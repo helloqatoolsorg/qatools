@@ -1,0 +1,39 @@
+"use client";
+import Image from "next/image";
+import {useEffect,useRef,useState} from "react";
+import {supabase} from "@/lib/supabase";
+import {productTypes} from "@/lib/productDraft";
+import {catalogProducts,productLabels,type AdminCatalog,type AdminProduct} from "@/lib/adminProductCatalog";
+import type {DraftRecovery} from "@/lib/adminDraftRecovery";
+import PublicationState from "./PublicationState";
+function imageFor(product:AdminProduct){const media=[...product.product_media].sort((a,b)=>a.sort_order-b.sort_order);const image=media.find(m=>m.role==="card")??media[0];return image?.file_path?supabase.storage.from("product-media").getPublicUrl(image.file_path).data.publicUrl:null;}
+function RecoveryThumbnail({file}:{file:File}){
+  const image=useRef<HTMLImageElement>(null);
+  useEffect(()=>{const url=URL.createObjectURL(file);if(image.current)image.current.src=url;return()=>URL.revokeObjectURL(url);},[file]);
+  return <Image ref={image} src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="" width={96} height={60} unoptimized/>;
+}
+export default function AdminProductCatalog({catalog,recovery}:{catalog:AdminCatalog;recovery:DraftRecovery|null}){
+  const [states,setStates]=useState<string[]>([]),[types,setTypes]=useState<string[]>([]),[query,setQuery]=useState(""),[sort,setSort]=useState("updated-desc"),[view,setView]=useState("cards");
+  const filterRef=useRef<HTMLDetailsElement>(null);
+  useEffect(()=>{const close=(event:PointerEvent)=>{if(!filterRef.current?.contains(event.target as Node))filterRef.current?.removeAttribute("open");};const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")filterRef.current?.removeAttribute("open");};document.addEventListener("pointerdown",close);document.addEventListener("keydown",escape);return()=>{document.removeEventListener("pointerdown",close);document.removeEventListener("keydown",escape);};},[]);
+  const products=catalogProducts(catalog.products,states,types,query,sort);
+  const latest=catalogProducts(catalog.products,["unpublished"],[],"")[0];
+  const resumeProduct=recovery?(recovery.id?catalog.products.find(p=>p.id===recovery.id):undefined):latest;
+  const resumeTitle=recovery?.draft.name||resumeProduct?.name||"Untitled product";
+  const resumeImage=resumeProduct?imageFor(resumeProduct):null;
+  const resumeLink=recovery?"/admin/products/edit?resume=1":latest?"/admin/products/edit?id="+latest.id:null;
+  const toggle=(value:string,list:string[],set:(v:string[])=>void)=>set(list.includes(value)?list.filter(v=>v!==value):[...list,value]);
+  const guardEditing=(event:React.MouseEvent<HTMLAnchorElement>,product:AdminProduct)=>{if(recovery && recovery.id!==product.id && !window.confirm("Open another product? Save your unfinished product first if you want to keep editing both. Its local recovery copy will be replaced when you edit this product."))event.preventDefault();};
+  const tags=(p:AdminProduct)=><div className="tags">{productLabels(p,catalog).map((label,index)=><span className="card-tag" key={index+":"+label}>{label.toUpperCase()}</span>)}</div>;
+  const actions=(p:AdminProduct)=><div className="admin-card-actions"><a className="admin-card-action" href={"/admin/products/edit?id="+p.id} onClick={event=>guardEditing(event,p)}>Edit</a>{p.published?<button className="admin-card-action admin-published-button" type="button" disabled>Published</button>:<a className="admin-card-action" href={"/admin/products/edit?id="+p.id+"&publish=1"} onClick={event=>guardEditing(event,p)}>Publish</a>}</div>;
+  return <section className="admin-products"><h2>Products</h2>
+    <div className="admin-catalog-toolbar"><details ref={filterRef} className="admin-catalog-filter"><summary className="menu-trigger">filter ＋</summary><div className="dropdown filter-menu open">
+      <div className="filter-group"><div className="filter-label">STATE</div>{["published","unpublished"].map(value=><button key={value} type="button" className={"filter-option "+(states.includes(value)?"selected":"")} aria-pressed={states.includes(value)} onClick={()=>toggle(value,states,setStates)}>{value.toUpperCase()}</button>)}</div>
+      <div className="filter-group"><div className="filter-label">TYPE</div>{productTypes.map(value=><button key={value} type="button" className={"filter-option "+(types.includes(value)?"selected":"")} aria-pressed={types.includes(value)} onClick={()=>toggle(value,types,setTypes)}>{value.toUpperCase()}</button>)}</div><button className="clear-filters" type="button" onClick={()=>{setStates([]);setTypes([]);}}>clear filters</button>
+    </div></details><label>Search<input value={query} onChange={e=>setQuery(e.target.value)}/></label><label>Sort<select value={sort} onChange={e=>setSort(e.target.value)}><option value="updated-desc">Last saved · newest first</option><option value="updated-asc">Last saved · oldest first</option><option value="name">Name · A–Z</option></select></label><div className="admin-view-toggle" role="group" aria-label="Product view">{["cards","list"].map(value=><button key={value} type="button" aria-pressed={view===value} onClick={()=>setView(value)}>{value==="cards"?"Card view":"List view"}</button>)}</div></div>
+    <div className="active-filter-chips">{states.map(value=><button type="button" key={value} className="filter-chip" onClick={()=>toggle(value,states,setStates)}>STATE: {value.toUpperCase()} ×</button>)}{types.map(value=><button type="button" key={value} className="filter-chip" onClick={()=>toggle(value,types,setTypes)}>TYPE: {value.toUpperCase()} ×</button>)}</div>
+    <div className="admin-product-entry-actions"><a className="card admin-new-product" href="/admin/products/edit?new=1" onClick={event=>{if(recovery&&!window.confirm("Start a new product? This replaces the local recovery copy. Save your unfinished product first if you want to keep it."))event.preventDefault();}}>＋ New product</a>{resumeLink?<a className="card admin-new-product admin-resume-product" href={resumeLink}>{recovery?.mainFile?<RecoveryThumbnail file={recovery.mainFile}/>:resumeImage&&<Image src={resumeImage} alt="" width={96} height={60} unoptimized/>}<span>Continue editing<small>{resumeTitle}</small></span></a>:<button className="card admin-new-product" type="button" disabled>Continue editing</button>}</div>
+    {view==="cards"?<div className="product-grid admin-product-grid">{products.map(p=>{const image=imageFor(p);return <article key={p.id} className="product-card admin-product-card"><a href={"/admin/products/edit?id="+p.id} onClick={event=>guardEditing(event,p)}><div className="media-frame">{image?<Image src={image} alt={p.name} width={640} height={400} unoptimized/>:<div className="admin-product-artwork">No artwork</div>}</div><div className="card-info"><h3 title={p.name}>{p.name}</h3><p className="admin-card-subtitle">{p.subtitle}</p>{tags(p)}<p>{p.price_eur===null?"Price not set":"€"+Number(p.price_eur).toFixed(2)}</p></div></a>{actions(p)}</article>;})}</div>:<div className="admin-product-table-scroll"><table className="admin-product-table"><thead><tr>{["Image","Name","Price","Tags","State","Last saved","Actions"].map(v=><th key={v} scope="col">{v}</th>)}</tr></thead><tbody>{products.map(p=>{const image=imageFor(p);return <tr key={p.id}><td><a href={"/admin/products/edit?id="+p.id} className="admin-list-thumbnail" onClick={event=>guardEditing(event,p)}>{image?<Image src={image} alt={p.name} width={80} height={50} unoptimized/>:<span>No artwork</span>}</a></td><td><a href={"/admin/products/edit?id="+p.id} onClick={event=>guardEditing(event,p)}>{p.name}</a></td><td>{p.price_eur===null?"Not set":"€"+Number(p.price_eur).toFixed(2)}</td><td>{tags(p)}</td><td><PublicationState published={p.published}/></td><td><time dateTime={p.updated_at}>{new Date(p.updated_at).toLocaleString()}</time></td><td>{actions(p)}</td></tr>;})}</tbody></table></div>}
+    {!products.length&&<p>No products match these filters.</p>}
+  </section>;
+}

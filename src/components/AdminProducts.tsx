@@ -2,6 +2,8 @@
 import { PriceEditor } from "@/components/AdminPrices";
 import ProductPublication from "@/components/ProductPublication";
 import AdminDownloads from "@/components/AdminDownloads";
+import AdminProductCatalog from "./AdminProductCatalog";
+import { readDraftRecovery, writeDraftRecovery, clearDraftRecovery, type DraftRecovery } from "@/lib/adminDraftRecovery";
 import AdminToolPackage from "@/components/AdminToolPackage";
 import PublicationState from "@/components/PublicationState";
 import Image from "next/image";
@@ -32,9 +34,16 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   const [draft, setDraft] = useState<DraftInput | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [pendingTools, setPendingTools] = useState<number[]>([]);
-  const [stateFilter, setStateFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [query, setQuery] = useState("");
+  const [recovery,setRecovery]=useState<DraftRecovery|null>(null);
+  const [recoveryWarning,setRecoveryWarning]=useState<string|null>(null);
+  const [pendingGallery,setPendingGallery]=useState<File[]>([]);
+  const [pendingTool,setPendingTool]=useState<File|null>(null);
+  const restored=useRef(false);
+  const loadedOwner=useRef<string|null>(null);
+  const saving=useRef(false);
+  const fileWrites=useRef(0);
+  const recoveryOwner=useRef<string|null>(null);
+  const uploading=useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [existingProductId,setExistingProductId]=useState<number|null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -49,7 +58,8 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   const requestId = useRef<string | null>(null);
   useEffect(() => {
     let cancelled = false;
-    if (!userId) return;
+    if (!userId) {restored.current=false;loadedOwner.current=null;return;}
+    if(loadedOwner.current!==userId){loadedOwner.current=userId;restored.current=false;recoveryOwner.current=null;requestId.current=null;setCatalog(null);setLoaded(false);setDraft(null);setId(null);setUpdatedAt(null);setPendingArtwork(null);setPendingGallery([]);setPendingTool(null);setDirty(false);setRecovery(null);}
     (async () => {
       try {
         const response = await fetch("/api/admin/products", { cache: "no-store", headers: { Authorization: "Bearer " + await access() } });
@@ -57,6 +67,19 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
         if (!response.ok) throw new Error(body.error ?? "Unable to load products.");
         if (cancelled) return;
         setCatalog(body);
+        if (!restored.current) {
+          let snapshot:DraftRecovery|null=null;
+          try {snapshot=await readDraftRecovery(userId);} catch {setRecoveryWarning("Browser recovery is unavailable. Save the draft before leaving this page.");}
+          if(cancelled)return;
+          const params=new URLSearchParams(window.location.search);
+          if(snapshot?.id && !body.products.some((p:Product)=>p.id===snapshot!.id && !p.published)) {await clearDraftRecovery(userId);snapshot=null;}
+          setRecovery(snapshot);setRecoveryWarning(snapshot?.recoveryWarning ?? null);restored.current=true;
+          if(editor && params.has("resume") && snapshot) {
+            requestId.current=snapshot.requestId;recoveryOwner.current=snapshot.requestId;setId(snapshot.id);setUpdatedAt(snapshot.updatedAt);setDraft(snapshot.draft);setPriceText(snapshot.priceText);setPendingTools(snapshot.draft.tool_ids);setPendingGallery(snapshot.galleryFiles);setPendingTool(snapshot.toolFile);setDirty(true);
+            if(snapshot.mainFile)setPendingArtwork({file:snapshot.mainFile,url:URL.createObjectURL(snapshot.mainFile)});
+            setRecoveryWarning(snapshot.recoveryWarning ?? null);setLoaded(true);return;
+          }
+        }
         if (editor) {
           const rawId = new URLSearchParams(window.location.search).get("id");
           if (rawId !== null) {
@@ -74,29 +97,66 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   }, [userId, editor, revision]);
   const selected = catalog?.products.find(p => p.id === id);
   const readOnly = selected?.published ?? false;
+  useEffect(()=>{
+    if(!editor || !userId || !loaded || !draft || readOnly || !restored.current)return;
+    if(!dirty && !pendingArtwork && !pendingGallery.length && !pendingTool) {
+      if(!recoveryOwner.current || recoveryOwner.current!==requestId.current)return;
+      recoveryOwner.current=null;setRecovery(null);void clearDraftRecovery(userId).catch(()=>setRecoveryWarning("Unable to clear the browser recovery copy."));return;
+    }
+    requestId.current ??=crypto.randomUUID();
+    const snapshot:DraftRecovery={version:1,requestId:requestId.current,id,updatedAt,draft,priceText,savedAt:new Date().toISOString(),fileRevision:crypto.randomUUID(),mainFile:pendingArtwork?.file ?? null,galleryFiles:pendingGallery,toolFile:pendingTool};
+    recoveryOwner.current=requestId.current;setRecovery(snapshot);fileWrites.current++;
+    try {void writeDraftRecovery(userId,snapshot).then(()=>setRecoveryWarning(null)).catch(()=>setRecoveryWarning("Browser recovery could not save your pending files. Keep this page open and save or upload them before leaving.")).finally(()=>{fileWrites.current--;});}
+    catch {fileWrites.current--;setRecoveryWarning("Browser recovery is unavailable. Save before leaving this page.");}
+  },[editor,userId,loaded,draft,priceText,id,updatedAt,dirty,readOnly,pendingArtwork,pendingGallery,pendingTool]);
+  useEffect(()=>{
+    const protect=(event:BeforeUnloadEvent)=>{if(fileWrites.current>0 || recoveryWarning){event.preventDefault();event.returnValue="";}};
+    window.addEventListener("beforeunload",protect);return()=>window.removeEventListener("beforeunload",protect);
+  },[recoveryWarning]);
   function choose(kind: ProductType) {
+    requestId.current=crypto.randomUUID();setPendingTools([]);
     setPriceText("0");
     setDraft({ name: "", product_type: kind, subtitle: "", description: "", price_eur: 0, compatibility: "", current_version: "", release_date: null, category_id: 0, complexity_id: 0, tool_ids: [] }); setDirty(true);
   }
   function change<K extends keyof DraftInput>(key: K, value: DraftInput[K]) { setDraft(d => d ? { ...d, [key]: value } : d); setDirty(true); setMessage(null); }
-  async function save(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault(); if (!draft || busy || packageBusy || readOnly) return;
-    if(priceText!=="" && !/^(0|[1-9][0-9]{0,5})([.,][0-9]{1,2})?$/.test(priceText)){setError("Enter a price with at most two decimal places.");return;}
-    const amount=priceText===""?null:Number(priceText.replace(",","."));
-    setBusy(true); setError(null); setMessage(null); setExistingProductId(null);
+  async function saveMetadata() {
+    if(saving.current)throw new Error("Wait for the current save to finish.");
+    if(!draft || readOnly)throw new Error("Choose an unpublished draft.");
+    if(!/^[a-z0-9][a-z0-9_-]{0,79}$/.test(draft.name))throw new Error("Enter a valid title before uploading or saving. Other product fields can be completed later.");
+    if(priceText!=="" && !/^(0|[1-9][0-9]{0,5})([.,][0-9]{1,2})?$/.test(priceText))throw new Error("Enter a price with at most two decimal places.");
+    saving.current=true;
     try {
-      requestId.current ??= crypto.randomUUID();
-      const response = await fetch("/api/admin/products", { method: "POST", headers: { Authorization: "Bearer " + await access(), "Content-Type": "application/json" }, body: JSON.stringify({ requestId: requestId.current, data: {...draft,price_eur:amount}, ...(id ? { productId: id, expectedUpdatedAt: updatedAt } : {}) }) });
-      const body = await response.json();
-      if (!response.ok) { setExistingProductId(body.existingProduct?.id ?? null); throw new Error(body.error ?? "Unable to save draft."); }
-      setId(body.draft.id); setUpdatedAt(body.draft.updated_at); setDirty(false); setMessage(body.message);
-      window.history.replaceState(null, "", "/admin/products/edit?id=" + body.draft.id);
-      if (pendingArtwork) {
-        if (!await upload(pendingArtwork.file, true, { id: body.draft.id, updatedAt: body.draft.updated_at, mediaId: selected?.product_media.find(m => m.role === "card")?.id ?? null })) return;
-      } else setRevision(v => v + 1);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save draft."); }
-    finally { setBusy(false); }
+      requestId.current ??=crypto.randomUUID();
+      const amount=priceText===""?null:Number(priceText.replace(",","."));
+      const response=await fetch("/api/admin/products",{method:"POST",headers:{Authorization:"Bearer "+await access(),"Content-Type":"application/json"},body:JSON.stringify({requestId:requestId.current,data:{...draft,price_eur:amount},...(id?{productId:id,expectedUpdatedAt:updatedAt}:{})})});
+      let body=await response.json();
+      if(!response.ok){setExistingProductId(body.existingProduct?.id ?? null);throw new Error(body.error ?? "Unable to save draft.");}
+      if(!id){
+        setId(body.draft.id);setUpdatedAt(body.draft.updated_at);
+        const updated=await fetch("/api/admin/products",{method:"POST",headers:{Authorization:"Bearer "+await access(),"Content-Type":"application/json"},body:JSON.stringify({requestId:requestId.current,data:{...draft,price_eur:amount},productId:body.draft.id,expectedUpdatedAt:body.draft.updated_at})});
+        const result=await updated.json();if(!updated.ok)throw new Error(result.error ?? "Draft created, but the latest edits were not saved. Retry to update it.");body=result;
+      }
+      const saved:Product={...draft,price_eur:amount,id:body.draft.id,slug:draft.name,published:false,updated_at:body.draft.updated_at,product_media:selected?.product_media ?? []};
+      setCatalog(c=>c?{...c,products:[...c.products.filter(p=>p.id!==saved.id),saved]}:c);
+      setId(saved.id);setUpdatedAt(saved.updated_at);setDirty(false);setMessage(body.message);
+      window.history.replaceState(null,"","/admin/products/edit?id="+saved.id);
+      return {id:saved.id,updatedAt:saved.updated_at,mediaId:selected?.product_media.find(m=>m.role==="card")?.id ?? null};
+    } finally {saving.current=false;}
   }
+  async function saveWithMedia() {
+    if(uploading.current)throw new Error("Wait for the current upload to finish.");
+    uploading.current=true;
+    setBusy(true);setError(null);setMessage(null);setExistingProductId(null);
+    try {
+      let target=id&&!dirty?{id,updatedAt:updatedAt!,mediaId:selected?.product_media.find(m=>m.role==="card")?.id ?? null}:await saveMetadata();
+      if(pendingArtwork){target=await uploadImage(pendingArtwork.file,true,target);setPendingArtwork(null);}
+      for(const file of pendingGallery){target=await uploadImage(file,false,target);setPendingGallery(files=>files.filter(f=>f!==file));}
+      setRevision(v=>v+1);return target.id;
+    } catch(reason){setError(reason instanceof Error?reason.message:"Unable to save draft.");throw reason;}
+    finally {uploading.current=false;setBusy(false);}
+  }
+  async function save(event:React.FormEvent<HTMLFormElement>){event.preventDefault();if(busy||packageBusy||readOnly)return;try{await saveWithMedia();}catch{/* Visible error is retained with the remaining files. */}}
+  async function ensureToolDraft(){if(readOnly && id)return id;return saveWithMedia();}
   async function discardDraft() {
     if (!id || !updatedAt || busy || packageBusy || readOnly) return;
     if (!window.confirm("Delete this unused draft and discard any unsaved changes? Its name will become available again. Products with release history or linked records cannot be deleted.")) return;
@@ -104,50 +164,40 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
     try {
       const response=await fetch("/api/admin/products",{method:"DELETE",headers:{Authorization:"Bearer "+await access(),"Content-Type":"application/json"},body:JSON.stringify({productId:id,expectedUpdatedAt:updatedAt})});
       const body=await response.json(); if(!response.ok) throw new Error(body.error ?? "Unable to delete draft.");
+      if(userId)await clearDraftRecovery(userId);
       router.push("/admin?section=products");
     } catch(reason) { setError(reason instanceof Error ? reason.message : "Unable to delete draft."); }
     finally {setBusy(false);}
   }
-  async function upload(file: File | undefined, main = false, target?: {id:number;updatedAt:string;mediaId:number|null}) {
-    const targetId = target?.id ?? id;
-    if (!file || !targetId || (!target && (busy || packageBusy || dirty || readOnly))) return false;
-    setBusy(true); setError(null); setMessage(null);
-    try {
-      if (file.size > 4 * 1024 * 1024) throw new Error("Choose an image up to 4 MB.");
-      const params = new URLSearchParams({productId:String(targetId)});
-      if (main) { params.set("role","card"); params.set("expectedUpdatedAt",target?.updatedAt ?? updatedAt ?? ""); params.set("expectedMediaId",String(target ? target.mediaId ?? "" : selected?.product_media.find(m => m.role === "card")?.id ?? "")); }
-      const response = await fetch("/api/admin/products/media?" + params, { method: "POST", headers: { Authorization: "Bearer " + await access(), "Content-Type": "application/octet-stream" }, body: file });
-      const body = await response.json(); if (!response.ok) throw new Error(body.error ?? "Unable to upload image.");
-      if (main && body.media) {
-        setCatalog(c => c ? {...c,products:c.products.map(p => p.id !== targetId ? p : {...p,updated_at:body.draft.updated_at,product_media:[...p.product_media.filter(m => m.id !== body.media.id).map(m => ["main","card"].includes(m.role) ? {...m,role:"gallery"} : m),body.media]})} : c);
-        setPendingArtwork(null);
-      }
-      setUpdatedAt(body.draft.updated_at); setMessage(body.message); setRevision(v => v + 1); return true;
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to upload image."); return false; }
-    finally { setBusy(false); }
+  async function uploadImage(file:File,main:boolean,target:{id:number;updatedAt:string;mediaId:number|null}){
+    if(file.size>4*1024*1024)throw new Error("Choose an image up to 4 MB.");
+    const params=new URLSearchParams({productId:String(target.id)});
+    if(main){params.set("role","card");params.set("expectedUpdatedAt",target.updatedAt);params.set("expectedMediaId",String(target.mediaId ?? ""));}
+    const response=await fetch("/api/admin/products/media?"+params,{method:"POST",headers:{Authorization:"Bearer "+await access(),"Content-Type":"application/octet-stream"},body:file});
+    const body=await response.json();if(!response.ok)throw new Error(body.error ?? "Unable to upload image.");
+    setUpdatedAt(body.draft.updated_at);setMessage(body.message);
+    setCatalog(c=>c?{...c,products:c.products.map(p=>p.id!==target.id?p:{...p,updated_at:body.draft.updated_at,product_media:body.media?[...p.product_media.filter(m=>m.id!==body.media.id).map(m=>["main","card"].includes(m.role)?{...m,role:"gallery"}:m),body.media]:p.product_media})}:c);
+    return {...target,updatedAt:body.draft.updated_at,mediaId:body.media?.id ?? target.mediaId};
+  }
+  function chooseGallery(files:FileList|null){
+    const images=Array.from(files ?? []);if(images.some(file=>file.size>4*1024*1024 || !["image/png","image/jpeg","image/webp","image/gif"].includes(file.type))){setError("Choose PNG, JPG, WebP or GIF images up to 4 MB each.");return;}
+    if(images.length+pendingGallery.length+(selected?.product_media.length ?? 0)+(pendingArtwork && !selected?.product_media.some(m=>m.role==="card")?1:0)>20){setError("A product can have at most 20 media images.");return;}
+    setPendingGallery(previous=>[...previous,...images]);setMessage(null);
   }
   function chooseArtwork(file: File | undefined) {
     if (!file) return;
     if (file.size > 4 * 1024 * 1024 || !["image/png","image/jpeg","image/webp","image/gif"].includes(file.type)) { setError("Choose a PNG, JPG, WebP or GIF up to 4 MB."); return; }
     setError(null); setPendingArtwork({file,url:URL.createObjectURL(file)});
-    if (id && !dirty) void upload(file,true);
+
   }
   if (authLoading || (!loaded && user)) return <p>Loading products...</p>;
   if (!user) return <p><a href="/user">Log in</a> with your admin account to manage products.</p>;
   if (!catalog) return <div role="alert">{error ?? "Unable to load products."}<button type="button" onClick={() => setRevision(v => v+1)}>Retry</button></div>;
   const tools = catalog.products.filter(p => p.product_type === "tool" && p.published);
-  if (!editor) return <section className="admin-products">
-    <h2>Products</h2>
-    <div className="admin-product-filters"><label>State<select value={stateFilter} onChange={e => setStateFilter(e.target.value)}><option value="all">All</option><option value="published">Published</option><option value="draft">Unpublished</option></select></label><label>Type<select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}><option value="all">All</option>{productTypes.map(t => <option key={t}>{t}</option>)}</select></label><label>Search<input value={query} onChange={e => setQuery(e.target.value)} /></label></div>
-    <div className="admin-product-entry-actions"><a className="card admin-new-product" href="/admin/products/edit">＋ New product</a><button type="button" className="card admin-new-product" disabled={!catalog.products.some(p=>!p.published)} onClick={()=>{setStateFilter("draft");setTypeFilter("all");setQuery("");}}>Continue editing</button></div>
-    <div className="product-grid admin-product-grid">
-      {catalog.products.filter(p => (stateFilter === "all" || p.published === (stateFilter === "published")) && (typeFilter === "all" || p.product_type === typeFilter) && (p.name + " " + p.slug + " " + p.subtitle).toLowerCase().includes(query.toLowerCase())).map(p => {
-        const image = artwork(p); return <article key={p.id} className="product-card admin-product-card"><a href={"/admin/products/edit?id="+p.id}>{image ? <div className="media-frame"><Image src={image} alt={p.name} width={640} height={360} unoptimized /></div> : <div className="admin-product-artwork">No artwork</div>}<div className="card-info"><h3>{p.name}</h3><p>{p.subtitle}</p><div className="tags"><span className="card-tag">{p.product_type.toUpperCase()}</span><PublicationState published={p.published}/></div><p>{p.price_eur===null?"Price not set":"€"+Number(p.price_eur).toFixed(2)}</p></div></a>{!p.published&&<div className="admin-card-actions"><a className="admin-card-action" href={"/admin/products/edit?id="+p.id}>Edit</a><a className="admin-card-action" href={"/admin/products/edit?id="+p.id+"&publish=1"}>Publish</a></div>}</article>;
-      })}
-    </div>
-  </section>;
+  if (!editor) return <><AdminProductCatalog catalog={catalog} recovery={recovery}/>{recoveryWarning && <p role="alert">{recoveryWarning}</p>}</>;
   return <section className="admin-products admin-product-editor"><a href="/admin?section=products">← Admin products</a><div className="admin-product-title"><h1>{id ? draft?.name : "New product"}</h1><PublicationState published={readOnly} /></div>
-    {error && <p role="alert" className="admin-product-error">{error}</p>}{existingProductId && <p><a href={"/admin/products/edit?id="+existingProductId}>Open existing product</a></p>}{message && <p role="status">{message}</p>}
+    {dirty && !readOnly && <p>Unsaved changes are kept in this browser. Use Continue editing to return to this product.</p>}
+    {recoveryWarning && <p role="alert" className="admin-product-error">{recoveryWarning}</p>}{error && <p role="alert" className="admin-product-error">{error}</p>}{existingProductId && <p><a href={"/admin/products/edit?id="+existingProductId}>Open existing product</a></p>}{message && <p role="status">{message}</p>}
     {!draft ? <div className="admin-type-choice" role="dialog" aria-modal="false" aria-labelledby="product-type-title"><h2 id="product-type-title">Choose product type</h2>{productTypes.map(t => <button key={t} type="button" onClick={() => choose(t)}>{t.toUpperCase()}</button>)}</div> : <>
       {readOnly && <p>This product is published. This editor currently saves unpublished drafts only. <a href={"/product?slug=" + selected?.slug}>View product</a></p>}
       <div className="product-hero admin-product-hero"><div className="admin-product-media-column">      <section className="admin-product-media"><input ref={artworkInput} className="admin-artwork-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy || packageBusy || readOnly} onChange={e => { chooseArtwork(e.target.files?.[0]); e.target.value=""; }} />
@@ -155,8 +205,8 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
             {pendingArtwork || (selected && artwork(selected)) ? <Image src={pendingArtwork?.url ?? artwork(selected!)!} alt="Product preview" width={960} height={600} unoptimized /> : <span className="admin-hero-placeholder">＋ Add media</span>}
             <span className="admin-artwork-overlay">{busy ? "Uploading..." : pendingArtwork || (selected && artwork(selected)) ? "Click to change image" : "PNG · JPG · WebP · GIF"}</span>
           </button>
-          {pendingArtwork && <p>{dirty || !id ? "Image selected. Save the draft to upload it." : "Image selected."}</p>}
-          {draft.product_type !== "tool" && <p>qatools.json · included automatically in the release package</p>}<h2>Gallery</h2><p>PNG, JPG, WebP or GIF up to 4 MB.</p><div className="admin-media-grid">{selected?.product_media.filter(m => m.role !== "card" && m.role !== "main").map(m => { const url = mediaUrl(m); return url ? <div key={m.id}><Image src={url} alt="Product artwork" width={640} height={360} unoptimized /><small>{m.role}</small></div> : null; })}</div><label className="admin-media-upload">Add gallery image<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={!id || busy || dirty || readOnly} onChange={e => { void upload(e.target.files?.[0]); e.target.value=""; }} /></label>{dirty && id && <p>Save your changes before adding media.</p>}</section>{draft.product_type === "tool" && <AdminToolPackage key={id ?? "new"} productId={id} disabled={busy || dirty} onBusyChange={setPackageBusy} />}{id && readOnly && <details><summary>Advanced ZIP replacement and download availability</summary><AdminDownloads key={id} productId={id} products={[{id,name:draft.name,slug:selected?.slug ?? draft.name,published:readOnly}]} /></details>}</div><div className="product-info admin-product-info"><form onSubmit={save}><fieldset disabled={busy || packageBusy || readOnly}><div className="admin-product-fields">
+          {pendingArtwork && <p>Image selected. Save the draft or upload your media to attach it.</p>}
+          {draft.product_type !== "tool" && <p>qatools.json · included automatically in the release package</p>}<h2>Gallery</h2><p>PNG, JPG, WebP or GIF up to 4 MB.</p><div className="admin-media-grid">{selected?.product_media.filter(m => m.role !== "card" && m.role !== "main").map(m => { const url = mediaUrl(m); return url ? <div key={m.id}><Image src={url} alt="Product artwork" width={640} height={360} unoptimized /><small>{m.role}</small></div> : null; })}</div><label className="admin-media-upload">Add gallery image<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple disabled={busy || packageBusy || readOnly} onChange={e => { chooseGallery(e.target.files); e.target.value=""; }} /></label>{pendingGallery.length>0 && <div className="admin-pending-gallery">{pendingGallery.map((file,index)=><p key={index}>{file.name} <button type="button" disabled={busy || packageBusy} onClick={()=>setPendingGallery(files=>files.filter((_,i)=>i!==index))}>Remove</button></p>)}</div>}{(pendingArtwork || pendingGallery.length>0) && <button type="button" disabled={busy || packageBusy || readOnly} onClick={()=>{void saveWithMedia().catch(()=>{});}}>Upload selected media</button>}</section>{draft.product_type === "tool" && <AdminToolPackage productId={id} disabled={busy} tool={pendingTool} onToolChange={setPendingTool} ensureDraft={ensureToolDraft} onBusyChange={setPackageBusy} />}{id && readOnly && <details><summary>Advanced ZIP replacement and download availability</summary><AdminDownloads key={id} productId={id} products={[{id,name:draft.name,slug:selected?.slug ?? draft.name,published:readOnly}]} /></details>}</div><div className="product-info admin-product-info"><form onSubmit={save}><fieldset disabled={busy || packageBusy || readOnly}><div className="admin-product-fields">
         <label>Title<input required pattern="[a-z0-9][a-z0-9_-]{0,79}" maxLength={80} value={draft.name} onChange={e => change("name",e.target.value)} placeholder="qatool01" /><small>Lowercase letters, numbers, underscores or hyphens. Slug matches the title.</small></label>
         <label>Type<input value={draft.product_type} readOnly /></label>
         <label className="admin-product-wide">Subtitle<input maxLength={200} value={draft.subtitle} onChange={e => change("subtitle",e.target.value)} /></label>
