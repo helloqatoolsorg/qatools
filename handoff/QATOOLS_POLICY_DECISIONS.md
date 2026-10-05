@@ -273,3 +273,12 @@ Projects remain blocked pending their dedicated ZIP and project-folder delivery 
 ## New-tool identity decision — 2026-10-05
 
 Owner approved prepared ZIP authoring/import. Asset Label supplies the website display name; Internal Name replaces its spaces with underscores; lowercase Internal Name supplies the immutable website/licensing slug. New Tool creation imports the ZIP before metadata editing, with title/slug read-only and server-enforced. Existing slugs, ownership and activation keys remain unchanged. The source JSON generated during preparation is identity metadata; customer installers retain the single shared qatools.json. The local importer/exporter are implemented; the complete Houdini Prepare shelf action and licensing injection/guard validation are the next milestone. See QATOOLS_PREPARED_TOOL_IDENTITY.md for limits and rollout.
+
+
+## 2026-10-05: repurchase after an approved full refund
+
+Approved: a fully refunded product returns to the unowned storefront state and may be purchased again at its current published price. Keep all previous orders and refund records. Active effective access from another purchase, bundle or grant still counts as ownership. Revoked access is not automatically restored.
+
+Implemented locally in 20261005160000_refunded_product_repurchase.sql: cart and retained single-item checkout accept refunded entitlement rows; only a new verified provider payment restores ownership. Each payment creates its own order and order item. Old refund deliveries remain tied to their original item and cannot remove the new purchase. Bundle repurchases restore the pinned included tools; independent purchases survive bundle refunds.
+
+Verified using actual PostgreSQL migration execution: individual and bundle repurchases, old refund replay, repeated refunds, active/revoked blocking and legacy checkout. Remote migration/deployment and owner testing remain pending. Supersedes earlier deferral of repurchase after refund only; revocation, disputes and partial monetary refund exceptions remain deferred.

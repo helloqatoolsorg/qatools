@@ -81,6 +81,32 @@ test('actual PostgreSQL bundle sources, pinned checkout, overlapping refunds and
  await db.query('SELECT delete_unused_product_draft($1,30,$2)',[admin,unusedStamp]);assert.equal((await db.query('SELECT count(*)::int n FROM bundle_releases WHERE product_id=30')).rows[0].n,0);
  await db.exec("SELECT setval(pg_get_serial_sequence('public.products','id'),(SELECT max(id) FROM products),true)");
  await db.exec(read('20261005150000_prepared_tool_identity.sql'));
+ // Refunded ownership is reusable only after a fresh verified payment.
+ await db.exec(read('20261005160000_refunded_product_repurchase.sql'));
+ const rebought=await purchase([1],40);assert.equal(await state(1),'active');
+ await refund(individual,41);assert.equal(await state(1),'active'); // new delivery for the old refund
+ assert.equal((await db.query('SELECT process_sandbox_payment_event($1,$2) r',[individual.event,'a'.repeat(64)])).rows[0].r.outcome,'fulfilled');
+ assert.deepEqual((await db.query('SELECT status FROM orders WHERE user_id=$1 AND provider_transaction_id=ANY($2::text[]) ORDER BY id',[buyer,[individual.txn,rebought.txn]])).rows.map(r=>r.status),['refunded','paid']);
+ const line={productId:1,slug:'one',priceId:'pri_'+String(1).padStart(26,'0'),paddleProductId:'pro_'+String(1).padStart(26,'0'),amount:500};
+ assert.equal((await db.query('SELECT reserve_sandbox_cart($1,$2) r',[buyer,[line]])).rows[0].r.code,'ownership_exists');
+ await refund(rebought,42);assert.equal(await state(1),'refunded');
+ const again=await purchase([1],43),reBundle=await purchase([10],44);
+ await refund(reBundle,45);assert.equal(await state(1),'active');assert.equal(await state(2),'refunded');
+ await refund(first,46);assert.equal(await state(1),'active');
+ await refund(again,47);assert.equal(await state(1),'refunded');
+ await db.query("UPDATE entitlements SET status='revoked' WHERE user_id=$1 AND product_id=1",[buyer]);
+ assert.equal((await db.query('SELECT reserve_sandbox_cart($1,$2) r',[buyer,[line]])).rows[0].r.code,'ownership_exists');
+ // The retained single-item checkout follows the same repurchase policy.
+ const legacyBuyer='00000000-0000-4000-8000-000000000009';await db.query('INSERT INTO auth.users VALUES($1,now(),null)',[legacyBuyer]);
+ await db.exec("UPDATE products SET slug='qafit01' WHERE id=1;UPDATE sandbox_product_prices SET price_id='pri_01m41bkp4f0fxgb9cfm37n5p4b',paddle_product_id='pro_01m41bf7cprd18e5aebzyp1rzw' WHERE product_id=1");
+ async function legacyBuy(n){
+  const reserved=(await db.query('SELECT reserve_sandbox_checkout($1,1) r',[legacyBuyer])).rows[0].r;assert.equal(reserved.ok,true);
+  const txn='txn_'+String(n).padStart(26,'0');await db.query('SELECT finish_sandbox_checkout($1,$2,$3)',[legacyBuyer,reserved.intent.id,txn]);
+  const event={eventId:'evt_'+String(n).padStart(26,'0'),type:'transaction.completed',txnId:txn,intentId:reserved.intent.id,valid:true,priceId:'pri_01m41bkp4f0fxgb9cfm37n5p4b',total:500,subtotal:500,occurredAt:'2026-10-05T12:00:00Z',eventHash:String(n).padStart(64,'0')};
+  assert.equal((await db.query('SELECT process_sandbox_payment_event($1,$2) r',[event,'a'.repeat(64)])).rows[0].r.outcome,'fulfilled');return {txn,total:500};
+ }
+ const legacyOld=await legacyBuy(60);await refund(legacyOld,61);await legacyBuy(62);await refund(legacyOld,63);assert.equal(await state(1,legacyBuyer),'active');
+ await db.exec("UPDATE products SET slug='one' WHERE id=1");
  const rid='00000000-0000-4000-8000-000000000080';
  const identity={schema:1,label:'Beautiful Noise',internal_name:'Beautiful_Noise',slug:'beautiful_noise',file:'beautiful_noise.hda',sha256:'a'.repeat(64)};
  const imported=(await db.query('SELECT import_prepared_tool($1,$2,$3) r',[admin,rid,identity])).rows[0].r;
