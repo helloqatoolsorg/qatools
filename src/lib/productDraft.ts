@@ -1,13 +1,19 @@
 export const productTypes = ["tool", "bundle", "project"] as const;
 export type ProductType = typeof productTypes[number];
 export type DraftInput = { name: string; slug?: string; product_type: ProductType; subtitle: string; description: string; price_eur: number | null; compatibility: string; current_version: string; release_date: string | null; category_id: number; complexity_id: number; tool_ids: number[] };
+export function productSlug(name:string):string{return name.trim().toLowerCase().replace(/ +/g,"_");}
+export function validProductTitle(name:string):boolean{return name.length<=80 && name===name.trim() && /^[A-Za-z0-9][A-Za-z0-9 _-]*$/.test(name);}
 export function draftValidationErrors(value: unknown): string[] {
   if (!value || typeof value !== "object" || Array.isArray(value)) return ["Draft information is invalid."];
   const d=value as Record<string,unknown>, errors:string[]=[];
   if(d.slug!==undefined && (typeof d.slug!=="string" || !/^[a-z0-9][a-z0-9_-]{0,79}$/.test(d.slug)))errors.push("Invalid product slug.");
   const fields=["slug","name","product_type","subtitle","description","price_eur","compatibility","current_version","release_date","category_id","complexity_id","tool_ids"];
   if(Object.keys(d).some(k=>!fields.includes(k)))errors.push("Unsupported draft fields.");
+  if(d.product_type==="bundle" || d.product_type==="project"){
+    if(typeof d.name!=="string" || !validProductTitle(d.name) || !/^[a-z0-9][a-z0-9_-]{0,79}$/.test(productSlug(d.name)))errors.push("Use a title with letters, numbers, spaces, underscores or hyphens.");
+  }else{
   if(typeof d.name!=="string" || !(d.slug && d.product_type==="tool" ? (/^[A-Za-z][A-Za-z0-9]*(?: [A-Za-z0-9]+)*$/.test(d.name) || /^[a-z0-9][a-z0-9_-]{0,79}$/.test(d.name)) && d.name.length<=80 && typeof d.slug==="string" && /^[a-z0-9][a-z0-9_-]{0,79}$/.test(d.slug) : /^[a-z0-9][a-z0-9_-]{0,79}$/.test(d.name)))errors.push(d.product_type==="tool" && d.slug ? "Use the Asset Label from the prepared tool." : "Title must use lowercase letters, numbers, underscores or hyphens.");
+  }
   if(!productTypes.includes(d.product_type as ProductType))errors.push("Choose a product type.");
   for(const [key,max] of [["subtitle",200],["description",20000],["compatibility",200],["current_version",40]] as const){if(typeof d[key]!=="string"||(d[key] as string).length>max)errors.push(key+" exceeds its allowed length or has an invalid value.");}
   if(d.price_eur!==null && (typeof d.price_eur!=="number"||!Number.isFinite(d.price_eur)||d.price_eur<0||d.price_eur>999999.99||Math.abs(d.price_eur*100-Math.round(d.price_eur*100))>=1e-7))errors.push("Price must be between 0 and 999999.99 with at most two decimal places.");

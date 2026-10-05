@@ -110,3 +110,11 @@ test('draft deletion authorizes, validates, protects stale and linked records, a
  const invalid=setup();assert.equal((await invalid.route.DELETE(request({...body,adminId:other}))).status,400);assert.equal(invalid.calls.length,0);
  for(const [code,status] of [[null,200],['40001',409],['22023',409],['23503',409],['XX000',503]]){const s=setup({rpcError:code});const r=await s.route.DELETE(request(body));assert.equal(r.status,status);assert.equal(r.headers.get('cache-control'),'no-store');assert.equal(s.calls.find(c=>c.rpc).args.p_admin_id,admin);assert.ok(!(await r.text()).includes('secret'));}
 });
+
+
+test('bundle display titles are distinct from generated slugs and unfinished drafts remain valid',()=>{
+ assert.equal(lib.productSlug('QA Test Bundle'),'qa_test_bundle');
+ const bundle={...valid,name:'QA Test Bundle',product_type:'bundle',slug:'qa_test_bundle',price_eur:null,category_id:0,complexity_id:0,tool_ids:[]};
+ assert.equal(lib.validDraft(bundle),true);
+ for(const name of ['../Bundle',' Bundle','Bundle!','', 'x'.repeat(81)])assert.equal(lib.validDraft({...bundle,name}),false);
+});

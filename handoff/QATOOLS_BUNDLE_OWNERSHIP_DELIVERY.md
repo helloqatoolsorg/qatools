@@ -72,3 +72,19 @@ git push
 After Ready: open qabundle01, select real published tools with uploaded installers, build, set/verify its discounted Paddle price and publish. Download/install the built archive, verify each included tool uses account activation, then run purchase/refund/repurchase checks. Refund a bundle containing a separately purchased tool and confirm that tool stays active. These owner-hosted tests remain pending.
 
 Local checks: six targeted tests pass (including actual PostgreSQL migration execution), assembly authorization and failure cases, preserved bundle/payment ownership tests. Production build/TypeScript, changed-source lint and diff check passed. No hosted products, source HDAs or installed Houdini licensing caches were changed.
+
+
+## Bundle editor title fix — 2026-10-05
+
+Bundle/project display titles accept capitalization and spaces (QA Test Bundle). The generated identifier is lowercase with underscores (qa_test_bundle). Existing identifiers remain stable through title edits and reloads. Server/database validation agree, while prepared individual-tool identity stays locked. Missing price, media or included tools do not block saving an unpublished draft; publishing still enforces its complete checklist. Included-tool options use customer-filter spacing and brighter selected backgrounds.
+
+Apply 20261005180000_bundle_display_titles.sql, then deploy:
+
+```bat
+cd /d D:\qatools\qatools
+git add src/components/AdminProducts.tsx src/components/AdminProducts.css src/lib/productDraft.ts src/app/api/admin/products/route.ts supabase/migrations/20261005180000_bundle_display_titles.sql tests/product-drafts.test.cjs tests/bundle-ownership.test.cjs handoff/QATOOLS_BUNDLE_OWNERSHIP_DELIVERY.md
+git commit -m "Separate bundle titles from stable slugs"
+git push
+```
+
+Owner check after Ready: title a bundle QA Test Bundle, confirm the slug qa_test_bundle, save an unfinished draft, reload, complete its included-tool selection and build. Confirm selected options brighten. Rename a saved draft and confirm its slug remains unchanged. Publication checks remain separate.

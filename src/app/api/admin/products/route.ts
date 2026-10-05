@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/requireAdmin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { paddleCartDatabase } from "@/lib/paddleCartDatabase";
 import { verifyCatalogPrice } from "@/lib/paddleCartCatalog";
-import { validDraft, draftValidationErrors } from "@/lib/productDraft";
+import { validDraft, draftValidationErrors, productSlug } from "@/lib/productDraft";
 const json = (body: object, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 async function readText(request: Request, max: number): Promise<string | null> {
   const reader = request.body?.getReader(); if (!reader) return "";
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       if (error.code === "23505") {
         // A duplicate primary key is not a duplicate name. Resolve the actual
         // slug against the complete private catalog before describing a conflict.
-        const existing = await supabaseAdmin.from("products").select("id,name,slug,published").eq("slug",body.data.slug ?? body.data.name).maybeSingle();
+        const existing = await supabaseAdmin.from("products").select("id,name,slug,published").eq("slug",body.data.slug ?? productSlug(body.data.name)).maybeSingle();
         if (!existing.error && existing.data && existing.data.id !== body.productId) return json({ error: "That name belongs to an existing product. Open it to continue editing or delete its unused draft.", existingProduct: { id: existing.data.id, name: existing.data.name, published: existing.data.published } },409);
         if (!existing.error && /products_pkey|Key \(id\)/.test((error.message ?? "")+" "+(error.details ?? ""))) return json({ error: "The product ID counter needs checking. This name has not been reserved. Apply the product draft identity migration before trying again." },503);
         return json({error:"Unable to save draft. No product name conflict was found. Please retry or contact support."},503);

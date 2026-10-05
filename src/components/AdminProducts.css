@@ -99,8 +99,9 @@
 .admin-catalog-filter>summary{list-style:none;cursor:pointer;font:13px monospace}
 .admin-catalog-filter>summary::-webkit-details-marker{display:none}
 .admin-catalog-filter .filter-menu{top:100%;left:0;min-width:280px;z-index:20}
-.admin-products .filter-group .filter-option{border:0;padding:6px 0;background:transparent;text-align:left;font:11px monospace;color:#aaa}
-.admin-products .filter-group .filter-option:hover,.admin-products .filter-group .filter-option.selected{color:#fff}
+.admin-products .filter-group .filter-option{width:100%;border:0;padding:8px 9px;background:transparent;text-align:left;font:10px monospace;color:#888;cursor:pointer;transition:background .15s,color .15s}
+.admin-products .filter-group .filter-option:hover{background:#181818;color:#ddd}
+.admin-products .filter-group .filter-option.selected{background:#242424;color:#fff}
 .admin-products .filter-chip{border:1px solid #333;padding:8px 10px;font:11px monospace}
 .admin-view-toggle{display:flex;gap:0}
 .admin-view-toggle button[aria-pressed=true]{background:#292929;color:#fff;border-color:#666}

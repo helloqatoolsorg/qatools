@@ -122,6 +122,18 @@ test('actual PostgreSQL bundle sources, pinned checkout, overlapping refunds and
  assert.equal((await db.query("SELECT set_assembled_bundle_download($1,10,$2,$3,'built.zip',$4) r",[admin,builtPath,builtPath,sources])).rows[0].r.ok,false);
  assert.equal((await db.query('SELECT file_path FROM bundle_releases WHERE product_id=10')).rows[0].file_path,builtPath);
  for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'set_assembled_bundle_download(uuid,bigint,text,text,text,jsonb)','EXECUTE') allowed",[role])).rows[0].allowed,false);
+ // Pretty bundle titles save independently from their stable identifier.
+ await db.exec(read('20261005180000_bundle_display_titles.sql'));
+ const bundleRequest='00000000-0000-4000-8000-000000000081';
+ const emptyBundle={name:'QA Test Bundle',product_type:'bundle',subtitle:'',description:'',price_eur:null,compatibility:'',current_version:'',release_date:null,category_id:0,complexity_id:0,tool_ids:[]};
+ const pretty=(await db.query('SELECT save_product_draft($1,$2,$3) r',[admin,bundleRequest,emptyBundle])).rows[0].r;
+ assert.equal(pretty.name,'QA Test Bundle');assert.equal(pretty.slug,'qa_test_bundle');
+ const renamed=(await db.query('SELECT save_product_draft($1,$2,$3,$4,$5) r',[admin,bundleRequest,{...emptyBundle,name:'New Bundle Title',slug:pretty.slug},pretty.id,pretty.updated_at])).rows[0].r;
+ assert.equal(renamed.name,'New Bundle Title');assert.equal(renamed.slug,pretty.slug);
+ assert.equal((await db.query('SELECT published FROM products WHERE id=$1',[pretty.id])).rows[0].published,false);
+ await assert.rejects(db.query('SELECT save_product_draft($1,$2,$3,$4,$5)',[admin,bundleRequest,{...emptyBundle,slug:'different'},pretty.id,renamed.updated_at]),/slug is locked/);
+ await assert.rejects(db.query('SELECT save_product_draft($1,gen_random_uuid(),$2)',[buyer,emptyBundle]),/Admin access/);
+ await assert.rejects(db.query('SELECT save_product_draft($1,gen_random_uuid(),$2)',[admin,emptyBundle]),/duplicate key/);
  const rid='00000000-0000-4000-8000-000000000080';
  const identity={schema:1,label:'Beautiful Noise',internal_name:'Beautiful_Noise',slug:'beautiful_noise',file:'beautiful_noise.hda',sha256:'a'.repeat(64)};
  const imported=(await db.query('SELECT import_prepared_tool($1,$2,$3) r',[admin,rid,identity])).rows[0].r;
