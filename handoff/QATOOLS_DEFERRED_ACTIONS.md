@@ -100,3 +100,10 @@ Finance checkpoint — 2026-10-07: Owner confirmed the original Finance deployme
 ## Projects batch — 2026-10-07
 
 Owner accepted the compact Finance graph and asked to park Finance; no additional Finance work is included. Projects are now implemented locally using selected published tools plus a separately preserved project ZIP inside one private release. Publication, pinned ownership, independent-tool protection on refunds, repurchase and account grouping reuse the verified bundle model. Upload limits are explicit (project ZIP below 4 MB, expanded project contents at most 20 MiB, complete release payload at most 25 MiB). Migration 20261007230000 precedes deployment; owner real-project purchase/download/install/refund verification remains pending. Larger project uploads and customer Download selection remain deferred. See QATOOLS_PROJECT_DELIVERY.md for implementation, tests and scoped rollout commands. This supersedes older notes that all Projects remain blocked drafts.
+
+
+## Gallery continuation — 2026-10-07
+
+Owner reported Projects working after the project-delivery migration/deployment and asked to continue. This is a general owner confirmation, not a claim that every specific real-project purchase/refund/relative-resource check has been evidenced. The Projects handoff retains the detailed hosted checklist.
+
+Gallery add/replace/remove/reorder is now implemented locally for saved drafts and published products, with exact-version protection and service-only authorization. Draft pending uploads/recovery remain supported. Main/card artwork and published commercial metadata stay protected. Uploaded old/replaced files are retained; cleanup, videos and broader published metadata editing remain deferred. Apply migration 20261008090000 and deploy using QATOOLS_PRODUCT_GALLERY.md, then owner checks the gallery and stale-tab behavior. No remote media/content changes were performed by the agent. Finance and recovery remain parked.

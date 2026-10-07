@@ -474,6 +474,10 @@ export type Database = {
       product_publication_checks: { Args: { p_admin_id: string; p_product_id: number }; Returns: { missing: string[]; ready: boolean; updated_at: string } };
       record_product_download: { Args: { p_request_id: string; p_user_id: string; p_product_id: number; p_file_path: string }; Returns: boolean };
       read_admin_download_counts: { Args: { p_admin_id: string }; Returns: { free: number; paid: number; admin: number; total: number } };
+      manage_product_gallery: {
+        Args: { p_admin_id:string; p_product_id:number; p_expected_updated_at:string; p_action:string; p_media_id?:number|null; p_path?:string|null; p_media_ids?:number[]|null };
+        Returns: { id:number; updated_at:string; media:{id:number;file_path:string|null;role:string;sort_order:number}[] };
+      };
       set_product_draft_card: { Args: { p_admin_id: string; p_product_id: number; p_expected_media_id: number | null; p_expected_updated_at: string; p_path: string }; Returns: { id: number; updated_at: string; media_id: number } };
       publish_product_draft: { Args: { p_admin_id: string; p_product_id: number; p_expected_updated_at: string; p_expected_price_id?: string | null }; Returns: { id: number; updated_at: string } };
       replace_prepared_tool_download: { Args: {p_admin_id:string;p_product_id:number;p_expected_path:string|null;p_file_path:string;p_file_name:string;p_identity:import("./preparedTool").ToolIdentity}; Returns:{ok:boolean} };
