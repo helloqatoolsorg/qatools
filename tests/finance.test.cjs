@@ -9,8 +9,8 @@ function route(options={}) {
  return {calls,get(query=''){return load('src/app/api/admin/finance/route.ts').GET(new Request('https://example.invalid/api/admin/finance'+query,{headers:options.noToken?{}:{Authorization:'Bearer synthetic'}}));}};
 }
 for(const [option,status] of [['noToken',401],['invalidToken',401],['nonAdmin',403]])test('finance rejects '+option+' before report read',async()=>{const s=route({[option]:true}),r=await s.get();assert.equal(r.status,status);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.ok(!s.calls.some(c=>typeof c==='object'));});
-test('finance rejects invalid filters before RPC',async()=>{for(const query of ['?period=all','?environment=all','?period=month;drop','?environment=']){const s=route();assert.equal((await s.get(query)).status,400);assert.ok(!s.calls.some(c=>typeof c==='object'));}});
-test('finance uses authenticated admin ID and sandbox default, accepts requested periods',async()=>{for(const period of ['week','month','3months','6months','year']){const s=route(),r=await s.get('?period='+period);assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.deepEqual(JSON.parse(JSON.stringify(s.calls.find(c=>typeof c==='object'))),{name:'read_admin_finance',args:{p_admin_id:'admin',p_environment:'sandbox',p_period:period}});}const s=route();await s.get('?environment=live');assert.equal(s.calls.find(c=>typeof c==='object').args.p_environment,'live');});
+test('finance rejects invalid filters before RPC',async()=>{for(const query of ['?period=week','?period=all','?environment=all','?period=month;drop','?environment=']){const s=route();assert.equal((await s.get(query)).status,400);assert.ok(!s.calls.some(c=>typeof c==='object'));}});
+test('finance uses authenticated admin ID and sandbox default, accepts requested periods',async()=>{for(const period of ['month','3months','6months','year']){const s=route(),r=await s.get('?period='+period);assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.deepEqual(JSON.parse(JSON.stringify(s.calls.find(c=>typeof c==='object'))),{name:'read_admin_finance',args:{p_admin_id:'admin',p_environment:'sandbox',p_period:period}});}const s=route();await s.get('?environment=live');assert.equal(s.calls.find(c=>typeof c==='object').args.p_environment,'live');});
 test('finance fails closed without leaking SQL or partial report',async()=>{for(const options of [{failure:true},{malformed:true}]){const r=await route(options).get();assert.equal(r.status,503);assert.ok(!(await r.text()).includes('private SQL'));}});
 
 test('finance renders loading, error, genuine empty live state, exact amounts and sandbox warning',()=>{
@@ -23,9 +23,9 @@ test('finance renders loading, error, genuine empty live state, exact amounts an
  assert.match(render({loading:true}),/Loading finance/);
  assert.match(render({error:'Unable to load finance.'}),/role="alert"/);
  const empty=render({environment:'live',report:{currencies:[]}});assert.match(empty,/No completed live orders/);assert.ok(!empty.includes('Sandbox test transactions'));
- const summary={currency:'EUR',orders:1,payments:8.26,refunds:0,remaining:8.26,monthRemaining:8.26,refundedOrders:0,reviewOrders:0,periodOrders:1,periodPayments:8.26,periodRefunds:0,periodRemaining:8.26,points:[{date:'2026-10-07',orders:1,payments:8.26,refunds:0,remaining:8.26}]};
+ const summary={currency:'EUR',orders:1,payments:8.26,refunds:0,remaining:8.26,monthRemaining:8.26,last30DaysRemaining:8.26,refundedOrders:0,reviewOrders:0,periodOrders:1,periodPayments:8.26,periodRefunds:0,periodRemaining:8.26,points:[{date:'2026-10-07',endDate:'2026-10-07',orders:1,payments:8.26,refunds:0,remaining:8.26}]};
  const html=render({report:{currencies:[summary],generatedAt:'2026-10-07T12:00:00Z',startDate:'2026-10-01',endDate:'2026-10-07'}});
- assert.match(html,/Sandbox test transactions/);assert.match(html,/€8.26/);assert.match(html,/Show exact amounts/);assert.match(html,/role="img"/);assert.match(html,/not a refund-date cash-flow chart/);
+ assert.match(html,/Sandbox test transactions/);assert.match(html,/€8.26/);assert.match(html,/Show exact amounts/);assert.match(html,/role="img"/);assert.match(html,/not a refund-date cash-flow chart/);assert.match(html,/Last 30 days/);assert.ok(!html.includes('Last 7 days'));assert.ok(!html.includes('This month'));
 });
 
 test('actual PostgreSQL finance aggregates full and item refunds, isolates currencies/environments and permissions',{skip:!process.env.PGLITE_TEST_MODULE},async()=>{
@@ -53,6 +53,7 @@ test('actual PostgreSQL finance aggregates full and item refunds, isolates curre
  INSERT INTO public.order_items VALUES(1,1,30,1,false),(2,1,5,1,false),(3,2,10,1,false),
  (4,3,3,2,true),(5,3,14,1,false),(6,4,8.26,1,false),(7,11,10,1,false);`);
  await db.exec(fs.readFileSync('supabase/migrations/20261007220000_admin_finance.sql','utf8'));
+ await db.exec(fs.readFileSync('supabase/migrations/20261007221000_finance_rolling_periods.sql','utf8'));
  const read=async(environment='sandbox',period='month')=>(await db.query('SELECT public.read_admin_finance($1,$2,$3) AS value',[admin,environment,period])).rows[0].value;
  const report=await read(),eur=report.currencies.find(c=>c.currency==='EUR');
  assert.equal(eur.orders,6);assert.equal(eur.payments,183.26);assert.equal(eur.refunds,16);assert.equal(eur.remaining,167.26);
@@ -61,7 +62,28 @@ test('actual PostgreSQL finance aggregates full and item refunds, isolates curre
  assert.equal(Math.round(eur.points.reduce((s,p)=>s+p.remaining,0)*100),6726);
  assert.equal(report.currencies.find(c=>c.currency==='USD').remaining,15);
  assert.equal((await read('live')).currencies[0].payments,200);
- for(const [period,count] of [['week',7],['3months',3],['6months',6],['year',12]]){const result=await read('sandbox',period);assert.equal(result.currencies[0].points.length,count);}
+ assert.equal(eur.points.length,30);assert.equal(eur.last30DaysRemaining,67.26);
+ for(const period of ['month','3months','6months','year']){
+  const result=await read('sandbox',period),points=result.currencies[0].points;
+  const dayCount=Math.round((Date.parse(result.endDate)-Date.parse(result.startDate))/86400000)+1;
+  const weekly=['6months','year'].includes(period),width=weekly?7:1;
+  assert.equal(points.length,Math.ceil(dayCount/width));
+  assert.equal(points[0].date,result.startDate);assert.equal(points.at(-1).endDate,result.endDate);
+  for(let i=1;i<points.length;i++)assert.equal(Date.parse(points[i].date)-Date.parse(points[i-1].date),width*86400000);
+  assert.equal(points.reduce((sum,p)=>sum+p.orders,0),5);
+ }
+ // Window edges and weekly boundaries: no gaps, duplicates or extra prior-day sales.
+ const long=await read('sandbox','year'),weeklyPoints=long.currencies.find(c=>c.currency==='EUR').points;
+ await db.query(`INSERT INTO public.orders VALUES
+  (20,'EUR','paid',1,'paddle_sandbox',($1::date::timestamp AT TIME ZONE 'UTC'),now()),
+  (21,'EUR','paid',2,'paddle_sandbox',(($1::date+6)::timestamp AT TIME ZONE 'UTC'),now()),
+  (22,'EUR','paid',4,'paddle_sandbox',(($1::date+7)::timestamp AT TIME ZONE 'UTC'),now()),
+  (23,'EUR','paid',8,'paddle_sandbox',(($1::date-1)::timestamp AT TIME ZONE 'UTC'),now())`,[long.startDate]);
+ const edges=(await read('sandbox','year')).currencies.find(c=>c.currency==='EUR');
+ assert.equal(edges.points[0].payments,3);assert.equal(edges.points[1].payments,4);
+ assert.equal(edges.periodPayments,90.26);
+ assert.equal(weeklyPoints[0].date,long.startDate);
+ await db.exec('DELETE FROM public.orders WHERE id BETWEEN 20 AND 23');
  // Original purchase date wins over local insertion time; refunds never add a new sale.
  await db.exec("UPDATE public.orders SET status='refunded' WHERE id=1;");
  assert.equal((await read()).currencies.find(c=>c.currency==='EUR').refunds,51);

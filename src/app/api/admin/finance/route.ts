@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     const params = new URL(request.url).searchParams;
     const environment = params.get("environment") ?? "sandbox";
     const period = params.get("period") ?? "month";
-    if (!["sandbox", "live"].includes(environment) || !["week", "month", "3months", "6months", "year"].includes(period)) {
+    if (!["sandbox", "live"].includes(environment) || !["month", "3months", "6months", "year"].includes(period)) {
       return json({ error: "Invalid finance filter." }, 400);
     }
     const { data, error } = await supabaseAdmin.rpc("read_admin_finance", {

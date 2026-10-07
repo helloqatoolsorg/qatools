@@ -10,7 +10,7 @@ Owner selected Finance from the feature backlog and paused further recovery test
 - Fully refunded orders contribute their original total once, including legacy orders whose item flags predate the current refund flow. Item refunds in partially refunded orders use recorded `unit_price * quantity` for fully refunded items. Bundles count as order lines, not constituent tools. Repurchases are separate orders.
 - Remaining payments = customer payments minus recorded refunds. This is not merchant profit, tax-exclusive revenue, a Paddle balance, or payouts. Unsupported partial monetary refunds/disputes are not invented from order statuses and still require Payment review/Paddle reconciliation. Inconsistent stored item flags/amounts produce a visible review warning.
 - Date basis: original provider completion date, falling back to local order creation date; UTC. Future-dated records are excluded. Refunds update the original purchase cohort, rather than being plotted on refund dates. No refund-date cash-flow claim is made.
-- Last 7 days and current month use daily buckets; 3/6/12 months include the current calendar month and preceding months. Zero buckets are filled. Lifetime and current-month amounts are independent of the selected chart range.
+- Last 30 days and last 3 calendar months use daily buckets. Last 6 and 12 calendar months use seven-day buckets anchored at the rolling period start, with a final partial week if needed. Every range includes today (UTC); 30 days means today plus the preceding 29 days. Month ranges start one day after the date 3/6/12 months ago. Zero buckets are filled and weekly date ranges are shown in tooltips/exact amounts. Lifetime and last-30-day summary amounts are independent of the chart selection.
 - Responsive CSS bars with accessible exact-amount table, loading/error/empty states, manual refresh and request cancellation. No new chart library.
 
 ## Security and implementation
@@ -50,3 +50,19 @@ git push
 ```
 
 After Vercel Ready: open `/admin?section=finance`; check Sandbox totals against existing Orders, refunded/rebought order totals, all five periods, and the exact-amount table. Live may be empty. Check narrow-screen layout. Do not create another purchase solely to test the chart. Hosted visual verification and production query performance remain unverified until this owner check; the report currently scans matching order history on demand. Add measured optimization if actual catalog volume warrants it.
+
+## Owner follow-up: rolling graph periods and Finance pause
+
+Owner reported the original deployed Finance section works and requested this final refinement before putting Finance aside. Removed 7-day option from the website/API. The SQL function retains the old `week` input for already-deployed callers during rollout only; no new UI uses it. Existing lifetime/refund/security semantics remain unchanged. The original migration is retained; `20261007221000_finance_rolling_periods.sql` replaces only the read-only report function. The current-month fields remain in the RPC for compatibility; the visible card now uses the separate last30DaysRemaining value.
+
+Eight Finance tests passed with zero failures/skips, including real PostgreSQL zero-fill/count/UTC boundary and weekly-edge checks, authorization and rendered UI. Scoped lint and production build/TypeScript passed. Owner performs the new hosted graph check after this follow-up deployment. Further Finance work is explicitly paused.
+
+Follow-up rollout (run one at a time, stop on an error):
+
+```cmd
+cd /d D:\qatools\qatools
+supabase db push
+git add src/components/AdminFinance.tsx src/app/api/admin/finance/route.ts src/lib/adminFinance.ts tests/finance.test.cjs supabase/migrations/20261007221000_finance_rolling_periods.sql handoff/QATOOLS_ADMIN_FINANCE.md handoff/QATOOLS_DEFERRED_ACTIONS.md
+git commit -m "Use rolling daily and weekly finance charts"
+git push
+```
