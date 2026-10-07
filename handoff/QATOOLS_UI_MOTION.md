@@ -21,3 +21,21 @@ git push
 ```
 
 After Vercel Ready check customer products/likes/product/account and admin products/editor: hover, press, likes, cart addition/count, filters, login menu, cart drawer, section switching, keyboard focus. Check mobile menus and enable reduced animation in OS settings: layout and actions must work without decorative movement. Visual tuning remains an owner review step.
+
+
+## Playful refinement — 2026-10-07
+
+Owner reported the first look is nice, including the corners. The next refinement increases spring feedback for button presses and release, lifts interactive tags/top-shelf icons slightly, gives likes a restrained tilt/pop, adds selected-choice feedback, navigation underlines/active sidebar accents, input focus glow and staggered menu items. Cart count feedback follows actual count increases with a short bounce. Disabled controls stay still; fine-pointer hover effects do not apply to touch. Reduced motion removes decorative scale/translation/rotation and all animations. Rounded corners, spacing, card button seams and commercial behavior remain unchanged.
+
+Tag entry animations now use backwards fill instead of both, so the finished animation no longer overrides the later hover/press scale. All changes are in shared CSS plus existing cart badge timing. No SQL or new dependencies.
+
+Rollout after normal CMD build passes:
+
+```bat
+npm run build
+git add src/app/interactions.css src/components/CartCountFeedback.tsx handoff/QATOOLS_UI_MOTION.md
+git commit -m "Refine playful interface micro-interactions"
+git push
+```
+
+Hosted visual review pending. Review pointer/touch/keyboard, menus, tags, selected states, likes/cart counts, input fields and disabled controls. Check reduced-motion settings as before.

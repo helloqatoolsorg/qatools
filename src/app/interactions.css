@@ -5,6 +5,7 @@
   --motion-fast:140ms;
   --motion-normal:220ms;
   --motion-ease:cubic-bezier(.2,.75,.25,1);
+  --motion-spring:cubic-bezier(.2,1.45,.35,1);
 }
 body :is(button,input,select,textarea,summary,.card-tag,.filter-chip,.meta-filter,.user-nav,.admin-card-action,.check-cart-button,.cart-page-checkout) {
   border-radius:var(--radius-control);
@@ -20,7 +21,7 @@ body .admin-card-actions .admin-card-action {border-radius:0;}
 body .admin-card-actions .admin-card-action:first-child {border-bottom-left-radius:var(--radius-surface);}
 body .admin-card-actions .admin-card-action:last-child {border-bottom-right-radius:var(--radius-surface);}
 body :is(button,.icon-link,.user-nav,.admin-card-action,.check-cart-button,summary,.card-tag,.filter-chip,.meta-filter) {
-  transition:background-color var(--motion-fast) var(--motion-ease),color var(--motion-fast) var(--motion-ease),border-color var(--motion-fast) var(--motion-ease),box-shadow var(--motion-fast) var(--motion-ease),scale var(--motion-fast) var(--motion-ease);
+  transition:background-color var(--motion-fast) var(--motion-ease),color var(--motion-fast) var(--motion-ease),border-color var(--motion-fast) var(--motion-ease),box-shadow var(--motion-fast) var(--motion-ease),scale 240ms var(--motion-spring),translate 240ms var(--motion-spring),rotate 240ms var(--motion-spring),filter var(--motion-fast) ease;
 }
 body :is(input,select,textarea) {
   transition:border-color var(--motion-fast) var(--motion-ease),box-shadow var(--motion-fast) var(--motion-ease);
@@ -43,23 +44,61 @@ body .card-info {transition:background-color var(--motion-normal) var(--motion-e
 body :is(.dropdown.open,.qatools-user-menu,.user-section.active) {animation:qatools-enter var(--motion-normal) var(--motion-ease) both;}
 body .admin-workspace-content>section:not([hidden])>section:not([hidden]),
 body .admin-workspace-content :is(.admin-finance,.admin-products,.admin-orders,.admin-payment-review) {animation:qatools-enter var(--motion-normal) var(--motion-ease) both;}
-body .filter-chip {animation:qatools-tag-in 160ms var(--motion-ease) both;}
-body :is(.heart.liked,.hero-heart.liked) {animation:qatools-like 260ms var(--motion-ease);}
+body .filter-chip {animation:qatools-tag-in 210ms var(--motion-spring) backwards;}
+body :is(.heart.liked,.hero-heart.liked) {animation:qatools-like 360ms var(--motion-ease);}
 body :is(.card-add-cart.in-cart,.buy-button.in-cart) {animation:qatools-selected 220ms var(--motion-ease);}
 body [role="status"] {animation:qatools-status 180ms ease-out both;}
 body .cart-drawer {border-radius:var(--radius-surface) 0 0 var(--radius-surface);transition:transform 240ms var(--motion-ease);}
 body .cart-overlay {transition:opacity var(--motion-normal) ease;}
 body .compact-nav-menu {border-radius:var(--radius-surface);transition:opacity 180ms var(--motion-ease),transform 180ms var(--motion-ease),visibility 180ms;}
-@keyframes qatools-enter {from{opacity:0;translate:0 -4px;}to{opacity:1;translate:0 0;}}
-@keyframes qatools-tag-in {from{opacity:0;scale:.97;}to{opacity:1;scale:1;}}
-@keyframes qatools-like {0%{scale:1;}45%{scale:1.13;}100%{scale:1;}}
+@keyframes qatools-enter {from{opacity:0;translate:0 -6px;}to{opacity:1;translate:0 0;}}
+@keyframes qatools-tag-in {from{opacity:0;scale:.92;}to{opacity:1;scale:1;}}
+@keyframes qatools-like {0%{scale:1;rotate:0deg;}35%{scale:1.2;rotate:-7deg;}65%{scale:.96;rotate:3deg;}100%{scale:1;rotate:0deg;}}
 @keyframes qatools-selected {from{box-shadow:inset 0 0 0 1px #777;}to{box-shadow:inset 0 0 0 1px transparent;}}
 @keyframes qatools-status {from{opacity:.4;}to{opacity:1;}}
+/* Playful feedback: transforms never change layout dimensions. */
+@media (hover:hover) and (pointer:fine) {
+  body button:not(:disabled):hover {filter:brightness(1.12);}
+  body :is(.card-tag,.filter-chip,.meta-filter):hover {translate:0 -1px;scale:1.025;}
+  body :is(.icon-nav .icon-link,.icon-nav button,.search-toggle):hover {translate:0 -2px;scale:1.08;}
+  body :is(.heart,.hero-heart):hover {rotate:-6deg;scale:1.12;}
+  body :is(.sort-menu button,.filter-option,.compact-nav-menu a):hover {translate:2px 0;}
+  body :is(.admin-new-product,.user-nav):hover {box-shadow:inset 2px 0 0 #777;}
+  body .admin-new-product:hover {translate:0 -2px;}
+}
+body :is(button:not(:disabled),summary,.icon-link,.user-nav,.admin-card-action,.check-cart-button):active {
+  scale:.96;translate:0 1px;rotate:0deg;transition-duration:80ms;
+}
+body :is(.card-add-cart,.admin-card-action,.user-nav):active {translate:0 0;scale:.99;}
+body .admin-main-artwork:active {scale:.995;}
+body :is(button:disabled,[aria-disabled="true"]) {scale:1;translate:0 0;rotate:0deg;filter:none;}
+body :is(.filter-option.selected,.sort-option.selected,[aria-pressed="true"]):not(:disabled) {animation:qatools-choice 240ms var(--motion-ease);}
+body .user-nav.active {box-shadow:inset 2px 0 0 #999;}
+body :is(input,select,textarea):focus-visible {box-shadow:0 0 0 3px #ffffff0d;}
+body label {transition:color 160ms ease;}
+body label:focus-within {color:#e3e3df;}
+body .main-nav a {position:relative;}
+body .main-nav a::after {
+  content:"";position:absolute;bottom:-5px;left:0;right:0;height:1px;background:currentColor;
+  transform:scaleX(0);transform-origin:left;transition:transform 220ms var(--motion-spring);
+}
+body .main-nav a:is(:hover,:focus-visible,.active)::after {transform:scaleX(1);}
+body :is(.dropdown.open,.qatools-user-menu) {transform-origin:top;}
+body .dropdown.open>:is(button,.filter-group),body .compact-nav-menu.open>a {
+  animation:qatools-menu-item 220ms var(--motion-ease) backwards;
+}
+body .dropdown.open>:nth-child(2),body .compact-nav-menu.open>a:nth-child(2) {animation-delay:15ms;}
+body .dropdown.open>:nth-child(3),body .compact-nav-menu.open>a:nth-child(3) {animation-delay:30ms;}
+body :is(.admin-gallery-replace,.admin-new-product,.compact-nav-menu a,.sort-menu button,.filter-option) {
+  transition:background-color 160ms ease,box-shadow 160ms ease,translate 220ms var(--motion-spring),scale 220ms var(--motion-spring);
+}
+@keyframes qatools-choice {0%{scale:.97;}55%{scale:1.025;}100%{scale:1;}}
+@keyframes qatools-menu-item {from{opacity:.4;translate:-3px 0;}to{opacity:1;translate:0 0;}}
 /* Also covers the older compact-nav, search and flying-cart transitions. */
 @media (prefers-reduced-motion:reduce) {
   html {scroll-behavior:auto;}
   body *,body *::before,body *::after {animation:none!important;transition:none!important;}
-  body :is(button,a,summary,.filter-chip,.heart,.hero-heart) {scale:1!important;}
+  body :is(button,a,summary,.filter-chip,.heart,.hero-heart) {scale:1!important;translate:0 0!important;rotate:0deg!important;}
   body .product-card:hover .media-frame img {transform:none;}
   body .cart-flyer {display:none;}
 }
