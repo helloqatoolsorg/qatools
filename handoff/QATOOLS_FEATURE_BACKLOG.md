@@ -163,3 +163,8 @@ Owner accepted the compact Finance graph and asked to park Finance; no additiona
 Owner reported Projects working after the project-delivery migration/deployment and asked to continue. This is a general owner confirmation, not a claim that every specific real-project purchase/refund/relative-resource check has been evidenced. The Projects handoff retains the detailed hosted checklist.
 
 Gallery add/replace/remove/reorder is now implemented locally for saved drafts and published products, with exact-version protection and service-only authorization. Draft pending uploads/recovery remain supported. Main/card artwork and published commercial metadata stay protected. Uploaded old/replaced files are retained; cleanup, videos and broader published metadata editing remain deferred. Apply migration 20261008090000 and deploy using QATOOLS_PRODUCT_GALLERY.md, then owner checks the gallery and stale-tab behavior. No remote media/content changes were performed by the agent. Finance and recovery remain parked.
+
+
+### Explicit product image update — 2026-10-07
+
+Owner approved published card replacement and explicit Update product. Main/card and gallery edits now stage locally and bind together on Update. Migration/deployment and hosted owner review are pending; see QATOOLS_PRODUCT_GALLERY.md. Finance and recovery remain parked. General published metadata edits and Storage cleanup remain deferred.

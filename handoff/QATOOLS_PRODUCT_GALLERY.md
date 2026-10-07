@@ -5,12 +5,12 @@ Implemented locally; migration/deployment and hosted owner review are pending.
 ## Editor behavior
 
 - Saved gallery/detail images have clickable replacement inputs, Move earlier/later controls and Remove.
-- Gallery order is saved immediately and reflected on the customer tool page after refresh.
-- Drafts retain pending multi-file uploads and unfinished-product recovery. Save/upload pending changes before managing existing images.
-- Published products allow gallery add, replace, remove and reorder. Product identity, description, composition, price, publication state and main/card image remain protected by the existing editor rules.
+- Main/card replacement and gallery add/replace/remove/reorder are local previews until Update product is clicked. Leaving the editor does not apply them. Draft browser recovery can retain unsaved files locally; recovery never publishes them.
+- Drafts retain pending multi-file uploads and unfinished-product recovery. All image changes can be staged together. Save/Update product before separately uploading or rebuilding tool installers.
+- Published products allow main/card replacement and gallery add, replace, remove and reorder. Product identity, description, composition, price and publication state remain protected. Main/card deletion remains disallowed.
 - PNG, JPG, WebP and GIF remain supported, at most 4 MiB per image and 20 media rows per product.
 
-No videos, main-image removal, general published metadata editing or bulk upload changes are included. These remain separate backlog items.
+No videos, main-image removal or general published metadata editing are included. These remain separate backlog items.
 
 ## Stability and security
 
@@ -50,3 +50,30 @@ git push
 Stop on a failed command. The explicit staging list excludes unrelated older working-tree changes. No new environment variables are required.
 
 Once Vercel is Ready, open Admin → Products → Edit for a draft and a published item. Add/replace a gallery image, reorder two images and remove one; refresh the customer tool page to verify the result. With two editor tabs open, change the gallery in one and confirm a stale edit in the other is rejected with Reload product. Confirm the main artwork, product price and publication state remain unchanged.
+
+## Explicit Update product batch — 2026-10-07
+
+Supersedes immediate gallery saving described in the original batch. Existing gallery migration was owner-applied and its push succeeded. Hosted image edits are not certified by that push alone.
+
+The editor stages image files, replacement previews, removals and order in memory. Update product uploads any changed files into new Storage paths, then applies the complete image set in one `save_product_artwork` transaction. Upload preparation never binds a product image. No network requests occur for gallery selection/removal/reorder alone. A failed upload prevents commit; a stale/invalid commit rolls back the entire image set. Old/unreferenced public Storage objects are retained. Main/card rows cannot be removed or reassigned to another role. New card insertion is permitted only when no main/card exists. The product version, admin membership, path existence, exact row ownership, uniqueness and 20-image limit are checked server-side. Commercial fields and ownership records are untouched.
+
+Draft metadata saves remain their own existing transaction on explicit Save/Update. If metadata succeeds but an image upload fails, metadata can be saved while the previous image set remains intact; pending files remain for retry. Tool import, installer upload/build, Paddle price actions and Publish remain separate explicit actions. Building an installer no longer silently saves pending product fields/images.
+
+Pending image replacements/removals/order are discarded when leaving the editor. The existing Continue editing browser recovery can retain draft metadata/main files/new gallery files locally; those files still require explicit Save/Update to affect the website. Published image changes have no browser recovery.
+
+Rollout (one command at a time, stop on error):
+
+```bat
+cd /d D:\qatools\qatools
+supabase db push
+```
+
+Run `npm run build` in your normal CMD first. The sandbox production build failed before application compilation because SWC could not canonicalize the D: project path (Windows access denied). TypeScript, scoped lint and 35 targeted/regression tests passed with no failures or skips. Apply the migration only after the normal build succeeds. This applies `20261008100000_explicit_product_artwork_update.sql`. After success:
+
+```bat
+git add src/app/api/admin/products/artwork/route.ts src/components/AdminGallery.tsx src/components/AdminProducts.tsx src/components/AdminToolPackage.tsx src/lib/database.types.ts supabase/migrations/20261008100000_explicit_product_artwork_update.sql tests/product-artwork.test.cjs tests/product-gallery.test.cjs handoff/QATOOLS_PRODUCT_GALLERY.md handoff/QATOOLS_FEATURE_BACKLOG.md handoff/QATOOLS_DEFERRED_ACTIONS.md
+git commit -m "Save product artwork only on explicit update"
+git push
+```
+
+Owner checks after Vercel Ready: replace published card artwork and change two gallery images/order, verify customer pages stay unchanged before Update, leave/reopen and confirm saved image set is retained. Stage again, click Update product and refresh the customer page. Test a stale second editor tab: its update must fail without replacing the first tab's saved images. Confirm draft Save/Update and installer build instructions work, and price/publication remain unchanged.
