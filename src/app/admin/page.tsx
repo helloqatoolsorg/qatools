@@ -12,6 +12,7 @@ import AdminProducts from "@/components/AdminProducts";
 import PublicationState from "@/components/PublicationState";
 import AdminDownloadCounts from "@/components/AdminDownloadCounts";
 import AdminOrders from "@/components/AdminOrders";
+import AdminFinance from "@/components/AdminFinance";
 import AdminPaymentReview from "@/components/AdminPaymentReview";
 import AdminDownloads from "@/components/AdminDownloads";
 import AdminPrices from "@/components/AdminPrices";
@@ -1227,6 +1228,7 @@ export default function AdminPage() {
             </div>
             {adminSection === "products" && <AdminProducts key={`products-${user.id}`} />}
             {adminSection === "orders" && <AdminOrders key={`orders-${user.id}`} />}
+            {adminSection === "finance" && <AdminFinance key={`finance-${user.id}`} />}
             {adminSection === "payments" && <AdminPaymentReview key={`payment-review-${user.id}`} />}
             {adminSection === "downloads" && <AdminDownloads key={`downloads-${user.id}`} products={products} />}
             {adminSection === "prices" && <AdminPrices key={`prices-${user.id}`} products={products} />}

@@ -1,4 +1,5 @@
 import type { AccountPurchases } from "./accountPurchases";
+import type { FinanceReport } from "./adminFinance";
 // Table types derived from supabase/migrations/20261002172027_remote_schema.sql.
 // Includes account activations and credential RPCs from migrations through 20261003020000.
 // Keep these synchronized with schema migrations; relationships determine query result shapes.
@@ -466,6 +467,7 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      read_admin_finance: { Args: { p_admin_id: string; p_environment: string; p_period: string }; Returns: FinanceReport };
       consume_licensing_request: { Args:{p_scope:string;p_subject_hash:string}; Returns:{allowed:boolean;retryAfter:number} };
       read_account_purchases: { Args:{p_user_id:string}; Returns:AccountPurchases };
       delete_unused_product_draft: { Args: { p_admin_id: string; p_product_id: number; p_expected_updated_at: string }; Returns: { id: number } };

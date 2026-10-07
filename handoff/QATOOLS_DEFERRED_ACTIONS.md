@@ -29,7 +29,7 @@ Payment behavior remains sandbox-only. These results permit pausing development;
 | LIC-01 | Restart/use the second computer offline with its signed license | Explicitly deferred because the owner is remotely connected. Connected machine denial, release, invalidation and reassignment passed. Do not ask the owner to disconnect during the remote session. | Before public distribution, when locally accessible |
 | LIC-02 | Verify several owned tools share one machine assignment and one activation action | Completed per owner report on 2026-10-07: bundle download/install and one account activation enabled its included tools; purchase, refund and repurchase checks succeeded. Broader version/OS coverage remains LIC-05. | Before public distribution |
 | LIC-03 | Introduce production signing keys with deliberate client verification continuity | Development signer/client public key currently used. Preserve existing credentials and plan signed-proof/key migration rather than casually replacing keys. | Before public distribution |
-| LIC-04 | Add distributed request limiting to licensing endpoints | Local implementation/tests complete on 2026-10-07; migration 20261007210000 and website deployment remain owner actions. See QATOOLS_LICENSING_LIMITS_7DAY.md. | Roll out before public launch |
+| LIC-04 | Add distributed request limiting to licensing endpoints | Migration applied and website code deployed per owner, 2026-10-07; owner confirmed updated tool/bundle Refresh works. Local throttle tests passed; deliberate hosted throttle verification remains pending. See QATOOLS_LICENSING_LIMITS_7DAY.md. | Roll out before public launch |
 | LIC-05 | Confirm supported Houdini/Python/OS versions and behavior in long sessions/renders | Current development package targets Houdini 22 / Python 3.13. Broader compatibility and extended-offline/clock/session behavior need explicit support decisions and tests. | Before promising supported platforms or offline behavior |
 | TOOL-01 | Upload the latest test tool's actual package and verify a real download/install | Ownership and payment passed; no file is uploaded for this tool. Owner performs routine admin uploads. Do not substitute a different tool's package. | When that tool's package is ready, before publishing it for sale |
 
@@ -40,7 +40,7 @@ Payment behavior remains sandbox-only. These results permit pausing development;
 | WEB-01 | Complete installation instructions and remaining product images/text/files | Verified Windows/Houdini 22 installation instructions are implemented locally on 2026-10-07, replacing placeholders; website deployment/visual review remains pending. Remaining product images/text/files remain owner content work. | Next suitable non-payment milestone / before launch |
 | LEGAL-01 | Prepare customer terms, privacy, license and refund documents; decide publication/version/acceptance process | Internal policy decisions recorded; no published agreement or acceptance is claimed. Confirm business/support details and unresolved policies before drafting final text. | Before public launch |
 | OPS-01 | Confirm support/contact address and customer help workflow | Actual support address remains to be confirmed. | Before public launch |
-| OPS-02 | Verify backups, restore procedures, secret continuity and production monitoring | Pending operational checks. Keep secret values out of handoffs. | Before public launch |
+| OPS-02 | Verify backups, restore procedures, secret continuity and production monitoring | Source-only snapshot and isolated exact-commit recovery verified on 2026-10-07. Owner manual database exports and both Storage bucket downloads verified locally (15 ZIPs, 17 media files). Independent copies, migration history, isolated database/Storage restore, secret escrow and monitoring remain pending. See QATOOLS_BACKUP_RECOVERY.md. | Before public launch |
 | EMAIL-01 | Check wider email deliverability, quotas and authentication headers/DMARC | Resend domain/SMTP and signup/reset delivery passed owner checks. Wider mailbox coverage and operational limits are unverified; authentication tracking is not configured. | Before public launch |
 
 ## Related records
@@ -77,3 +77,18 @@ Bundle/project refinement — 2026-10-05: approved separate release ZIP uploads 
 ## Seven-day licensing rollout — 2026-10-07
 
 Owner approved reducing the offline allowance to seven days. Compatible client/server support and distributed limiting are prepared locally. Update installed/shared runtimes and rebuild hosted tool/bundle installers before treating the new period as rolled out. Existing clients and signed 30-day proofs are preserved during transition. Retire legacy 30-day issuance only after client coverage is verified; universal seven-day enforcement is not yet claimed. See QATOOLS_LICENSING_LIMITS_7DAY.md.
+
+
+## Backup/readiness checkpoint — 2026-10-07
+
+Source backup script and restore tests implemented; actual committed-source recovery verified in an isolated folder. Local recovery codes protected from ordinary Git staging without reading/changing contents. Whole-system backups are not claimed complete: database availability, Storage object copies, protected signing/encryption secrets and monitoring still need owner evidence. Next owner check is the Supabase Backups page; no production restore or credential export is authorized by this record.
+
+
+Manual backup update — 2026-10-07: Free plan has no scheduled project backups. schema.sql, data.sql and roles.sql exist outside Git at D:\qatools-backups\database-20261007; Auth/application data sections are present. Both Storage buckets copied with no missing paths versus the exported inventory and no empty files. All 15 tool ZIPs decompressed successfully. This supersedes the earlier pending Backups-page check. Independent copies and full restoration have not been verified.
+
+
+## Recovery pause and Finance continuation — 2026-10-07
+
+Owner confirmed creation and testing of an encrypted WinRAR archive, restricted Drive upload and downloaded-copy test. Fresh committed-source backup: D:\qatools-backups\qatools-source-20261007-145516-fab82b55. Local configuration copied into encrypted owner backup. The saved encryption key successfully decrypted both database-export credentials and matched stored hashes. Signing-key comparison could not complete in the agent environment because cache access remained denied; owner command result has not been supplied. Exact deployed secret equality, original archive contents/password recoverability by an independent drill, migration-history preservation and whole-system restoration remain unverified. Owner explicitly paused recovery work in favor of the original feature backlog. Do not resume without a relevant request; revisit before public launch.
+
+Finance reporting now implemented locally; see QATOOLS_ADMIN_FINANCE.md. Apply read-only migration, deploy and owner-check existing data; do not repeat purchases or change licenses to verify reports.

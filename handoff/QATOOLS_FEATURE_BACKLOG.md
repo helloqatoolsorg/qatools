@@ -146,3 +146,8 @@ Owner confirmed the grouped account purchases batch works after rollout. Custome
 ## Licensing stability batch prepared — 2026-10-07
 
 Distributed activation/renewal limiting and the owner-approved seven-day client transition are implemented locally. 286 Node tests and 35 Houdini tests passed, scoped lint and production build passed. Owner migration/deployment, installed client update and hosted installer replacement remain pending. Existing old clients retain compatibility; retiring legacy 30-day issuance is a deliberate later rollout step. See QATOOLS_LICENSING_LIMITS_7DAY.md for exact scope, limits and rollout instructions.
+
+
+## Finance batch — 2026-10-07
+
+Owner selected Finance and paused further recovery testing. FIN-01 now has local protected reporting, lifetime/current-month totals, recorded refunds and remaining customer payments, 7-day/current-month/3/6/12-month charts and exact amounts, with sandbox/live and currency separation. FIN-02 uses explicit UTC purchase-date cohorts; figures include charged tax and exclude any claim of fees, payouts or profit. Unsupported partial monetary refunds/disputes remain reconciliation work. One read-only migration precedes deployment; hosted visual review remains pending. See QATOOLS_ADMIN_FINANCE.md.
