@@ -1,3 +1,4 @@
+import type { AccountPurchases } from "./accountPurchases";
 // Table types derived from supabase/migrations/20261002172027_remote_schema.sql.
 // Includes account activations and credential RPCs from migrations through 20261003020000.
 // Keep these synchronized with schema migrations; relationships determine query result shapes.
@@ -465,6 +466,7 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      read_account_purchases: { Args:{p_user_id:string}; Returns:AccountPurchases };
       delete_unused_product_draft: { Args: { p_admin_id: string; p_product_id: number; p_expected_updated_at: string }; Returns: { id: number } };
       product_publication_checks: { Args: { p_admin_id: string; p_product_id: number }; Returns: { missing: string[]; ready: boolean; updated_at: string } };
       record_product_download: { Args: { p_request_id: string; p_user_id: string; p_product_id: number; p_file_path: string }; Returns: boolean };

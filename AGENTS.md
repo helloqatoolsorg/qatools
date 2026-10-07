@@ -183,3 +183,8 @@ Keep `handoff/QATOOLS_POLICY_DECISIONS.md` current when the owner approves mater
 ## Brand spelling
 
 Use exactly `qatools` in all user-visible website and Houdini text, including titles, dialogs, metadata and errors. Do not use spaced or capitalized variants. Preserve internal identifiers, protocol strings, cache paths and historical source documents unless changes are separately required.
+
+
+## Owner batching preference — 2026-10-07
+
+For a small fix, consider whether it can be combined with the next related authorized steps. Describe the cohesive batch and complete it before one migration/deployment handoff. Avoid separate rollout cycles for each minor fix. Keep security, payments and ownership verification appropriate to the batch; do not combine unrelated high-risk work just to reduce deploys. Owner still performs hosted product uploads, publishing and sandbox checks.

@@ -1,4 +1,5 @@
 "use client";
+import type { AccountAccess, AccountPurchases } from "@/lib/accountPurchases";
 import AccountName from "@/components/AccountName";
 import { formatOrderNumber } from "@/lib/orderNumber";
 
@@ -34,19 +35,6 @@ type ProfileRow = {
   invoice_details: string | null;
 };
 
-type EntitlementProduct = {
-  product_type: string;
-  id: number;
-  name: string;
-  slug: string;
-  subtitle: string | null;
-  current_version: string | null;
-
-  category: {
-    name: string;
-  } | null;
-};
-
 type LicenseActivation = {
   id: number;
   machine_id: string;
@@ -54,18 +42,7 @@ type LicenseActivation = {
   activated_at: string;
 };
 
-type Entitlement = {
-  id: number;
-  status: string;
-  source: string;
-  granted_at: string;
-
-  products:
-    | EntitlementProduct
-    | null;
-
-
-};
+type Entitlement = AccountAccess;
 
 type OrderProduct = {
   id: number;
@@ -157,6 +134,7 @@ function formatMoney(
 }
 
 export default function UserPage() {
+  const [purchaseRevision,setPurchaseRevision]=useState(0);
   const {
     user,
     loading,
@@ -434,7 +412,7 @@ export default function UserPage() {
     This reads only the currently logged-in user's
     entitlement rows.
 
-    RLS is the real security boundary.
+    The authenticated server route reads this account's access and origins.
   */
   useEffect(() => {
     if (!user) {
@@ -443,7 +421,6 @@ export default function UserPage() {
       return;
     }
 
-    const userId = user.id;
 
     let cancelled =
       false;
@@ -457,79 +434,15 @@ export default function UserPage() {
 
       setError(null);
 
-      const {
-        data,
-        error: entitlementError,
-      } =
-        await supabase
-          .from("entitlements")
-          .select(`
-            id,
-            status,
-            source,
-            granted_at,
-
-            products!entitlements_product_id_fkey (
-              id,
-              name,
-              slug,
-              subtitle,
-              current_version,
-              product_type,
-
-              category (
-                name
-              )
-            )
-          `)
-          .eq(
-            "user_id",
-            userId
-          )
-          .eq(
-            "status",
-            "active"
-          )
-          .order(
-            "granted_at",
-            {
-              ascending:
-                false,
-            }
-          );
-
-      const { data: machines, error: machineError } = await supabase
-        .from("account_activations")
-        .select("id, machine_id, status, activated_at")
-        .eq("user_id", userId)
-        .order("activated_at", { ascending: false });
-
-      if (cancelled) {
-        return;
-      }
-
-      if (
-        entitlementError || machineError
-      ) {
-        setError(
-          "Unable to load purchases and account machine. Please refresh or try again later."
-        );
-
-        setEntitlementsLoading(
-          false
-        );
-
-        return;
-      }
-
-      setAccountActivations(machines ?? []);
-      setEntitlements(
-        data ?? []
-      );
-
-      setEntitlementsLoading(
-        false
-      );
+      try {
+        const session=await supabase.auth.getSession();
+        if(session.error || !session.data.session)throw Error("Please log in again.");
+        const response=await fetch("/api/account/purchases",{cache:"no-store",headers:{Authorization:"Bearer "+session.data.session.access_token}});
+        const body=await response.json() as AccountPurchases & {error?:string};
+        if(!response.ok || !body.ok)throw Error(body.error ?? "Unable to load purchases and account machine.");
+        if(cancelled)return;
+        setEntitlements(body.entitlements);setAccountActivations(body.machines);setEntitlementsLoading(false);
+      }catch(reason){if(!cancelled){setError(reason instanceof Error?reason.message:"Unable to load purchases and account machine.");setEntitlementsLoading(false);}}
     }
 
     loadEntitlements();
@@ -537,7 +450,7 @@ export default function UserPage() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user,purchaseRevision]);
 
   /*
     --------------------------------------------------
@@ -1165,11 +1078,12 @@ export default function UserPage() {
                   </h1>
                 </div>
 
+                <button type="button" className="menu-trigger" disabled={entitlementsLoading} onClick={()=>setPurchaseRevision(v=>v+1)}>Refresh purchases</button>
                 <span className="muted-count">
                   {entitlementsLoading
                     ? "loading..."
-                    : `${entitlements.length} ${
-                        entitlements.length ===
+                    : `${entitlements.filter(e=>e.direct_acquisition).length} ${
+                        entitlements.filter(e=>e.direct_acquisition).length ===
                         1
                           ? "product"
                           : "products"
@@ -1181,7 +1095,7 @@ export default function UserPage() {
                 <p className="user-muted">
                   loading purchased products...
                 </p>
-              ) : entitlements.length ===
+              ) : entitlements.filter(e=>e.direct_acquisition).length ===
                 0 ? (
                 <div
                   style={{
@@ -1240,7 +1154,7 @@ export default function UserPage() {
                 </div>
               ) : (
                 <div className="purchase-list">
-                  {entitlements.map(
+                  {entitlements.filter(e=>e.direct_acquisition).map(
                     (
                       entitlement
                     ) => {
@@ -1388,6 +1302,7 @@ export default function UserPage() {
                               </strong>
                             </div>
 
+                            {entitlement.included_tools.length>0 && <div className="purchase-included-tools"><span>Included tools</span><div className="tags">{entitlement.included_tools.map(tool=><a key={tool.id} className="card-tag" href={"/product?id="+tool.slug}>{tool.name}</a>)}</div></div>}
                             <div className="purchase-actions">
                               {entitlement.status === "active" && <ProductDownload productId={product.id} />}
                               <a

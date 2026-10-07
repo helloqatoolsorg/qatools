@@ -134,6 +134,36 @@ test('actual PostgreSQL bundle sources, pinned checkout, overlapping refunds and
  await assert.rejects(db.query('SELECT save_product_draft($1,$2,$3,$4,$5)',[admin,bundleRequest,{...emptyBundle,slug:'different'},pretty.id,renamed.updated_at]),/slug is locked/);
  await assert.rejects(db.query('SELECT save_product_draft($1,gen_random_uuid(),$2)',[buyer,emptyBundle]),/Admin access/);
  await assert.rejects(db.query('SELECT save_product_draft($1,gen_random_uuid(),$2)',[admin,emptyBundle]),/duplicate key/);
+ // Account presentation separates direct acquisitions from effective tool access.
+ await db.exec("ALTER TABLE category ADD COLUMN name text DEFAULT 'SOP'");
+ await db.exec('CREATE TABLE account_activations(id bigint PRIMARY KEY,user_id uuid,machine_id text,status text,activated_at timestamptz)');
+ await db.exec(read('20261007200000_account_purchase_groups.sql'));
+ const displayBuyer='00000000-0000-4000-8000-000000000100';await db.query('INSERT INTO auth.users VALUES($1,now(),null)',[displayBuyer]);
+ await db.query("INSERT INTO account_activations VALUES(1,$1,'my-pc','active',now()),(2,$2,'other-pc','active',now())",[displayBuyer,buyer]);
+ await db.exec("UPDATE sandbox_product_prices SET price_id='pri_'||lpad('1',26,'0'),paddle_product_id='pro_'||lpad('1',26,'0') WHERE product_id=1");
+ async function view(who=displayBuyer){return (await db.query('SELECT read_account_purchases($1) r',[who])).rows[0].r;}
+ const mixed=await purchase([1,10],90,displayBuyer);
+ let page=await view();assert.equal(page.ok,true);assert.equal(page.entitlements.length,3);
+ assert.deepEqual(page.entitlements.filter(e=>e.direct_acquisition).map(e=>e.products.id).sort((a,b)=>a-b),[1,10]);
+ assert.deepEqual(page.entitlements.find(e=>e.products.id===10).included_tools.map(t=>t.id).sort((a,b)=>a-b),[1,2]);
+ assert.deepEqual(page.machines.map(m=>m.machine_id),['my-pc']);
+ const bundleLine=(await db.query("SELECT i.provider_item_id FROM order_items i JOIN orders o ON o.id=i.order_id WHERE o.provider_transaction_id=$1 AND i.product_id=10",[mixed.txn])).rows[0];
+ const refundBundle={eventId:'evt_'+String(91).padStart(26,'0'),type:'adjustment.updated',refundId:'adj_'+String(91).padStart(26,'0'),txnId:mixed.txn,refundedTools:true,refundTotal:900,refundItems:[{providerItemId:bundleLine.provider_item_id,amount:900}],occurredAt:'2026-10-07T13:00:00Z',eventHash:'c'.repeat(64)};
+ assert.equal((await db.query('SELECT process_sandbox_payment_event($1,$2) r',[refundBundle,'b'.repeat(64)])).rows[0].r.outcome,'refunded');
+ page=await view();assert.deepEqual(page.entitlements.filter(e=>e.direct_acquisition).map(e=>e.products.id),[1]);
+ const newBundle=await purchase([10],92,displayBuyer);
+ await db.query("UPDATE orders SET provider_created_at='2026-10-07T15:00:00Z' WHERE provider_transaction_id=$1",[newBundle.txn]);
+ page=await view();assert.deepEqual(page.entitlements.filter(e=>e.direct_acquisition).map(e=>e.products.id).sort((a,b)=>a-b),[1,10]);
+ assert.equal(Date.parse(page.entitlements.find(e=>e.products.id===10).granted_at),Date.parse('2026-10-07T15:00:00Z'));
+ // Refund the separate tool's original purchase: it remains usable via the rebought bundle,
+ // but must no longer appear as a separate acquisition even though source stays purchase.
+ await refund(mixed,93);page=await view();assert.deepEqual(page.entitlements.filter(e=>e.direct_acquisition).map(e=>e.products.id),[10]);
+ assert.equal(page.entitlements.find(e=>e.products.id===1).source,'purchase');assert.equal(page.entitlements.length,3);
+ for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'read_account_purchases(uuid)','EXECUTE') allowed",[role])).rows[0].allowed,false);
+ assert.equal((await view('00000000-0000-4000-8000-000000000999')).ok,false);
+ const displayAdmin='00000000-0000-4000-8000-000000000101';await db.query('INSERT INTO auth.users VALUES($1,now(),null)',[displayAdmin]);
+ await db.query("INSERT INTO entitlements(user_id,product_id,source,status) VALUES($1,1,'admin','active'),($1,10,'admin','active')",[displayAdmin]);
+ assert.deepEqual((await view(displayAdmin)).entitlements.filter(e=>e.direct_acquisition).map(e=>e.products.id).sort((a,b)=>a-b),[1,10]);
  // Standalone bundle pricing has no dependency on constituent prices.
  await db.exec(read('20261005190000_independent_bundle_pricing.sql'));
  for(const price of [12,20]){

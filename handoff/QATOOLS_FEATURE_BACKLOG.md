@@ -131,3 +131,8 @@ Local Prepare qatools tool helper and portable Houdini 22 authoring installer ar
 ## Automatic bundle assembly checkpoint — 2026-10-05
 
 Bundles now assemble from the selected published tools' existing private installers; the editor no longer requires a bundle ZIP upload. Shared JSON/runtime appears once. Explicit rebuilds create independent saved releases; source updates never silently change an existing bundle. Transactional source-path/membership checks preserve the current installer on stale builds. Migration 20261005170000 precedes deployment. Owner purchase/download/Houdini/refund/repurchase verification is next. Project delivery and customer bulk selection remain deferred. See QATOOLS_BUNDLE_OWNERSHIP_DELIVERY.md for scoped rollout commands and bounds.
+
+
+## Grouped account purchases batch — 2026-10-07
+
+Owner confirmed sandbox bundle purchase, download, Houdini activation, refund and repurchase all work. Current batch groups bundle-only tools beneath their directly acquired bundle, preserves independent acquisitions, fixes the visible product count and repurchase date, and provides Refresh purchases. One read-only account RPC migration precedes deployment; no ownership mutations. See the bundle handoff for rollout and grouped display checks. Small related fixes should be batched with the next authorized steps; preference persisted in AGENTS.md.

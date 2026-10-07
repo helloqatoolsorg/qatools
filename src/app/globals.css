@@ -2397,3 +2397,6 @@ body:not(.products-page) .cart-overlay{
 .admin-count-grid>div{padding:16px;background:#141414;border:1px solid var(--line)}
 .admin-count-grid span{color:#888}
 .admin-count-grid strong{display:block;font:24px monospace;margin-top:12px}
+
+.purchase-included-tools{grid-column:1 / -1}
+.purchase-included-tools .tags{margin-top:8px}

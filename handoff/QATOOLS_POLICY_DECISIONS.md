@@ -287,3 +287,8 @@ Verified using actual PostgreSQL migration execution: individual and bundle repu
 ## 2026-10-05: independent bundle prices
 
 Owner supersedes the earlier mandatory discount comparison: each bundle has its own fixed positive price, with no comparison to a constituent-tool price total. Existing ownership still does not reduce that price. Publication verifies a valid positive bundle price and the existing server-verified Paddle mapping; no ownership, refunds or checkout verification rules change. Locally implemented in 20261005190000_independent_bundle_pricing.sql. Remote application pending.
+
+
+## 2026-10-07: acquired products versus bundle tool access
+
+Owner approved that Purchased products shows directly acquired products as standalone entries. Bundle-only tool access is displayed under Included tools within its bundle. Independently acquired included tools stay standalone. Filtering must use the active acquisition origin, not just the effective entitlement source, because an old refunded individual purchase may retain effective access from a current bundle. Licensing/download authorization remains based on all active effective access. Implemented locally in the grouped account read/UI batch; hosted rollout remains pending.

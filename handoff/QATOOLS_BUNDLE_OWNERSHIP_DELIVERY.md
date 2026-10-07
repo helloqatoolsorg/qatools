@@ -133,3 +133,26 @@ git push
 ```
 
 After Ready: refresh the customer account, verify the purchased bundle and included tools, download the saved bundle and continue Houdini installation/activation. No repeat payment is required to verify this fix. Hosted user verification remains pending.
+
+
+## Grouped customer acquisitions — 2026-10-07
+
+Owner approved showing directly acquired products as standalone entries, with bundle-only tools nested under their bundle. A separate tool purchase stays standalone even if also included in a bundle. Current access and direct acquisition are read separately from entitlement_origins, so a refunded direct purchase still supplied by an active bundle is not falsely shown as standalone. Free and admin grants retain their standalone entries when they have their own active origin. Included-tool links use the pinned active bundle contribution; customer downloads still use the saved bundle release.
+
+This cohesive batch includes displayed product counts, an explicit Refresh purchases action and the latest verified purchase date after repurchase. Account-wide licensed tool counts and Houdini access still use all effective entitlements. read_account_purchases is a read-only SECURITY DEFINER function executable only by service_role; the trusted GET route independently authenticates and passes only the verified account ID. No browser ledger grants, signing/cache changes or ownership mutations were introduced.
+
+Actual PostgreSQL tests cover mixed bundle/individual checkout, item-only bundle refund, bundle repurchase, direct-tool refund while bundle access survives, independent admin grants, other-account machine isolation and execute privilege restrictions. Account-route tests cover authenticated attribution, denial before SQL and private/safe responses. The owner's previously confirmed sandbox purchase/download/activation/refund/repurchase cycle remains verified; grouped display requires a hosted check after rollout.
+
+Apply the one migration, then deploy this batch from CMD:
+
+```bat
+cd /d D:\qatools\qatools
+supabase db push
+git add AGENTS.md src/app/user/page.tsx src/app/globals.css src/app/api/account/purchases/route.ts src/lib/accountPurchases.ts src/lib/database.types.ts supabase/migrations/20261007200000_account_purchase_groups.sql tests/account-purchases.test.cjs tests/bundle-ownership.test.cjs handoff/QATOOLS_POLICY_DECISIONS.md handoff/QATOOLS_FEATURE_BACKLOG.md handoff/QATOOLS_BUNDLE_OWNERSHIP_DELIVERY.md
+git commit -m "Group included tools under purchased bundles"
+git push
+```
+
+After Ready: Refresh purchases on the existing customer account. Expect bundle plus separately acquired test B; test C appears within Included tools, with no extra standalone product count. If the separate tool's purchase is refunded while bundle access survives, it becomes bundle-only. Existing downloads and activation continue to work.
+
+Future small related fixes should be proposed and grouped with the next authorized steps into one rollout; this preference is recorded in AGENTS.md. Project delivery, bulk customer downloads and finance remain separate future feature batches.
