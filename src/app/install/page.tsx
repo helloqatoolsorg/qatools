@@ -106,13 +106,8 @@ export default function InstallPage() {
         </h1>
 
         <p>
-          Lorem ipsum dolor sit amet,
-          consectetur adipiscing elit.
-          Sed do eiusmod tempor
-          incididunt ut labore et dolore
-          magna aliqua. Ut enim ad minim
-          veniam, quis nostrud
-          exercitation ullamco laboris.
+          These instructions cover the current Houdini 22 installer on Windows.
+          Individual tools and bundles use the same shared qatools package.
         </p>
 
         <section
@@ -170,12 +165,9 @@ export default function InstallPage() {
                   lineHeight: 1.75,
                 }}
               >
-                Lorem ipsum dolor sit
-                amet, consectetur
-                adipiscing elit. Integer
-                nec odio. Praesent
-                libero. Sed cursus ante
-                dapibus diam. Sed nisi.
+                Log in and open <a href="/user?section=purchased">Purchased products</a>.
+                Download your tool or bundle, then extract the complete ZIP.
+                Inside you will find qatools.json and a qatools folder.
               </p>
             </div>
           </article>
@@ -217,7 +209,7 @@ export default function InstallPage() {
                     "400 20px monospace",
                 }}
               >
-                Place it in Houdini
+                Install the complete package
               </h2>
 
               <p
@@ -228,13 +220,12 @@ export default function InstallPage() {
                   lineHeight: 1.75,
                 }}
               >
-                Lorem ipsum dolor sit
-                amet, consectetur
-                adipiscing elit.
-                Curabitur sodales ligula
-                in libero. Sed dignissim
-                lacinia nunc. Curabitur
-                tortor.
+                Save your work and close Houdini. Open your Houdini preferences
+                packages folder, usually <code style={{ overflowWrap: "anywhere" }}>Documents\houdini22.0\packages</code>.
+                Create the packages folder if it does not exist. Copy qatools.json
+                and the complete qatools folder into it. When updating, merge the
+                folders and replace matching files while keeping your other tools.
+                Installing only the HDA does not install the shared licensing files.
               </p>
             </div>
           </article>
@@ -287,13 +278,11 @@ export default function InstallPage() {
                   lineHeight: 1.75,
                 }}
               >
-                Lorem ipsum dolor sit
-                amet, consectetur
-                adipiscing elit.
-                Vestibulum lacinia arcu
-                eget nulla. Class aptent
-                taciti sociosqu ad litora
-                torquent.
+                Restart Houdini and place one of your owned tools. In your website
+                account, open <a href="/user?section=license">License</a>, reveal your
+                activation key and copy it. In the tool&apos;s License tab, click
+                License key activation, paste the key and click Activate.
+                Keep your key private.
               </p>
             </div>
           </article>
@@ -346,13 +335,11 @@ export default function InstallPage() {
                   lineHeight: 1.75,
                 }}
               >
-                Lorem ipsum dolor sit
-                amet, consectetur
-                adipiscing elit. Fusce
-                nec tellus sed augue
-                semper porta. Mauris
-                massa. Vestibulum
-                lacinia arcu eget nulla.
+                Check that State is active in the tool&apos;s License tab.
+                One account activation covers your owned tools, including tools in
+                bundles. Newly placed owned tools use the same shared license.
+                After acquiring another tool, connect to the internet and click
+                Refresh to update your access.
               </p>
             </div>
           </article>
@@ -398,12 +385,10 @@ export default function InstallPage() {
                 lineHeight: 1.8,
               }}
             >
-              Lorem ipsum dolor sit
-              amet, consectetur
-              adipiscing elit. Duis
-              sagittis ipsum. Praesent
-              mauris. Fusce nec tellus
-              sed augue semper porta.
+              Your account allows one active computer. If you change computers,
+              ask support to release the previous assignment before activating the
+              new one. Clear local license removes the cached license on that
+              computer; it does not release the account&apos;s machine assignment.
             </p>
 
             <p
@@ -414,12 +399,11 @@ export default function InstallPage() {
                 lineHeight: 1.8,
               }}
             >
-              Lorem ipsum dolor sit
-              amet, consectetur
-              adipiscing elit. Nulla
-              quis sem at nibh
-              elementum imperdiet.
-              Duis sagittis ipsum.
+              After activation, tools can work offline using the cached license.
+              Connect and click Refresh when renewal is needed. If a tool does not
+              appear, check that the full package is in your Houdini packages folder
+              and restart Houdini. For a connection error, check your internet
+              connection and use the latest downloaded installer.
             </p>
           </div>
         </section>
@@ -427,7 +411,7 @@ export default function InstallPage() {
 
       <footer>
         <span>
-          qatools.studio
+          qatools.org
         </span>
 
         <span>

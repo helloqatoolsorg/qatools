@@ -37,7 +37,7 @@ Payment behavior remains sandbox-only. These results permit pausing development;
 
 | ID | Action | Status and reason | When to revisit |
 | --- | --- | --- | --- |
-| WEB-01 | Complete installation instructions and remaining product images/text/files | Installation content has placeholders. Owner reserves normal uploads/content operations for themselves; guide rather than repeat completed uploads. | Next suitable non-payment milestone / before launch |
+| WEB-01 | Complete installation instructions and remaining product images/text/files | Verified Windows/Houdini 22 installation instructions are implemented locally on 2026-10-07, replacing placeholders; website deployment/visual review remains pending. Remaining product images/text/files remain owner content work. | Next suitable non-payment milestone / before launch |
 | LEGAL-01 | Prepare customer terms, privacy, license and refund documents; decide publication/version/acceptance process | Internal policy decisions recorded; no published agreement or acceptance is claimed. Confirm business/support details and unresolved policies before drafting final text. | Before public launch |
 | OPS-01 | Confirm support/contact address and customer help workflow | Actual support address remains to be confirmed. | Before public launch |
 | OPS-02 | Verify backups, restore procedures, secret continuity and production monitoring | Pending operational checks. Keep secret values out of handoffs. | Before public launch |

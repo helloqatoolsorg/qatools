@@ -51,3 +51,28 @@ After Vercel Ready:
 5. Download/install an actual refreshed product and confirm Refresh works before declaring customer rollout complete. Previously installed clients continue using the compatibility allowance until updated. Retiring legacy 30-day issuance remains a follow-up after installer coverage is confirmed.
 
 No remote SQL, commit, push, deployment or installed-Houdini mutation was performed by the agent. Product files, membership, commercial ownership, signing keys and machine algorithm were not changed by this batch.
+
+
+## Owner rollout and local installation repair — 2026-10-07
+
+Owner applied the limiter migration, committed/pushed c0f7a82, confirmed website readiness and initially reported Houdini Refresh worked. After redownloading QA Tool testB on this computer, contact failed. Read-only inspection of its current private hosted installer (product 9 / qa_tool_testb) confirmed CRC validity and exact current-source config/client bytes: www.qatools.org and seven-day capability. Hosted download was not the localhost source.
+
+The active local packages runtime still used localhost:3000 and exact 30-day verification; localhost was unreachable. With owner-granted filesystem permission, five shared runtime/startup files were backed up and replaced from the repository. Six installed HDAs were byte-verified unchanged; no account cache was written or cleared. Existing portable qatools.json was already correct and not replaced. Backup: C:\Users\quima\Documents\Codex\2026-10-02\i-was-building-step-by-step\licensing-install-backup-20261007-134331. Houdini was open during replacement: owner must save work, fully restart and Refresh to verify its newly loaded client. No hosted release upload or deployment was performed by the agent. The owner-reported current testB release contains the updated runtime; other releases and bundle rebuild coverage remain to be verified.
+
+Installing only the HDA with Houdini's asset installer does not install shared Python/startup files. Install the complete downloaded package by merging qatools and qatools.json into the Houdini preferences packages directory, retaining existing otls. For this repair, full restart is essential because Python modules already loaded in an open Houdini session remain in memory.
+
+
+## Hosted installer coverage checkpoint — 2026-10-07
+
+Owner confirmed the repaired local client works after restart, then rebuilt/downloaded/installed the bundle and confirmed both tools work. Read-only inspection of all seven published catalog products found:
+
+- QA Tool testB, QA Tool testC and QA Beginner Bundle: mapped enabled installers contain config.py/client.py byte-identical to current repository source, www.qatools.org and seven-day capability.
+- qafit01: enabled installer points to www.qatools.org but still contains the old 30-day client. Owner must rebuild/replace it through the legacy HDA upload flow; installing it now could overwrite the shared runtime with old code. This is the remaining existing-file update, not a request to recreate the HDA.
+- qasim01, qaroad01, qanoise01: published test catalog entries have no download mapping. Do not invent files or silently unpublish them. Actual package creation/owner uploads remain pending before those products can be treated as ready for customers.
+
+Inspection did not mutate catalog, storage, counters, ownership or customer data. It verifies stored runtime configuration, not every HDA's output or strict universal seven-day enforcement. Legacy issuance retirement remains separate after release/client coverage is confirmed.
+
+
+## Existing-file rollout completion — 2026-10-07
+
+Owner proceeded with qafit01 replacement. Read-only hosted inspection now confirms its config.py and client.py exactly match current repository source. Together with the prior inspections of testB, testC and QA Beginner Bundle, all four currently mapped published installers contain the online seven-day-capable runtime. Missing files for published test catalog placeholders remain separate owner content work. This does not retire legacy 30-day issuance or certify old installed clients have all been updated.
