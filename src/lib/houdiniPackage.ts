@@ -25,7 +25,7 @@ export function crc32(bytes: Buffer) {
 }
 // Stored ZIP entries: no extraction, uploaded paths or compression-ratio hazards.
 export function makePackageZip(entries: PackageEntry[]): Buffer {
-  if (!entries.length || entries.length > 107 || entries.reduce((n,e) => n + e.bytes.length,0) > 25 * 1024 * 1024) throw new Error("Package exceeds limits.");
+  if (!entries.length || entries.length > 109 || entries.reduce((n,e) => n + e.bytes.length,0) > 25 * 1024 * 1024) throw new Error("Package exceeds limits.");
   const names = new Set<string>(), files: Buffer[] = [], directory: Buffer[] = []; let offset = 0;
   for (const entry of entries) {
     if (!/^[A-Za-z0-9_.\/-]+$/.test(entry.name) || entry.name.startsWith("/") || entry.name.split("/").some(p => !p || p === "." || p === "..") || names.has(entry.name.toLowerCase())) throw new Error("Invalid or duplicate package path.");
@@ -37,9 +37,13 @@ export function makePackageZip(entries: PackageEntry[]): Buffer {
   const end = Buffer.alloc(22), central = Buffer.concat(directory); end.writeUInt32LE(0x06054b50,0); end.writeUInt16LE(entries.length,8); end.writeUInt16LE(entries.length,10); end.writeUInt32LE(central.length,12); end.writeUInt32LE(offset,16);
   return Buffer.concat([...files,central,end]);
 }
-export async function buildHoudiniPackage(json: Buffer, tools: { name: string; bytes: Buffer }[]): Promise<Buffer> {
-  if (!validPackageJson(json) || !tools.length || tools.some(t => !validHda(t.name,t.bytes))) throw new Error("Invalid installer inputs.");
+export async function houdiniPackageEntries(json: Buffer, tools: { name: string; bytes: Buffer }[]): Promise<PackageEntry[]> {
+  if (!validPackageJson(json) || !tools.length || tools.length > 100 || tools.some(t => !validHda(t.name,t.bytes))) throw new Error("Invalid installer inputs.");
   const runtime = await Promise.all(runtimeFiles.map(async name => ({ name: "qatools/python3.13libs/qatools_licensing/" + name, bytes: await readFile(join(process.cwd(),"houdini/python/qatools_licensing",name)) })));
   const startup = await readFile(join(process.cwd(),"houdini/scripts/pythonrc.py"));
-  return makePackageZip([{ name: "qatools.json", bytes: json }, ...tools.map(t => ({ name: "qatools/otls/" + t.name, bytes: t.bytes })), ...runtime, { name: "qatools/scripts/pythonrc.py", bytes: startup }]);
+  return [{ name: "qatools.json", bytes: json }, ...tools.map(t => ({ name: "qatools/otls/" + t.name, bytes: t.bytes })), ...runtime, { name: "qatools/scripts/pythonrc.py", bytes: startup }];
+}
+
+export async function buildHoudiniPackage(json: Buffer, tools: PackageEntry[]): Promise<Buffer> {
+  return makePackageZip(await houdiniPackageEntries(json, tools));
 }

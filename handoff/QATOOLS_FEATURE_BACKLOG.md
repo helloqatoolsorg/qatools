@@ -151,3 +151,8 @@ Distributed activation/renewal limiting and the owner-approved seven-day client 
 ## Finance batch — 2026-10-07
 
 Owner selected Finance and paused further recovery testing. FIN-01 now has local protected reporting, lifetime/current-month totals, recorded refunds and remaining customer payments, 7-day/current-month/3/6/12-month charts and exact amounts, with sandbox/live and currency separation. FIN-02 uses explicit UTC purchase-date cohorts; figures include charged tax and exclude any claim of fees, payouts or profit. Unsupported partial monetary refunds/disputes remain reconciliation work. One read-only migration precedes deployment; hosted visual review remains pending. See QATOOLS_ADMIN_FINANCE.md.
+
+
+## Projects batch — 2026-10-07
+
+Owner accepted the compact Finance graph and asked to park Finance; no additional Finance work is included. Projects are now implemented locally using selected published tools plus a separately preserved project ZIP inside one private release. Publication, pinned ownership, independent-tool protection on refunds, repurchase and account grouping reuse the verified bundle model. Upload limits are explicit (project ZIP below 4 MB, expanded project contents at most 20 MiB, complete release payload at most 25 MiB). Migration 20261007230000 precedes deployment; owner real-project purchase/download/install/refund verification remains pending. Larger project uploads and customer Download selection remain deferred. See QATOOLS_PROJECT_DELIVERY.md for implementation, tests and scoped rollout commands. This supersedes older notes that all Projects remain blocked drafts.

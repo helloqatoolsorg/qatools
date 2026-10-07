@@ -107,7 +107,7 @@ export default function InstallPage() {
 
         <p>
           These instructions cover the current Houdini 22 installer on Windows.
-          Individual tools and bundles use the same shared qatools package.
+          Individual tools, bundles and projects use the same shared qatools package.
         </p>
 
         <section
@@ -166,7 +166,7 @@ export default function InstallPage() {
                 }}
               >
                 Log in and open <a href="/user?section=purchased">Purchased products</a>.
-                Download your tool or bundle, then extract the complete ZIP.
+                Download your tool, bundle or project, then extract the complete ZIP. For projects, extract the ZIP inside the project folder into a separate working folder, preserving its structure.
                 Inside you will find qatools.json and a qatools folder.
               </p>
             </div>

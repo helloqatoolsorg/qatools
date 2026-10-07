@@ -95,3 +95,8 @@ Finance reporting now implemented locally; see QATOOLS_ADMIN_FINANCE.md. Apply r
 
 
 Finance checkpoint — 2026-10-07: Owner confirmed the original Finance deployment works. Final authorized refinement: Last 30 days / Last 3 months use daily columns; Last 6 / Last 12 months use weekly columns; 7-day option removed and summary card uses Last 30 days. Rolling UTC intervals include today; final weekly bucket may be partial. Local tests/lint/build passed; new read-only migration/deployment and owner visual check pending. Owner explicitly asked to leave Finance aside after this refinement. Do not extend Finance without a new request.
+
+
+## Projects batch — 2026-10-07
+
+Owner accepted the compact Finance graph and asked to park Finance; no additional Finance work is included. Projects are now implemented locally using selected published tools plus a separately preserved project ZIP inside one private release. Publication, pinned ownership, independent-tool protection on refunds, repurchase and account grouping reuse the verified bundle model. Upload limits are explicit (project ZIP below 4 MB, expanded project contents at most 20 MiB, complete release payload at most 25 MiB). Migration 20261007230000 precedes deployment; owner real-project purchase/download/install/refund verification remains pending. Larger project uploads and customer Download selection remain deferred. See QATOOLS_PROJECT_DELIVERY.md for implementation, tests and scoped rollout commands. This supersedes older notes that all Projects remain blocked drafts.

@@ -492,6 +492,10 @@ export type Database = {
             product: { id: number; name: string; slug: string } | null }[];
         }[] };
       };
+      set_assembled_project_download: {
+        Args: { p_admin_id:string; p_product_id:number; p_expected_path:string|null; p_file_path:string; p_file_name:string; p_sources:{tool_id:number;file_path:string}[]; p_project_sha256:string };
+        Returns: { ok:boolean };
+      };
       set_assembled_bundle_download: {
         Args: { p_admin_id:string; p_product_id:number; p_expected_path:string|null; p_file_path:string; p_file_name:string; p_sources:{tool_id:number;file_path:string}[] };
         Returns: { ok:boolean };

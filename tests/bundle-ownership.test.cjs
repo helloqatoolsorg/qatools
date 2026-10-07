@@ -202,6 +202,37 @@ test('actual PostgreSQL bundle sources, pinned checkout, overlapping refunds and
  assert.equal((await db.query('SELECT slug FROM products WHERE id=1')).rows[0].slug,'one');
  assert.equal((await db.query("SELECT has_function_privilege('service_role','save_product_draft_legacy(uuid,uuid,jsonb,bigint,timestamptz)','EXECUTE') allowed")).rows[0].allowed,false);
  for(const role of ['anon','authenticated']){assert.equal((await db.query("SELECT has_table_privilege($1,'entitlement_origins','INSERT,UPDATE,DELETE,TRUNCATE') allowed",[role])).rows[0].allowed,false);assert.equal((await db.query("SELECT has_function_privilege($1,'set_bundle_download(uuid,bigint,text,text,text,bigint[])','EXECUTE') allowed",[role])).rows[0].allowed,false);}
+
+ // Projects reuse the same verified checkout snapshot and purchase-origin rules.
+ await db.exec(read('20261007230000_project_delivery.sql'));
+ const projectBuyer='00000000-0000-4000-8000-000000000201';await db.query('INSERT INTO auth.users VALUES($1,now(),null)',[projectBuyer]);
+ await db.exec("UPDATE products SET price_eur=5 WHERE id=1;UPDATE product_downloads SET enabled=true WHERE product_id IN (1,2)");
+ assert.equal((await db.query("SELECT set_assembled_bundle_download($1,10,$2,$2,'built.zip',$3) r",[admin,builtPath,sources])).rows[0].r.ok,true); // existing bundle writer survives the new release column
+ await db.exec("INSERT INTO products(id,name,slug,price_eur,current_version,compatibility,subtitle,description,category_id,complexity_id,product_type,published) VALUES(200,'Example Project','example_project',15,'1','Houdini 22','Scene','Project description',1,1,'project',false);INSERT INTO product_members VALUES(200,1),(200,2);INSERT INTO product_media(product_id,media_type,file_path,role,sort_order) VALUES(200,'image','test.gif','card',0)");
+ await db.query('INSERT INTO sandbox_product_prices VALUES(200,$1,$2,true)',['pri_'+String(200).padStart(26,'0'),'pro_'+String(200).padStart(26,'0')]);
+ const projectPath=path(200);await db.query("INSERT INTO storage.objects VALUES('qatools-downloads',$1)",[projectPath]);
+ const fingerprint='d'.repeat(64),projectSources=[{tool_id:1,file_path:path(1)},{tool_id:2,file_path:path(2)}];
+ assert.ok((await db.query('SELECT product_publication_checks($1,200) r',[admin])).rows[0].r.missing.includes('Project ZIP and installer matching the included tools'));
+ assert.equal((await db.query("SELECT set_product_download($1,200,NULL,$2,'package.zip',true) r",[admin,projectPath])).rows[0].r.ok,false);
+ assert.equal((await db.query("SELECT set_bundle_download($1,200,NULL,$2,'package.zip',ARRAY[1,2]::bigint[]) r",[admin,projectPath])).rows[0].r.ok,false);
+ for(const [who,src,hash] of [[buyer,projectSources,fingerprint],[admin,projectSources,null],[admin,projectSources,'bad'],[admin,[projectSources[0]],fingerprint],[admin,[projectSources[0],{...projectSources[1],file_path:'stale'}],fingerprint]])
+  assert.equal((await db.query("SELECT set_assembled_project_download($1,200,NULL,$2,'package.zip',$3,$4) r",[who,projectPath,src,hash])).rows[0].r.ok,false);
+ assert.equal((await db.query("SELECT set_assembled_project_download($1,200,NULL,$2,'package.zip',$3,$4) r",[admin,projectPath,projectSources,fingerprint])).rows[0].r.ok,true);
+ await assert.rejects(db.query("SELECT set_assembled_project_download($1,200,NULL,$2,'package.zip',$3,$4)",[admin,projectPath,projectSources,'e'.repeat(64)]),/changed/);
+ assert.equal((await db.query('SELECT project_sha256 FROM bundle_releases WHERE product_id=200')).rows[0].project_sha256,fingerprint); // failed replacement rolls back its attestation too
+ assert.equal((await db.query('SELECT product_publication_checks($1,200) r',[admin])).rows[0].r.ready,true);
+ const projectStamp=(await db.query('SELECT updated_at FROM products WHERE id=200')).rows[0].updated_at;
+ await db.query('SELECT publish_product_draft($1,200,$2,$3)',[admin,projectStamp,'pri_'+String(200).padStart(26,'0')]);
+ await assert.rejects(db.exec('DELETE FROM product_members WHERE product_id=200'),/immutable/);
+ const ownedTool=await purchase([1],200,projectBuyer),ownedProject=await purchase([200],201,projectBuyer);
+ assert.equal(await state(2,projectBuyer),'active');assert.equal((await db.query('SELECT bundled_tool_ids FROM order_items WHERE product_id=200')).rows[0].bundled_tool_ids.length,2);
+ let projectView=await view(projectBuyer);assert.deepEqual(projectView.entitlements.filter(e=>e.direct_acquisition).map(e=>e.products.id).sort((a,b)=>a-b),[1,200]);assert.equal(projectView.entitlements.find(e=>e.products.id===200).included_tools.length,2);
+ assert.equal((await db.query('SELECT record_product_download(gen_random_uuid(),$1,200,$2) r',[projectBuyer,projectPath])).rows[0].r,true);
+ await refund(ownedProject,202);assert.equal(await state(1,projectBuyer),'active');assert.equal(await state(2,projectBuyer),'refunded');assert.equal(await state(200,projectBuyer),'refunded');
+ assert.equal((await db.query('SELECT record_product_download(gen_random_uuid(),$1,200,$2) r',[projectBuyer,projectPath])).rows[0].r,false);
+ const projectAgain=await purchase([200],203,projectBuyer);await refund(ownedProject,204);assert.equal(await state(200,projectBuyer),'active');await refund(ownedTool,205);assert.equal(await state(1,projectBuyer),'active');await refund(projectAgain,206);assert.equal(await state(1,projectBuyer),'refunded');
+ const grantUser='00000000-0000-4000-8000-000000000202';await db.query('INSERT INTO auth.users VALUES($1,now(),null)',[grantUser]);await db.query("INSERT INTO entitlements(user_id,product_id,source,status) VALUES($1,200,'admin','active')",[grantUser]);assert.equal(await state(2,grantUser),'active');
+ for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'set_assembled_project_download(uuid,bigint,text,text,text,jsonb,text)','EXECUTE') allowed",[role])).rows[0].allowed,false);
  }finally{await db.close();}
 });
 
