@@ -136,3 +136,13 @@ Bundles now assemble from the selected published tools' existing private install
 ## Grouped account purchases batch — 2026-10-07
 
 Owner confirmed sandbox bundle purchase, download, Houdini activation, refund and repurchase all work. Current batch groups bundle-only tools beneath their directly acquired bundle, preserves independent acquisitions, fixes the visible product count and repurchase date, and provides Refresh purchases. One read-only account RPC migration precedes deployment; no ownership mutations. See the bundle handoff for rollout and grouped display checks. Small related fixes should be batched with the next authorized steps; preference persisted in AGENTS.md.
+
+
+## Superseding stability priority — 2026-10-07
+
+Owner confirmed the grouped account purchases batch works after rollout. Customer Download selection (DOWNLOAD-01/02/04) is explicitly deferred; existing individual downloads and independently assembled bundle releases remain the supported paths. DOWNLOAD-03's shared installer/bundle assembly work is already implemented; it does not imply a customer bulk-selection feature. The owner prioritizes stability over adding download complexity. Next: regression verification and an accurate operational-readiness record before selecting another feature batch. Finance and Projects remain pending; live payment readiness remains separate.
+
+
+## Licensing stability batch prepared — 2026-10-07
+
+Distributed activation/renewal limiting and the owner-approved seven-day client transition are implemented locally. 286 Node tests and 35 Houdini tests passed, scoped lint and production build passed. Owner migration/deployment, installed client update and hosted installer replacement remain pending. Existing old clients retain compatibility; retiring legacy 30-day issuance is a deliberate later rollout step. See QATOOLS_LICENSING_LIMITS_7DAY.md for exact scope, limits and rollout instructions.

@@ -1,6 +1,6 @@
 # qatools deferred actions
 
-Updated: 2026-10-04
+Updated: 2026-10-07
 
 Owner's subsequent complete website/admin/download/Houdini feature list is grouped in QATOOLS_FEATURE_BACKLOG.md. Use that document for implementation batches; retain this document for postponed checks, launch dependencies and operational work. No feature in the new list is claimed completed merely because it resembles existing behavior.
 
@@ -19,7 +19,7 @@ Payment behavior remains sandbox-only. These results permit pausing development;
 | PAY-01 | Refund one complete tool from a multi-item order and verify the other tool remains owned | Owner explicitly deferred the hosted test. Item-scoped full-refund handling already exists and is covered by automated SQL tests; no additional implementation is requested now. | Before advertising multi-item live checkout as verified |
 | PAY-02 | Investigate the earlier test account's blocked checkout despite no visible purchases/orders | Unresolved; a fresh account worked. Inspect saved checkout reservations and entitlement history before identifying the cause. Do not clear history or restore ownership merely to unblock a test. | When resuming payment operations/recovery work |
 | PAY-03 | Confirm live Paddle approval, credentials, catalog, domains, notification configuration, receipts, invoices and real end-to-end purchase/refund | Pending separate live implementation/configuration and verification. Sandbox success is not live verification. | Before accepting real payments |
-| PAY-04 | Define handling of partial monetary refunds, disputes/chargebacks and reversals, repurchases after revocation, and ambiguous checkouts | These cases currently require manual review; revoked-access restoration exceptions are not approved. Refunded repurchases are approved and implemented locally in migration 20261005160000; deployment remains pending. Decide policy before automation. | Before live launch; automation can be a later milestone |
+| PAY-04 | Define handling of partial monetary refunds, disputes/chargebacks and reversals, repurchases after revocation, and ambiguous checkouts | These cases currently require manual review; revoked-access restoration exceptions are not approved. Refunded repurchases are deployed and owner-verified, including bundle repurchase and preservation of independently purchased tools. Decide policy before automation. | Before live launch; automation can be a later milestone |
 | PAY-05 | Review reconciliation, failed webhook visibility and operator recovery procedures | Replay and durable event history exist; a complete operational recovery workflow has not been verified. | Before live launch |
 
 ## Licensing and tool delivery
@@ -27,9 +27,9 @@ Payment behavior remains sandbox-only. These results permit pausing development;
 | ID | Action | Status and reason | When to revisit |
 | --- | --- | --- | --- |
 | LIC-01 | Restart/use the second computer offline with its signed license | Explicitly deferred because the owner is remotely connected. Connected machine denial, release, invalidation and reassignment passed. Do not ask the owner to disconnect during the remote session. | Before public distribution, when locally accessible |
-| LIC-02 | Verify several owned tools share one machine assignment and one activation action | Account-wide design implemented; real-client coverage with multiple tools remains pending. | Before public distribution |
+| LIC-02 | Verify several owned tools share one machine assignment and one activation action | Completed per owner report on 2026-10-07: bundle download/install and one account activation enabled its included tools; purchase, refund and repurchase checks succeeded. Broader version/OS coverage remains LIC-05. | Before public distribution |
 | LIC-03 | Introduce production signing keys with deliberate client verification continuity | Development signer/client public key currently used. Preserve existing credentials and plan signed-proof/key migration rather than casually replacing keys. | Before public distribution |
-| LIC-04 | Add distributed request limiting to licensing endpoints | Pending implementation. | Before public launch |
+| LIC-04 | Add distributed request limiting to licensing endpoints | Local implementation/tests complete on 2026-10-07; migration 20261007210000 and website deployment remain owner actions. See QATOOLS_LICENSING_LIMITS_7DAY.md. | Roll out before public launch |
 | LIC-05 | Confirm supported Houdini/Python/OS versions and behavior in long sessions/renders | Current development package targets Houdini 22 / Python 3.13. Broader compatibility and extended-offline/clock/session behavior need explicit support decisions and tests. | Before promising supported platforms or offline behavior |
 | TOOL-01 | Upload the latest test tool's actual package and verify a real download/install | Ownership and payment passed; no file is uploaded for this tool. Owner performs routine admin uploads. Do not substitute a different tool's package. | When that tool's package is ready, before publishing it for sale |
 
@@ -64,3 +64,16 @@ Editor continuation update: saved unpublished individual tools now have working 
 Main-image replacement update — 2026-10-05: inline preview and replacement for unpublished drafts implemented locally with primary-row/timestamp protection. Published editing, removal/reordering/videos remain deferred. Free/paid/admin download-link request counts implemented locally; completed-transfer analytics and historical backfill are not claimed. Apply the two migrations listed in QATOOLS_PRODUCT_DRAFTS.md before deployment, then owner checks upload/replacement and dashboard counts.
 
 Bundle/project refinement — 2026-10-05: approved separate release ZIP uploads rather than dynamically pulling mutable tool files, while retaining backend included-tool links. Implement purchase-source attribution and membership/release snapshots before enabling composed sales. Refund tests must cover direct ownership plus bundle, overlapping bundles, repeated events and partial refunds. Project uploads use ZIP initially; larger uploads need a path that respects hosting request limits. Individual editor/publication fixes are prepared locally in QATOOLS_PRODUCT_PUBLICATION.md.
+
+
+## Stability checkpoint — 2026-10-07
+
+- DOWNLOAD-01: Owner approved deferring customer Download selection. Keep individual installers and assembled bundle installers as the supported download paths. No selection controls, bulk API or archive merging will be added in this milestone. Revisit only if customer demand justifies the extra operational complexity.
+- Owner confirmed bundle and independently purchased tool visibility, bundle refund, repurchase, download and Houdini activation. The grouped account purchases rollout is also owner-confirmed working. Preserve these flows; do not repeat completed uploads or purchases because older dated sections list them as pending.
+- Projects, Finance and live payments remain separate unfinished milestones. Sandbox verification does not establish live launch readiness.
+- Regression verification and remaining operational readiness are the next stability priority. See QATOOLS_STABILITY_CHECKPOINT.md for current evidence and limits.
+
+
+## Seven-day licensing rollout — 2026-10-07
+
+Owner approved reducing the offline allowance to seven days. Compatible client/server support and distributed limiting are prepared locally. Update installed/shared runtimes and rebuild hosted tool/bundle installers before treating the new period as rolled out. Existing clients and signed 30-day proofs are preserved during transition. Retire legacy 30-day issuance only after client coverage is verified; universal seven-day enforcement is not yet claimed. See QATOOLS_LICENSING_LIMITS_7DAY.md.

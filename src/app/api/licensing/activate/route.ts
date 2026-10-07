@@ -1,8 +1,9 @@
+import { licensingNetworkLimit, licensingRequestLimit } from "@/lib/licensingRequestLimit";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { hashActivationKey, validActivationKey } from "@/lib/activationCredentials";
 import { activationFailure, privateJson, readActivationBody } from "@/lib/activationHttp";
 
-import { issueLicense, signingConfiguration } from "@/lib/signedLicense";
+import { issueLicense, signingConfiguration, LEGACY_OFFLINE_SECONDS, OFFLINE_SECONDS } from "@/lib/signedLicense";
 import { licenseIdentity } from "@/lib/licenseIdentity";
 
 export const runtime = "nodejs";
@@ -10,6 +11,8 @@ export const runtime = "nodejs";
 // Explicit activation only. A future renewal endpoint must never create an assignment.
 export async function POST(request: Request) {
   try {
+    const networkLimit = await licensingNetworkLimit(request, "activate");
+    if (networkLimit) return networkLimit;
     const authorization = request.headers.get("authorization");
     const key = authorization?.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
     if (!validActivationKey(key)) return activationFailure("invalid_credential");
@@ -17,6 +20,8 @@ export async function POST(request: Request) {
     if (!body || typeof body.machineId !== "string" || !/^[A-F0-9]{16}$/.test(body.machineId)) {
       return activationFailure("invalid_machine");
     }
+    const keyLimit = await licensingRequestLimit("activate-key", key);
+    if (keyLimit) return keyLimit;
     // Check signing configuration before any machine-assignment mutation.
     signingConfiguration();
     const { data, error } = await supabaseAdmin.rpc("activate_account_machine", {
@@ -33,6 +38,6 @@ export async function POST(request: Request) {
     if (!renewed.data.ok) return activationFailure(renewed.data.code);
     if (!renewed.data.activation || !renewed.data.products) return activationFailure();
     return privateJson({ activation: renewed.data.activation, products: renewed.data.products,
-      signedLicenseAvailable: true, license: issueLicense(renewed.data.activation, renewed.data.products, undefined, await licenseIdentity(renewed.data.activation)) });
+      signedLicenseAvailable: true, license: issueLicense(renewed.data.activation, renewed.data.products, undefined, await licenseIdentity(renewed.data.activation), body.offlineDays === 7 ? OFFLINE_SECONDS : LEGACY_OFFLINE_SECONDS) });
   } catch { return activationFailure(); }
 }

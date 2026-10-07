@@ -30,7 +30,8 @@ with warnings.catch_warnings():
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from . import config
 
-OFFLINE_SECONDS = 30 * 24 * 60 * 60
+OFFLINE_SECONDS = 7 * 24 * 60 * 60
+LEGACY_OFFLINE_SECONDS = 30 * 24 * 60 * 60
 MAX_BYTES = 131072
 UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 _thread_lock = threading.RLock()
@@ -111,7 +112,7 @@ def verify_license(envelope, public_keys, machine_id, now=None, allow_expired=Fa
             or any(not isinstance(p, str) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,127}", p) for p in products)
             or len(set(products)) != len(products)
             or type(issued) is not int or type(expiry) is not int or issued <= 0
-            or expiry - issued != OFFLINE_SECONDS or issued > now + 300):
+            or expiry - issued not in (OFFLINE_SECONDS, LEGACY_OFFLINE_SECONDS) or issued > now + 300):
         raise LicenseError("The signed license does not match this computer or has an invalid format.")
     if not allow_expired and now >= expiry:
         raise LicenseError("Your offline license has expired. Connect to the internet and refresh the license.")
@@ -282,8 +283,10 @@ class Client:
         if not isinstance(key, str) or not re.fullmatch(r"QA_[A-Za-z0-9_-]{43}", key.strip()):
             raise LicenseError("Enter your qatools account activation key.")
         with self._exclusive():
-            status, result = self._request("/api/licensing/activate", {"machineId": self.machine_id}, key.strip())
+            status, result = self._request("/api/licensing/activate", {"machineId": self.machine_id, "offlineDays": 7}, key.strip())
             if status != 200:
+                if status in (429, 503):
+                    raise TemporaryError("Activation temporarily unavailable. Please try again shortly.")
                 if status == 409:
                     raise LicenseError("Your account has another active computer. Ask support to release it first.")
                 raise LicenseError("Activation failed. Check your account key, owned tools and server connection.")
@@ -307,7 +310,7 @@ class Client:
             state["lastAttemptAt"] = now
             self._save(state)
             try:
-                status, result = self._request("/api/licensing/renew", {"license": proof, "machineId": self.machine_id, "nonce": nonce})
+                status, result = self._request("/api/licensing/renew", {"license": proof, "machineId": self.machine_id, "nonce": nonce, "offlineDays": 7})
             except TemporaryError:
                 return {"renewed": False, "message": "Server unavailable; cached license retained."}
             if status == 200:

@@ -1,6 +1,7 @@
+import { licensingNetworkLimit, licensingRequestLimit } from "@/lib/licensingRequestLimit";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { privateJson, readActivationBody } from "@/lib/activationHttp";
-import { issueDenial, issueLicense, signingConfiguration, verifyLicense, type SignedEnvelope } from "@/lib/signedLicense";
+import { issueDenial, issueLicense, signingConfiguration, LEGACY_OFFLINE_SECONDS, OFFLINE_SECONDS, verifyLicense, type SignedEnvelope } from "@/lib/signedLicense";
 import { licenseIdentity } from "@/lib/licenseIdentity";
 
 export const runtime = "nodejs";
@@ -8,6 +9,8 @@ const terminalReasons = new Set(["assignment_inactive", "credential_changed", "a
 
 export async function POST(request: Request) {
   try {
+    const networkLimit = await licensingNetworkLimit(request, "renew");
+    if (networkLimit) return networkLimit;
     signingConfiguration();
     const body = await readActivationBody(request, 131072);
     if (!body || typeof body.machineId !== "string" || !/^[A-F0-9]{16}$/.test(body.machineId) ||
@@ -18,6 +21,8 @@ export async function POST(request: Request) {
     try { payload = verifyLicense(body.license, true); }
     catch { return privateJson({ error: "A valid signed license is required." }, 401); }
     if (payload.machineId !== body.machineId) return privateJson({ error: "License machine does not match." }, 401);
+    const assignmentLimit = await licensingRequestLimit("renew-assignment", `${payload.activationId}:${payload.credentialId}`);
+    if (assignmentLimit) return assignmentLimit;
     const { data, error } = await supabaseAdmin.rpc("renew_account_license", {
       p_activation_id: Number(payload.activationId), p_credential_id: payload.credentialId, p_machine_id: payload.machineId,
     });
@@ -30,6 +35,6 @@ export async function POST(request: Request) {
       return privateJson({ error: "Renewal temporarily unavailable." }, 503);
     }
     if (!data.activation || !data.products) return privateJson({ error: "Renewal temporarily unavailable." }, 503);
-    return privateJson({ license: issueLicense(data.activation, data.products, undefined, await licenseIdentity(data.activation)) });
+    return privateJson({ license: issueLicense(data.activation, data.products, undefined, await licenseIdentity(data.activation), body.offlineDays === 7 ? OFFLINE_SECONDS : LEGACY_OFFLINE_SECONDS) });
   } catch { return privateJson({ error: "Renewal temporarily unavailable." }, 503); }
 }

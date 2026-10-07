@@ -1,7 +1,8 @@
 import "server-only";
 import { createHash, createPrivateKey, createPublicKey, sign, verify } from "node:crypto";
 
-export const OFFLINE_SECONDS = 30 * 24 * 60 * 60;
+export const OFFLINE_SECONDS = 7 * 24 * 60 * 60;
+export const LEGACY_OFFLINE_SECONDS = 30 * 24 * 60 * 60;
 export type SignedEnvelope = { payload: string; signature: string };
 export type LicensePayload = {
   vendor: "qatools"; version: 2; kind: "license"; keyId: string;
@@ -51,7 +52,7 @@ export function verifyLicense(envelope: unknown, allowExpired = false, now = Mat
     value.products.some((p: unknown) => typeof p !== "string" || !/^[a-z0-9][a-z0-9_-]{0,127}$/.test(p)) ||
     new Set(value.products).size !== value.products.length ||
     !Number.isSafeInteger(value.issuedAt) || !Number.isSafeInteger(value.expiresAt) || value.issuedAt <= 0 ||
-    value.expiresAt - value.issuedAt !== OFFLINE_SECONDS || value.issuedAt > now + 300 || (!allowExpired && now >= value.expiresAt)) {
+    ![OFFLINE_SECONDS, LEGACY_OFFLINE_SECONDS].includes(value.expiresAt - value.issuedAt) || value.issuedAt > now + 300 || (!allowExpired && now >= value.expiresAt)) {
     throw new Error("Invalid or expired license.");
   }
   if ((value.accountEmail !== undefined && (typeof value.accountEmail !== "string" || value.accountEmail.length > 320 || !/^[^\s@]+@[^\s@]+$/.test(value.accountEmail))) ||
@@ -59,10 +60,10 @@ export function verifyLicense(envelope: unknown, allowExpired = false, now = Mat
   return value;
 }
 
-export function issueLicense(assignment: Assignment, products: { slug: string }[], now = Math.floor(Date.now() / 1000), identity: { accountEmail?: string; activatedAt?: number } = {}): SignedEnvelope {
+export function issueLicense(assignment: Assignment, products: { slug: string }[], now = Math.floor(Date.now() / 1000), identity: { accountEmail?: string; activatedAt?: number } = {}, duration = OFFLINE_SECONDS): SignedEnvelope {
   const envelope = encode({ vendor: "qatools", version: 2, kind: "license", activationId: String(assignment.id),
     credentialId: assignment.credential_id, machineId: assignment.machine_id,
-    products: [...new Set(products.map(p => p.slug))].sort(), issuedAt: now, expiresAt: now + OFFLINE_SECONDS, ...identity });
+    products: [...new Set(products.map(p => p.slug))].sort(), issuedAt: now, expiresAt: now + duration, ...identity });
   verifyLicense(envelope, false, now);
   return envelope;
 }

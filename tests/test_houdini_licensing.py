@@ -168,6 +168,28 @@ class LicensingTests(unittest.TestCase):
                 self.client.refresh(force=True)
             self.client.require_product("qafit01")
 
+    def test_seven_day_request_and_legacy_cache_transition(self):
+        self.activate()
+        self.assertEqual(self.calls[-1][1]["offlineDays"], 7)
+        old = self.license(expiresAt=self.now + 30 * 86400)
+        self.client._save({"license": old})
+        self.client.require_product("qafit01")
+        self.assertTrue(self.client.refresh(force=True)["renewed"])
+        self.assertEqual(self.calls[-1][1]["offlineDays"], 7)
+        self.assertEqual(self.client._payload(self.client._load())["expiresAt"] - self.now, 7 * 86400)
+
+    def test_throttling_and_service_failure_preserve_offline_proof(self):
+        self.activate()
+        original = self.client._load()["license"]
+        for status in [429, 503]:
+            self.handler = lambda *args: (status, {"error": "temporary"})
+            self.assertFalse(self.client.refresh(force=True)["renewed"])
+            self.assertEqual(self.client._load()["license"], original)
+            self.client.require_product("qafit01")
+            with self.assertRaises(TemporaryError):
+                self.client.activate(KEY)
+            self.assertEqual(self.client._load()["license"], original)
+
     def test_no_license_never_automatically_activates(self):
         self.assertFalse(self.client.refresh()["renewed"])
         self.assertEqual(self.calls, [])

@@ -466,6 +466,7 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      consume_licensing_request: { Args:{p_scope:string;p_subject_hash:string}; Returns:{allowed:boolean;retryAfter:number} };
       read_account_purchases: { Args:{p_user_id:string}; Returns:AccountPurchases };
       delete_unused_product_draft: { Args: { p_admin_id: string; p_product_id: number; p_expected_updated_at: string }; Returns: { id: number } };
       product_publication_checks: { Args: { p_admin_id: string; p_product_id: number }; Returns: { missing: string[]; ready: boolean; updated_at: string } };
