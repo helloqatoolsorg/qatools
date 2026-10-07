@@ -52,9 +52,7 @@ export default function InstallPage() {
             title="Liked products"
           >
             <span className="liked-icon">
-              {likedCount > 0
-                ? "♥"
-                : "♡"}
+              ♡
             </span>
 
             <span className="liked-count">

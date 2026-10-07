@@ -525,9 +525,7 @@ export default function LikedPage() {
             title="Liked products"
           >
             <span className="liked-icon">
-              {likedCount > 0
-                ? "♥"
-                : "♡"}
+              ♡
             </span>
 
             <span className="liked-count">
@@ -861,15 +859,6 @@ export default function LikedPage() {
             </div>
           </div>
 
-          <div className="toolbar-center">
-            <span className="toolbar-meta">
-              {visibleProducts.length}{" "}
-              {visibleProducts.length === 1
-                ? "product"
-                : "products"}
-            </span>
-          </div>
-
           <div className="toolbar-right">
             <span className="toolbar-meta">
               liked products
@@ -1013,12 +1002,6 @@ export default function LikedPage() {
                               no media
                             </div>
                           )}
-
-                          {category && (
-                            <span className="media-badge">
-                              {category.toUpperCase()}
-                            </span>
-                          )}
                         </div>
                       </a>
 
@@ -1066,7 +1049,7 @@ export default function LikedPage() {
                                 )
                               }
                             >
-                              ♥
+                              ♡
                             </button>
                           </div>
                         </div>
@@ -1116,21 +1099,13 @@ export default function LikedPage() {
                                 product.price_eur
                               )}
                             </strong>
-
-                            {product.release_date && (
-                              <span>
-                                {
-                                  product.release_date
-                                }
-                              </span>
-                            )}
                           </div>
                         </div>
 
                         </div>
 
                         <button
-                          className={`card-add-cart ${
+                          className={`card-add-cart ${purchased ? "purchased" : ""} ${
                             inCart
                               ? "in-cart"
                               : ""

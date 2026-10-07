@@ -940,9 +940,7 @@ export default function Home() {
             title="Liked products"
           >
             <span className="liked-icon">
-              {likedCount > 0
-                ? "♥"
-                : "♡"}
+              ♡
             </span>
 
             <span className="liked-count">
@@ -1324,21 +1322,6 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="toolbar-center">
-            <span
-              className="toolbar-meta"
-              id="productCount"
-            >
-              {
-                visibleProducts.length
-              }{" "}
-              {visibleProducts.length ===
-              1
-                ? "product"
-                : "products"}
-            </span>
-          </div>
-
           {/* SEARCH */}
 
           <div className="toolbar-right">
@@ -1607,12 +1590,6 @@ export default function Home() {
                               no media
                             </div>
                           )}
-
-                          {category && (
-                            <span className="media-badge">
-                              {category.toUpperCase()}
-                            </span>
-                          )}
                         </div>
                       </a>
 
@@ -1664,9 +1641,7 @@ export default function Home() {
                                 )
                               }
                             >
-                              {liked
-                                ? "♥"
-                                : "♡"}
+                              ♡
                             </button>
                           </div>
                         </div>
@@ -1716,21 +1691,13 @@ export default function Home() {
                                 product.price_eur
                               )}
                             </strong>
-
-                            {product.release_date && (
-                              <span>
-                                {
-                                  product.release_date
-                                }
-                              </span>
-                            )}
                           </div>
                         </div>
 
                         </div>
 
                         <button
-                          className={`card-add-cart ${
+                          className={`card-add-cart ${purchased ? "purchased" : ""} ${
                             inCart
                               ? "in-cart"
                               : ""

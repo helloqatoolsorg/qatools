@@ -77,12 +77,9 @@ body .user-nav.active {box-shadow:inset 2px 0 0 #999;}
 body :is(input,select,textarea):focus-visible {box-shadow:0 0 0 3px #ffffff0d;}
 body label {transition:color 160ms ease;}
 body label:focus-within {color:#e3e3df;}
-body .main-nav a {position:relative;}
-body .main-nav a::after {
-  content:"";position:absolute;bottom:-5px;left:0;right:0;height:1px;background:currentColor;
-  transform:scaleX(0);transform-origin:left;transition:transform 220ms var(--motion-spring);
-}
-body .main-nav a:is(:hover,:focus-visible,.active)::after {transform:scaleX(1);}
+/* Light up quickly, then return to the resting color more slowly. */
+body .main-nav a {transition:color 420ms ease-out;}
+body .main-nav a:is(:hover,:focus-visible) {transition-duration:120ms;}
 body :is(.dropdown.open,.qatools-user-menu) {transform-origin:top;}
 body .dropdown.open>:is(button,.filter-group),body .compact-nav-menu.open>a {
   animation:qatools-menu-item 220ms var(--motion-ease) backwards;
@@ -94,6 +91,26 @@ body :is(.admin-gallery-replace,.admin-new-product,.compact-nav-menu a,.sort-men
 }
 @keyframes qatools-choice {0%{scale:.97;}55%{scale:1.025;}100%{scale:1;}}
 @keyframes qatools-menu-item {from{opacity:.4;translate:-3px 0;}to{opacity:1;translate:0 0;}}
+/* Preserve the right shelf column after removing its middle count. */
+body .toolbar>.toolbar-left {grid-column:1;}
+body .toolbar>.toolbar-right {grid-column:3;}
+/* Shared logo: contain the taller symbol within the existing top shelf. */
+body .brand img {height:54px!important;width:auto;max-width:145px;object-fit:contain;filter:none;}
+/* Cart and ownership feedback use one consistent palette across card/tool pages. */
+body :is(.card-add-cart,.buy-button,#toolAddToCart).in-cart {
+  background:#112b45!important;border-color:#356f9c!important;color:#98caff!important;
+}
+body :is(.card-add-cart,.buy-button,#toolAddToCart).in-cart:hover {
+  background:#163a5c!important;border-color:#4c8ec1!important;color:transparent!important;
+}
+body :is(.card-add-cart,.buy-button,#toolAddToCart).in-cart:hover::after {color:#b9ddff;}
+body :is(.card-add-cart,.buy-button,#toolAddToCart).purchased,
+body :is(.card-add-cart,.buy-button,#toolAddToCart).purchased:hover {
+  background:#142b20!important;border-color:#366b49!important;color:#98d5a9!important;
+  opacity:1;animation:none;filter:none;cursor:default;
+}
+body :is(.card-add-cart,.buy-button,#toolAddToCart).purchased::after,
+body :is(.card-add-cart,.buy-button,#toolAddToCart).purchased:hover::after {content:none;}
 /* Also covers the older compact-nav, search and flying-cart transitions. */
 @media (prefers-reduced-motion:reduce) {
   html {scroll-behavior:auto;}

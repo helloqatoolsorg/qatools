@@ -342,9 +342,7 @@ export default function ProductPage() {
             title="Liked products"
           >
             <span className="liked-icon">
-              {likedCount > 0
-                ? "♥"
-                : "♡"}
+              ♡
             </span>
 
             <span className="liked-count">
@@ -471,9 +469,7 @@ export default function ProductPage() {
                     )
                   }
                 >
-                  {liked
-                    ? "♥"
-                    : "♡"}
+                  ♡
                 </button>
               </div>
             </div>
@@ -516,7 +512,7 @@ export default function ProductPage() {
 
               <button
                 id="toolAddToCart"
-                className={`buy-button ${
+                className={`buy-button ${purchased ? "purchased" : ""} ${
                   inCart
                     ? "in-cart"
                     : ""

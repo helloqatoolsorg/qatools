@@ -10,7 +10,7 @@ export function AdminHeader() {
     <Link className="brand" href="/"><Image src="/assets/qatools_logo.png" alt="qatools" width={145} height={40} style={{ height: "auto" }} /></Link>
     <nav className="main-nav"><Link href="/">products</Link><Link href="/install">how to install</Link><Link href="/whats-new">what’s new</Link></nav>
     <nav className="icon-nav"><AccountName />
-      <Link className={"icon-link liked-nav-link " + (likedCount > 0 ? "has-likes" : "")} href="/liked" aria-label="Liked products" title="Liked products"><span className="liked-icon">{likedCount > 0 ? "♥" : "♡"}</span><span className="liked-count">{likedCount > 0 ? likedCount : ""}</span></Link>
+      <Link className={"icon-link liked-nav-link " + (likedCount > 0 ? "has-likes" : "")} href="/liked" aria-label="Liked products" title="Liked products"><span className="liked-icon">♡</span><span className="liked-count">{likedCount > 0 ? likedCount : ""}</span></Link>
       <Link className="icon-link" href="/user" aria-label="Account" title="Account">○</Link>
       <button id="cartButton" className={cartCount > 0 ? "cart-has-items" : ""} aria-label="Cart" title="Cart" type="button">□<span className="cart-count">{cartCount > 0 ? cartCount : ""}</span></button>
     </nav>
