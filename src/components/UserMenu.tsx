@@ -265,6 +265,7 @@ export default function UserMenu() {
   return (
     <div
       ref={menuRef}
+      className="qatools-user-menu"
       style={{
         position: "fixed",
 

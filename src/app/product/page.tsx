@@ -1,6 +1,7 @@
 "use client";
 import IncludedTools from "@/components/IncludedTools";
 import AccountName from "@/components/AccountName";
+import { animateToCart } from "@/lib/cartAnimation";
 
 import {
   useEffect,
@@ -68,58 +69,6 @@ function formatPrice(
   }
 
   return `€${value.toFixed(2)}`;
-}
-
-function animateToCart(
-  image: HTMLImageElement | null
-) {
-  const cartIcon =
-    document.getElementById(
-      "cartButton"
-    );
-
-  if (!image || !cartIcon) {
-    return;
-  }
-
-  const start =
-    image.getBoundingClientRect();
-
-  const target =
-    cartIcon.getBoundingClientRect();
-
-  const flyer =
-    image.cloneNode() as HTMLImageElement;
-
-  flyer.className =
-    "cart-flyer";
-
-  Object.assign(flyer.style, {
-    left: `${start.left}px`,
-    top: `${start.top}px`,
-    width: "110px",
-    height: "78px",
-  });
-
-  document.body.appendChild(
-    flyer
-  );
-
-  requestAnimationFrame(() => {
-    flyer.style.transform = `
-      translate(
-        ${target.left - start.left}px,
-        ${target.top - start.top}px
-      )
-      scale(.12)
-    `;
-
-    flyer.style.opacity = "0";
-  });
-
-  window.setTimeout(() => {
-    flyer.remove();
-  }, 520);
 }
 
 export default function ProductPage() {

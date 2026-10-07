@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 
 import "./globals.css";
 import "./compact-nav.css";
+import "./interactions.css";
 
+import CartCountFeedback from "@/components/CartCountFeedback";
 import CartMenu from "@/components/CartMenu";
 import CompactNav from "@/components/CompactNav";
 import UserMenu from "@/components/UserMenu";
@@ -30,6 +32,7 @@ export default function RootLayout({
             {children}
 
             <CompactNav />
+            <CartCountFeedback />
 
             <UserMenu />
 

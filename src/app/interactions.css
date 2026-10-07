@@ -1,0 +1,65 @@
+/* qatools motion and surface tokens. No dimensions or interaction state changes. */
+:root {
+  --radius-control:3px;
+  --radius-surface:4px;
+  --motion-fast:140ms;
+  --motion-normal:220ms;
+  --motion-ease:cubic-bezier(.2,.75,.25,1);
+}
+body :is(button,input,select,textarea,summary,.card-tag,.filter-chip,.meta-filter,.user-nav,.admin-card-action,.check-cart-button,.cart-page-checkout) {
+  border-radius:var(--radius-control);
+}
+body :is(.product-card,.admin-product-card,.admin-new-product,.product-media,.media-frame,.dropdown,.qatools-user-menu,.compact-nav-menu,.cart-page-summary,.cart-page-item,.user-stat,.finance-stat,.finance-notice,.admin-count-grid>div,.admin-release-confirm,.password-error,.password-success) {
+  border-radius:var(--radius-surface);
+}
+/* Keep adjoining card surfaces and the flush cart action joined. */
+body .media-frame {border-radius:var(--radius-surface) var(--radius-surface) 0 0;}
+body .card-info {border-radius:0;}
+body .card-add-cart {border-radius:0 0 var(--radius-surface) var(--radius-surface);}
+body .admin-card-actions .admin-card-action {border-radius:0;}
+body .admin-card-actions .admin-card-action:first-child {border-bottom-left-radius:var(--radius-surface);}
+body .admin-card-actions .admin-card-action:last-child {border-bottom-right-radius:var(--radius-surface);}
+body :is(button,.icon-link,.user-nav,.admin-card-action,.check-cart-button,summary,.card-tag,.filter-chip,.meta-filter) {
+  transition:background-color var(--motion-fast) var(--motion-ease),color var(--motion-fast) var(--motion-ease),border-color var(--motion-fast) var(--motion-ease),box-shadow var(--motion-fast) var(--motion-ease),scale var(--motion-fast) var(--motion-ease);
+}
+body :is(input,select,textarea) {
+  transition:border-color var(--motion-fast) var(--motion-ease),box-shadow var(--motion-fast) var(--motion-ease);
+}
+body :is(button,a,input,select,textarea,summary):focus-visible {
+  outline:2px solid #a9a9a1;
+  outline-offset:3px;
+}
+body :is(input,select,textarea):focus-visible {border-color:#777;}
+body :is(button:not(:disabled),summary,.icon-link,.user-nav,.admin-card-action,.check-cart-button):active {scale:.98;}
+body :is(button:disabled,[aria-disabled="true"]) {scale:1;}
+@media (hover:hover) and (pointer:fine) {
+  body :is(.card-tag,.filter-chip,.meta-filter):hover {background-color:#242424;border-color:#484848;color:#f1f1ef;}
+  body .product-card .media-frame img {transition:transform 320ms var(--motion-ease),filter var(--motion-normal) var(--motion-ease);}
+  body .product-card:hover .media-frame img {transform:scale(1.018);filter:brightness(1.06);}
+  body :is(.product-card,.admin-product-card):hover .card-info {background-color:#171717;}
+  body :is(.heart,.hero-heart):hover {scale:1.06;transform:none;}
+}
+body .card-info {transition:background-color var(--motion-normal) var(--motion-ease);}
+body :is(.dropdown.open,.qatools-user-menu,.user-section.active) {animation:qatools-enter var(--motion-normal) var(--motion-ease) both;}
+body .admin-workspace-content>section:not([hidden])>section:not([hidden]),
+body .admin-workspace-content :is(.admin-finance,.admin-products,.admin-orders,.admin-payment-review) {animation:qatools-enter var(--motion-normal) var(--motion-ease) both;}
+body .filter-chip {animation:qatools-tag-in 160ms var(--motion-ease) both;}
+body :is(.heart.liked,.hero-heart.liked) {animation:qatools-like 260ms var(--motion-ease);}
+body :is(.card-add-cart.in-cart,.buy-button.in-cart) {animation:qatools-selected 220ms var(--motion-ease);}
+body [role="status"] {animation:qatools-status 180ms ease-out both;}
+body .cart-drawer {border-radius:var(--radius-surface) 0 0 var(--radius-surface);transition:transform 240ms var(--motion-ease);}
+body .cart-overlay {transition:opacity var(--motion-normal) ease;}
+body .compact-nav-menu {border-radius:var(--radius-surface);transition:opacity 180ms var(--motion-ease),transform 180ms var(--motion-ease),visibility 180ms;}
+@keyframes qatools-enter {from{opacity:0;translate:0 -4px;}to{opacity:1;translate:0 0;}}
+@keyframes qatools-tag-in {from{opacity:0;scale:.97;}to{opacity:1;scale:1;}}
+@keyframes qatools-like {0%{scale:1;}45%{scale:1.13;}100%{scale:1;}}
+@keyframes qatools-selected {from{box-shadow:inset 0 0 0 1px #777;}to{box-shadow:inset 0 0 0 1px transparent;}}
+@keyframes qatools-status {from{opacity:.4;}to{opacity:1;}}
+/* Also covers the older compact-nav, search and flying-cart transitions. */
+@media (prefers-reduced-motion:reduce) {
+  html {scroll-behavior:auto;}
+  body *,body *::before,body *::after {animation:none!important;transition:none!important;}
+  body :is(button,a,summary,.filter-chip,.heart,.hero-heart) {scale:1!important;}
+  body .product-card:hover .media-frame img {transform:none;}
+  body .cart-flyer {display:none;}
+}

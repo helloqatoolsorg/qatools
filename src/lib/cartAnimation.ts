@@ -1,6 +1,7 @@
 export function animateToCart(
   image: HTMLImageElement | null
 ) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const cartIcon =
     document.getElementById(
       "cartButton"
