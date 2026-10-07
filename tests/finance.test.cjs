@@ -25,7 +25,7 @@ test('finance renders loading, error, genuine empty live state, exact amounts an
  const empty=render({environment:'live',report:{currencies:[]}});assert.match(empty,/No completed live orders/);assert.ok(!empty.includes('Sandbox test transactions'));
  const summary={currency:'EUR',orders:1,payments:8.26,refunds:0,remaining:8.26,monthRemaining:8.26,last30DaysRemaining:8.26,refundedOrders:0,reviewOrders:0,periodOrders:1,periodPayments:8.26,periodRefunds:0,periodRemaining:8.26,points:[{date:'2026-10-07',endDate:'2026-10-07',orders:1,payments:8.26,refunds:0,remaining:8.26}]};
  const html=render({report:{currencies:[summary],generatedAt:'2026-10-07T12:00:00Z',startDate:'2026-10-01',endDate:'2026-10-07'}});
- assert.match(html,/Sandbox test transactions/);assert.match(html,/€8.26/);assert.match(html,/Show exact amounts/);assert.match(html,/role="img"/);assert.match(html,/not a refund-date cash-flow chart/);assert.match(html,/Last 30 days/);assert.ok(!html.includes('Last 7 days'));assert.ok(!html.includes('This month'));
+ assert.match(html,/Sandbox test transactions/);assert.match(html,/€8.26/);assert.match(html,/Show exact amounts/);assert.match(html,/role="group"/);assert.match(html,/finance-chart-tooltip/);assert.match(html,/tabindex="0"/);assert.match(html,/not a refund-date cash-flow chart/);assert.match(html,/Last 30 days/);assert.ok(!html.includes('Last 7 days'));assert.ok(!html.includes('This month'));
 });
 
 test('actual PostgreSQL finance aggregates full and item refunds, isolates currencies/environments and permissions',{skip:!process.env.PGLITE_TEST_MODULE},async()=>{

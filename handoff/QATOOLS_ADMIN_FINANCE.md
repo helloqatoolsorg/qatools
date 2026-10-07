@@ -66,3 +66,7 @@ git add src/components/AdminFinance.tsx src/app/api/admin/finance/route.ts src/l
 git commit -m "Use rolling daily and weekly finance charts"
 git push
 ```
+
+## Compact graph refinement
+
+Owner requested all graph columns visible without internal horizontal scrolling. The graph now uses fluid columns with zero minimum width, a compact 180px plot, sparse start/middle/end date labels and CSS hover/focus value labels constrained within the chart. Every original data bucket remains present; no aggregation/window change. Zero-value buckets retain full-height hover/focus targets. Exact amounts remain available. No new SQL migration. Finance stays paused after this display refinement; owner hosted responsive review remains pending.
