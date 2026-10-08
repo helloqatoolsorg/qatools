@@ -19,3 +19,11 @@ Authoritative context: QATOOLS_POLICY_DECISIONS.md and QATOOLS_CUSTOMER_POLICIES
 Static React rendering checks verify each new page, policy draft notices/noindex, support email and all footer destinations; stylesheet parsing, TypeScript, scoped new-file lint and whitespace checks are run for this batch. These are local checks; mobile/browser review remains owner-operated after deployment. Run npm run build in normal CMD because the agent environment previously blocks SWC canonicalization. No Supabase migration is needed.
 
 After deployment: open the four footer links on desktop/mobile, check readable text and draft notice, confirm mailto targets, and check existing cart/header controls still behave normally. These checks do not finalize missing business disclosures or enable live sales.
+
+## Central legal notice — 2026-10-08
+
+Owner approved centralizing public operator identity in /legal (Legal notice / Aviso legal), linked from the shared footer and terms/privacy/support pages. Other pages retain the support email without repeating the full name. Privacy links directly to the named operator/controller record; no identity is concealed behind an email-on-request process.
+
+src/lib/siteOperator.ts is the single public name/contact/address/tax/registration source. Postal address and tax fields remain null at the owner's explicit request; /legal shows their pending status and retains the visible pre-launch draft notice/noindex. Do not treat it as complete LSSI disclosure.
+
+A future SLU operator change is technically straightforward but not merely a branding edit: confirm the transfer and provider requirements with the owner's adviser and Paddle, update operator/controller and business details with a dated policy version and appropriate customer notices, preserve historical orders/invoices and valid entitlements. Do not automatically rename past legal records, rotate license keys or assume Paddle will transfer accounts/catalog IDs without coordination. No future corporate entity is invented or implemented now.

@@ -303,3 +303,7 @@ Owner requested seven days instead of the previously approved 30 days. This supe
 Operator: Quim Amat Heinert, individual based in Spain. Public contact: hello@qatools.org. Owner approved reviewing discretionary refund requests individually when submitted within 14 days of purchase, without limiting mandatory rights or guaranteeing approval. Full-refund access consequences and independent-tool preservation remain unchanged.
 
 Owner explicitly left public postal address and registration/tax disclosures pending. Do not invent or publish private identity documents. Policy pages are pre-launch drafts, not finalized legal disclosures or evidence of customer acceptance. No live payment enablement, digital-delivery waiver/acceptance recording, liability exclusion, future update guarantee or support deadline is introduced by this content batch. Privacy provider roles, retention and transfer details still require factual completion.
+
+## Legal notice presentation — 2026-10-08
+
+Owner approved a separate public Legal notice instead of repeating personal operator identity on the terms/support pages. Name and applicable business disclosures must remain directly accessible in that page, not available only on email request. Operator record is centralized for a possible future SLU transition; the entity change itself is not decided or performed. Postal/tax details remain explicitly pending. Current operator is still Quim Amat Heinert in Spain.

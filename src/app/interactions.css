@@ -198,3 +198,8 @@ body .policy-preview {max-width:760px;padding:18px 20px;margin-top:26px;border:1
 body .policy-preview p {margin:6px 0 0;}
 body .support-email {display:inline-block;margin-bottom:14px;font:clamp(18px,4vw,27px) monospace;overflow-wrap:anywhere;}
 @media(max-width:599px){body .site-footer {align-items:flex-start;}body .site-footer nav {gap:16px;}body .information-page {padding-top:40px;}body .information-page h1 {font-size:32px;}}
+
+body .legal-operator {display:grid;grid-template-columns:minmax(130px,180px) minmax(0,1fr);gap:12px 24px;margin:20px 0 24px;}
+body .legal-operator dt {color:#777;}
+body .legal-operator dd {margin:0;color:#ddd;overflow-wrap:anywhere;}
+@media(max-width:499px){body .legal-operator {grid-template-columns:1fr;gap:4px;}body .legal-operator dd {margin-bottom:14px;}}
