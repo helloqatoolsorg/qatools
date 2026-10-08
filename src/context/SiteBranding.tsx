@@ -26,7 +26,7 @@ export function SiteBrandingProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!url) return;
     document.querySelectorAll<HTMLLinkElement>('link[rel="icon"]').forEach(icon => {
-      icon.href = url; icon.type = "image/png"; icon.sizes.value = "any";
+      icon.href = `/api/site-icon?v=${encodeURIComponent(url)}`; icon.type = "image/png"; icon.sizes.value = "64x64";
     });
   }, [url]);
   return <BrandingContext.Provider value={{ url, refresh }}>{children}</BrandingContext.Provider>;

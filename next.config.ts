@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     "/api/admin/products/assemble": ["./houdini/**/__pycache__/**"],
   },
   outputFileTracingIncludes: {
+    "/api/site-icon": ["./public/assets/qatools_logo.png"],
     "/api/admin/products/package": ["./houdini/python/qatools_licensing/*.py", "./houdini/scripts/pythonrc.py"],
     "/api/admin/products/assemble": ["./houdini/python/qatools_licensing/*.py", "./houdini/scripts/pythonrc.py"],
   },

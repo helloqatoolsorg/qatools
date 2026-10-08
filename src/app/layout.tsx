@@ -16,7 +16,7 @@ import { QAToolsStateProvider } from "@/context/QAToolsState";
 
 export const metadata: Metadata = {
   title: "qatools",
-  icons: { icon: { url: "/api/site-icon", type: "image/png", sizes: "any" } },
+  icons: { icon: { url: "/api/site-icon", type: "image/png", sizes: "64x64" } },
   description:
     "qatools for SideFX Houdini",
 };

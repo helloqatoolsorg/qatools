@@ -24,3 +24,10 @@ Run checks/build from D:\qatools\qatools in normal CMD. Apply 20261008110000_sit
 ### Follow-up: navigation and browser icon
 
 The managed logo also supplies the browser-tab favicon through /api/site-icon and branding-provider updates. Removed the starter Next favicon. The logo link now navigates without rebuilding branding state; a fresh page reserves logo space until settings resolve, preventing an obsolete-logo flash. Favicon changes can require a refresh in browsers that retain tab icons.
+
+
+### Proportional square favicon
+
+/api/site-icon now returns a generated 64 × 64 PNG instead of redirecting to a rectangular logo. Sharp uses a centred cover crop: scales both dimensions equally and crops excess edges, preserving the logo geometry. The packaged default uses the same transformation and is explicitly included in the route's deployment trace. Active logo fetches have a 5-second timeout and 8 MB streamed limit; errors fall back to the packaged icon. The provider refreshes the generated endpoint with a logo-specific version query and declares 64x64 sizes. Website header rendering remains unchanged.
+
+Regression check: a square shape in a wide source remains square in the output, catching stretching. Four branding-display tests passed, including settings/storage outages and fallback rendering. No migration required.
