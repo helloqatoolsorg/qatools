@@ -1,4 +1,5 @@
 "use client";
+import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
 import type { AccountAccess, AccountPurchases } from "@/lib/accountPurchases";
 import AccountName from "@/components/AccountName";
@@ -847,10 +848,7 @@ export default function UserPage() {
           className="brand"
           href="/"
         >
-          <img
-            src="/assets/qatools_logo.png"
-            alt="qatools"
-          />
+          <BrandLogo />
         </a>
 
         <nav className="main-nav">

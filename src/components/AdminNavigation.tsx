@@ -1,14 +1,14 @@
 "use client";
+import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
 import Link from "next/link";
-import Image from "next/image";
 import AccountName from "@/components/AccountName";
 import { useQAToolsState } from "@/context/QAToolsState";
 export const adminSections = [["dashboard", "Dashboard"], ["customers", "Customers / Accounts"], ["orders", "Orders"], ["products", "Products"], ["finance", "Finance"], ["payments", "Payment review"]] as const;
 export function AdminHeader() {
   const { likedCount, cartCount } = useQAToolsState();
   return <header className="site-header">
-    <Link className="brand" href="/"><Image src="/assets/qatools_logo.png" alt="qatools" width={145} height={40} style={{ height: "auto" }} /></Link>
+    <Link className="brand" href="/"><BrandLogo /></Link>
     <nav className="main-nav"><Link href="/">products</Link><Link href="/install">how to install</Link><Link href="/whats-new">what’s new</Link></nav>
     <nav className="icon-nav"><AccountName />
       <Link className={"icon-link liked-nav-link " + (likedCount > 0 ? "has-likes" : "")} href="/liked" aria-label="Liked products" title="Liked products"><span className="liked-icon">♡</span><span className="liked-count">{likedCount > 0 ? likedCount : ""}</span></Link>

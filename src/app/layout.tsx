@@ -4,6 +4,8 @@ import "./globals.css";
 import "./compact-nav.css";
 import "./interactions.css";
 
+import { SiteBrandingProvider } from "@/context/SiteBranding";
+
 import CartCountFeedback from "@/components/CartCountFeedback";
 import CartMenu from "@/components/CartMenu";
 import CompactNav from "@/components/CompactNav";
@@ -29,6 +31,7 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <QAToolsStateProvider>
+            <SiteBrandingProvider>
             {children}
 
             <CompactNav />
@@ -37,6 +40,7 @@ export default function RootLayout({
             <UserMenu />
 
             <CartMenu />
+            </SiteBrandingProvider>
           </QAToolsStateProvider>
         </AuthProvider>
       </body>

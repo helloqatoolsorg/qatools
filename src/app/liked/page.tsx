@@ -1,4 +1,5 @@
 "use client";
+import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
 import AccountName from "@/components/AccountName";
 
@@ -485,10 +486,7 @@ const [
           className="brand"
           href="/"
         >
-          <img
-            src="/assets/qatools_logo.png"
-            alt="qatools"
-          />
+          <BrandLogo />
         </a>
 
         <nav className="main-nav">

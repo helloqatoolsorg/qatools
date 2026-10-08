@@ -154,3 +154,13 @@ body .license-key-manage {margin-top:16px;color:#8e8e89;font:11px monospace;}
 body .license-key-manage summary {cursor:pointer;width:fit-content;}
 body .license-key-manage p {max-width:58ch;line-height:1.6;margin:12px 0;}
 body .user-page .status-ok {color:#79c98e;}
+
+body .admin-site-logo {padding:22px;margin-bottom:24px;background:#141414;border:1px solid #303030;border-radius:var(--radius-surface);max-width:650px;}
+body .admin-site-logo h2 {margin:0 0 10px;font:18px monospace;color:#ddd;}
+body .admin-logo-preview {display:flex;align-items:center;justify-content:center;min-height:105px;margin:16px 0;background:#0b0b0b;border:1px solid #292929;border-radius:var(--radius-surface);}
+body .admin-logo-preview img {width:145px;height:54px;object-fit:contain;}
+body .admin-logo-upload {display:flex;flex-wrap:wrap;align-items:center;gap:12px;color:#ccc;font:12px monospace;}
+body .admin-logo-upload input {max-width:100%;min-width:0;}
+body .admin-logo-actions {display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
+body .admin-site-logo button,body .admin-logo-upload input::file-selector-button {padding:10px 14px;border:1px solid #444;background:#242424;color:#ddd;font:11px monospace;cursor:pointer;}
+body .admin-site-logo button:disabled {opacity:.45;cursor:default;}

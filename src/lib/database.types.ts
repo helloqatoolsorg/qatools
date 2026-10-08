@@ -6,6 +6,12 @@ import type { FinanceReport } from "./adminFinance";
 export type Database = {
   public: {
     Tables: {
+      site_branding: {
+        Row: { id: number; logo_path: string | null; revision: string };
+        Insert: { id: number; logo_path?: string | null; revision?: string };
+        Update: { logo_path?: string | null; revision?: string };
+        Relationships: [];
+      };
       product_members: {
         Row: { product_id: number; tool_id: number };
         Insert: { product_id: number; tool_id: number };
