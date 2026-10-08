@@ -1,4 +1,5 @@
 "use client";
+import SiteFooter from "@/components/SiteFooter";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
@@ -407,15 +408,7 @@ export default function InstallPage() {
         </section>
       </main>
 
-      <footer>
-        <span>
-          qatools.org
-        </span>
-
-        <span>
-          how to install
-        </span>
-      </footer>
+      <SiteFooter>how to install</SiteFooter>
     </div>
   );
 }

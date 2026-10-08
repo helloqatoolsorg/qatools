@@ -1,4 +1,5 @@
 "use client";
+import SiteFooter from "@/components/SiteFooter";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
@@ -2471,15 +2472,7 @@ export default function UserPage() {
         </main>
       )}
 
-      <footer>
-        <span>
-          qatools.studio
-        </span>
-
-        <span>
-          account
-        </span>
-      </footer>
+      <SiteFooter>account</SiteFooter>
     </div>
   );
 }

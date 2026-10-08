@@ -1,4 +1,5 @@
 "use client";
+import SiteFooter from "@/components/SiteFooter";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
@@ -322,15 +323,7 @@ export default function WhatsNewPage() {
         </section>
       </main>
 
-      <footer>
-        <span>
-          qatools.studio
-        </span>
-
-        <span>
-          what&apos;s new
-        </span>
-      </footer>
+      <SiteFooter>what&apos;s new</SiteFooter>
     </div>
   );
 }

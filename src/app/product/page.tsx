@@ -1,4 +1,5 @@
 "use client";
+import SiteFooter from "@/components/SiteFooter";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
@@ -651,17 +652,9 @@ export default function ProductPage() {
         )}
       </main>
 
-      <footer>
-        <span>
-          qatools.studio
-        </span>
-
-        <span>
-          {product.name} /{" "}
+      <SiteFooter>{product.name} /{" "}
           {category} /{" "}
-          {complexity}
-        </span>
-      </footer>
+          {complexity}</SiteFooter>
     </>
   );
 }

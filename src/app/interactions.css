@@ -181,3 +181,20 @@ body .brand-logo-placeholder {display:block;width:145px;height:54px;}
 @media(max-width:899px) {
   body .brand-logo-placeholder {width:101.5px;height:37.8px;}
 }
+
+/* Shared legal/support navigation keeps the existing footer footprint. */
+body .site-footer {gap:20px;flex-wrap:wrap;padding-top:18px;padding-bottom:18px;}
+body .site-footer-brand {display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+body .site-footer nav {display:flex;flex-wrap:wrap;gap:20px;}
+body .site-footer a {color:#888;text-decoration:none;transition:color var(--motion-normal) var(--motion-ease);}
+body .site-footer a:hover {color:#ddd;}
+body .information-content {max-width:760px;color:#a2a29c;font-size:13px;line-height:1.85;}
+body .information-content section {margin-top:36px;padding-top:24px;border-top:1px solid #242424;}
+body .information-content h2 {margin:0 0 14px;color:#ddd;font:18px monospace;}
+body .information-content p {margin:0 0 14px;}
+body .information-content ul {padding-left:22px;}
+body .information-content a {color:#deded6;text-underline-offset:4px;}
+body .policy-preview {max-width:760px;padding:18px 20px;margin-top:26px;border:1px solid #39362c;border-radius:var(--radius-surface);background:#171611;color:#bcb7a7;font-size:12px;line-height:1.7;}
+body .policy-preview p {margin:6px 0 0;}
+body .support-email {display:inline-block;margin-bottom:14px;font:clamp(18px,4vw,27px) monospace;overflow-wrap:anywhere;}
+@media(max-width:599px){body .site-footer {align-items:flex-start;}body .site-footer nav {gap:16px;}body .information-page {padding-top:40px;}body .information-page h1 {font-size:32px;}}

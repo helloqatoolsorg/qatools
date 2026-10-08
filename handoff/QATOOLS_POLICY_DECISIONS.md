@@ -297,3 +297,9 @@ Owner approved that Purchased products shows directly acquired products as stand
 ## Seven-day offline allowance — owner approval, 2026-10-07
 
 Owner requested seven days instead of the previously approved 30 days. This supersedes the duration policy in earlier dated sections; account-wide assignment, one active machine, product-aware signed access and offline local verification remain unchanged. Newly issued proofs for the updated client last seven days. Existing proofs retain their original signed expiry, and legacy clients temporarily continue receiving 30-day proofs to avoid invalidating their exact-duration verifier. Universal seven-day enforcement requires updated customer installers and deliberate retirement of legacy issuance; it is not claimed by this compatibility rollout. Users need a successful online renewal within seven days to continue after the updated proof expires. No expiry/countdown UI is added. Local implementation and rollout details: QATOOLS_LICENSING_LIMITS_7DAY.md. Hosted deployment/client verification remains pending.
+
+## Owner-approved policy foundation — 2026-10-08
+
+Operator: Quim Amat Heinert, individual based in Spain. Public contact: hello@qatools.org. Owner approved reviewing discretionary refund requests individually when submitted within 14 days of purchase, without limiting mandatory rights or guaranteeing approval. Full-refund access consequences and independent-tool preservation remain unchanged.
+
+Owner explicitly left public postal address and registration/tax disclosures pending. Do not invent or publish private identity documents. Policy pages are pre-launch drafts, not finalized legal disclosures or evidence of customer acceptance. No live payment enablement, digital-delivery waiver/acceptance recording, liability exclusion, future update guarantee or support deadline is introduced by this content batch. Privacy provider roles, retention and transfer details still require factual completion.

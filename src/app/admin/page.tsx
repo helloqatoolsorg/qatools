@@ -1,4 +1,5 @@
 "use client";
+import SiteFooter from "@/components/SiteFooter";
 import { AdminHeader, AdminSidebar, adminSections } from "@/components/AdminNavigation";
 
 import {
@@ -2417,15 +2418,7 @@ export default function AdminPage() {
         </main>
       )}
 
-      <footer>
-        <span>
-          qatools.studio
-        </span>
-
-        <span>
-          admin
-        </span>
-      </footer>
+      <SiteFooter>admin</SiteFooter>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 "use client";
+import SiteFooter from "@/components/SiteFooter";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
@@ -1147,15 +1148,7 @@ const [
           )}
       </main>
 
-      <footer>
-        <span>
-          qatools.studio
-        </span>
-
-        <span>
-          liked products
-        </span>
-      </footer>
+      <SiteFooter>liked products</SiteFooter>
     </div>
   );
 }

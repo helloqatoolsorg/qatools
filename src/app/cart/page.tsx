@@ -1,4 +1,5 @@
 "use client";
+import SiteFooter from "@/components/SiteFooter";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
@@ -414,13 +415,7 @@ export default function CartPage() {
         </section>
       </main>
 
-      <footer>
-        <span>
-          qatools.studio
-        </span>
-
-        <span>cart</span>
-      </footer>
+      <SiteFooter>cart</SiteFooter>
     </div>
   );
 }
