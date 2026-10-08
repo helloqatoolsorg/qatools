@@ -36,3 +36,8 @@ Dashboard replaces MY qatools in the sidebar and uses a prominent button, as doe
 Dashboard and License Data share one key component: a clear masked/read-only field, Reveal/Hide and Copy controls. Removed machine-limit and obsolete integration/explanatory paragraphs. Replacement stays available under Manage key with its existing confirmation; authenticated key endpoints, clipboard fallback and reveal handling are preserved. Active status is green. No database changes.
 
 Validation: TypeScript, CSS parsing and whitespace checks passed. Run npm run build in normal CMD and check account presentation at desktop/mobile widths after deployment.
+
+
+## Mobile header and logged-in account icon — 2026-10-08
+
+Below 900px (the existing compact navigation breakpoint), the logo uses 70% of its desktop height and maximum width; the account name is hidden. Desktop name visibility remains unchanged. Shared OutlineIcon now derives signed-in account styling from AuthContext, making the account circle green on desktop/mobile and returning to its inherited neutral color after logout. No database or settings changes.

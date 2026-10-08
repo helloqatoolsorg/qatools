@@ -164,3 +164,11 @@ body .admin-logo-upload input {max-width:100%;min-width:0;}
 body .admin-logo-actions {display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
 body .admin-site-logo button,body .admin-logo-upload input::file-selector-button {padding:10px 14px;border:1px solid #444;background:#242424;color:#ddd;font:11px monospace;cursor:pointer;}
 body .admin-site-logo button:disabled {opacity:.45;cursor:default;}
+
+/* Account state follows shared authentication across every header. */
+body .outline-icon.account-signed-in {color:#79c98e;}
+/* Match the compact navigation breakpoint and retain room for the icons. */
+@media (max-width:899px) {
+  body .site-header .brand img {height:37.8px!important;max-width:101.5px;}
+  body .site-header .account-name {display:none;}
+}
