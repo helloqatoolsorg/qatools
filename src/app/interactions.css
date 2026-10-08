@@ -203,3 +203,5 @@ body .legal-operator {display:grid;grid-template-columns:minmax(130px,180px) min
 body .legal-operator dt {color:#777;}
 body .legal-operator dd {margin:0;color:#ddd;overflow-wrap:anywhere;}
 @media(max-width:499px){body .legal-operator {grid-template-columns:1fr;gap:4px;}body .legal-operator dd {margin-bottom:14px;}}
+
+body .information-content section[id] {scroll-margin-top:96px;}
