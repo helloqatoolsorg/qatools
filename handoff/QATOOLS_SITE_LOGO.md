@@ -19,3 +19,8 @@ Run checks/build from D:\qatools\qatools in normal CMD. Apply 20261008110000_sit
 - TypeScript, scoped lint, CSS and whitespace checks run for this batch.
 - Agent production build blocked before compilation by Windows sandbox canonicalization Access denied; owner must run npm run build in normal CMD before pushing.
 - Hosted upload/restore and visual checks remain for the owner after deployment: preview does not update header, Update does, navigating customer/admin pages keeps the same logo, Restore returns the original, and different aspect ratios do not increase header height.
+
+
+### Follow-up: navigation and browser icon
+
+The managed logo also supplies the browser-tab favicon through /api/site-icon and branding-provider updates. Removed the starter Next favicon. The logo link now navigates without rebuilding branding state; a fresh page reserves logo space until settings resolve, preventing an obsolete-logo flash. Favicon changes can require a refresh in browsers that retain tab icons.

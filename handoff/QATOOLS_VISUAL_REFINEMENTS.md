@@ -41,3 +41,16 @@ Validation: TypeScript, CSS parsing and whitespace checks passed. Run npm run bu
 ## Mobile header and logged-in account icon — 2026-10-08
 
 Below 900px (the existing compact navigation breakpoint), the logo uses 70% of its desktop height and maximum width; the account name is hidden. Desktop name visibility remains unchanged. Shared OutlineIcon now derives signed-in account styling from AuthContext, making the account circle green on desktop/mobile and returning to its inherited neutral color after logout. No database or settings changes.
+
+
+## Shared hearts, logo navigation and calmer motion — 2026-10-08
+
+Every header/card/tool-page heart now uses the same SVG path via OutlineIcon, so mobile font fallback cannot change its shape. Liked state colors the same outline red. Existing cart/account vector geometry and authentication-driven green account state remain shared across screen sizes.
+
+All customer logo links use Next Link so clicking the logo preserves the root branding provider instead of rebuilding it during a full document reload. On a fresh document the provider starts unresolved and BrandLogo reserves space until the saved setting is known; it no longer displays the old default logo while waiting. Settings failures retain the last valid logo, with the packaged default as initial error fallback.
+
+Interaction timing is about one-third slower: ordinary transitions 200/300 ms, spring movement 340 ms, like feedback 480 ms, menu fade 260 ms, cart badge 460 ms and flying image 650 ms. Flying-image removal is adjusted to 700 ms so it is not cut off. Press feedback remains short; reduced-motion behavior is retained.
+
+The framework starter favicon.ico is removed. Metadata references /api/site-icon, a public, no-store redirect to the current allowed branding/logo path (packaged PNG fallback). It reads public settings with the publishable key, never the service role. The provider also updates browser favicon links after an admin logo change. No paid hosting feature or environment-variable change is involved. No migration is required.
+
+Validation: four branding rendering/favicon regressions plus six existing logo-upload tests passed. CSS parsing and whitespace checks passed. Run the production build in normal CMD before committing; after deployment check the heart on phone/desktop, logo clicks, hover feel and browser-tab icon.

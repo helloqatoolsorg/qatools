@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
 import IncludedTools from "@/components/IncludedTools";
@@ -205,12 +206,12 @@ export default function ProductPage() {
     return (
       <>
         <header className="site-header">
-          <a
+          <Link
             className="brand"
             href="/"
           >
             <BrandLogo />
-          </a>
+          </Link>
 
           <nav className="main-nav">
             <a
@@ -301,12 +302,12 @@ export default function ProductPage() {
   return (
     <>
       <header className="site-header">
-        <a
+        <Link
           className="brand"
           href="/"
         >
-          <BrandLogo />
-        </a>
+            <BrandLogo />
+          </Link>
 
         <nav className="main-nav">
           <a
@@ -338,7 +339,7 @@ export default function ProductPage() {
             title="Liked products"
           >
             <span className="liked-icon">
-              ♡
+              <OutlineIcon kind="heart" />
             </span>
 
             <span className="liked-count">
@@ -465,7 +466,7 @@ export default function ProductPage() {
                     )
                   }
                 >
-                  ♡
+                  <OutlineIcon kind="heart" />
                 </button>
               </div>
             </div>

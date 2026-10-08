@@ -10,7 +10,7 @@ export default function CartCountFeedback(){
   if(!increased || window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
   const animations:Animation[]=[];
   document.querySelectorAll<HTMLElement>(".cart-count").forEach(badge=>{
-   if(typeof badge.animate==="function")animations.push(badge.animate([{transform:"translateY(0) scale(1)"},{transform:"translateY(-2px) scale(1.35)"},{transform:"translateY(1px) scale(.94)"},{transform:"translateY(0) scale(1)"}],{duration:340,easing:"cubic-bezier(.2,.75,.25,1)"}));
+   if(typeof badge.animate==="function")animations.push(badge.animate([{transform:"translateY(0) scale(1)"},{transform:"translateY(-2px) scale(1.35)"},{transform:"translateY(1px) scale(.94)"},{transform:"translateY(0) scale(1)"}],{duration:460,easing:"cubic-bezier(.2,.75,.25,1)"}));
   });
   return()=>animations.forEach(animation=>animation.cancel());
  },[cartCount]);

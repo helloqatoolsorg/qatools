@@ -11,7 +11,7 @@ export function AdminHeader() {
     <Link className="brand" href="/"><BrandLogo /></Link>
     <nav className="main-nav"><Link href="/">products</Link><Link href="/install">how to install</Link><Link href="/whats-new">what’s new</Link></nav>
     <nav className="icon-nav"><AccountName />
-      <Link className={"icon-link liked-nav-link " + (likedCount > 0 ? "has-likes" : "")} href="/liked" aria-label="Liked products" title="Liked products"><span className="liked-icon">♡</span><span className="liked-count">{likedCount > 0 ? likedCount : ""}</span></Link>
+      <Link className={"icon-link liked-nav-link " + (likedCount > 0 ? "has-likes" : "")} href="/liked" aria-label="Liked products" title="Liked products"><span className="liked-icon"><OutlineIcon kind="heart" /></span><span className="liked-count">{likedCount > 0 ? likedCount : ""}</span></Link>
       <Link className="icon-link" href="/user" aria-label="Account" title="Account"><OutlineIcon kind="account" /></Link>
       <button id="cartButton" className={cartCount > 0 ? "cart-has-items" : ""} aria-label="Cart" title="Cart" type="button"><OutlineIcon kind="cart" /><span className="cart-count">{cartCount > 0 ? cartCount : ""}</span></button>
     </nav>

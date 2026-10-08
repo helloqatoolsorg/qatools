@@ -122,7 +122,7 @@ export function animateToCart(
         "center center",
 
       transition:
-        "transform 500ms ease, opacity 500ms ease",
+        "transform 650ms ease, opacity 650ms ease",
     }
   );
 
@@ -144,6 +144,6 @@ export function animateToCart(
     () => {
       flyer.remove();
     },
-    520
+    700
   );
 }

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
 import AccountName from "@/components/AccountName";
@@ -57,12 +58,12 @@ export default function CartPage() {
   return (
     <div className="cart-page">
       <header className="site-header">
-        <a
+        <Link
           className="brand"
           href="/"
         >
-          <BrandLogo />
-        </a>
+            <BrandLogo />
+          </Link>
 
         <nav className="main-nav">
           <a href="/">
@@ -91,7 +92,7 @@ export default function CartPage() {
             title="Liked products"
           >
             <span className="liked-icon">
-              ♡
+              <OutlineIcon kind="heart" />
             </span>
 
             <span className="liked-count">

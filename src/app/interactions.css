@@ -2,8 +2,8 @@
 :root {
   --radius-control:3px;
   --radius-surface:4px;
-  --motion-fast:140ms;
-  --motion-normal:220ms;
+  --motion-fast:200ms;
+  --motion-normal:300ms;
   --motion-ease:cubic-bezier(.2,.75,.25,1);
   --motion-spring:cubic-bezier(.2,1.45,.35,1);
 }
@@ -21,7 +21,7 @@ body .admin-card-actions .admin-card-action {border-radius:0;}
 body .admin-card-actions .admin-card-action:first-child {border-bottom-left-radius:var(--radius-surface);}
 body .admin-card-actions .admin-card-action:last-child {border-bottom-right-radius:var(--radius-surface);}
 body :is(button,.icon-link,.user-nav,.admin-card-action,.check-cart-button,summary,.card-tag,.filter-chip,.meta-filter) {
-  transition:background-color var(--motion-fast) var(--motion-ease),color var(--motion-fast) var(--motion-ease),border-color var(--motion-fast) var(--motion-ease),box-shadow var(--motion-fast) var(--motion-ease),scale 240ms var(--motion-spring),translate 240ms var(--motion-spring),rotate 240ms var(--motion-spring),filter var(--motion-fast) ease;
+  transition:background-color var(--motion-fast) var(--motion-ease),color var(--motion-fast) var(--motion-ease),border-color var(--motion-fast) var(--motion-ease),box-shadow var(--motion-fast) var(--motion-ease),scale 340ms var(--motion-spring),translate 340ms var(--motion-spring),rotate 340ms var(--motion-spring),filter var(--motion-fast) ease;
 }
 body :is(input,select,textarea) {
   transition:border-color var(--motion-fast) var(--motion-ease),box-shadow var(--motion-fast) var(--motion-ease);
@@ -35,7 +35,7 @@ body :is(button:not(:disabled),summary,.icon-link,.user-nav,.admin-card-action,.
 body :is(button:disabled,[aria-disabled="true"]) {scale:1;}
 @media (hover:hover) and (pointer:fine) {
   body :is(.card-tag,.filter-chip,.meta-filter):hover {background-color:#242424;border-color:#484848;color:#f1f1ef;}
-  body .product-card .media-frame img {transition:transform 320ms var(--motion-ease),filter var(--motion-normal) var(--motion-ease);}
+  body .product-card .media-frame img {transition:transform 420ms var(--motion-ease),filter var(--motion-normal) var(--motion-ease);}
   body .product-card:hover .media-frame img {transform:scale(1.018);filter:brightness(1.06);}
   body :is(.product-card,.admin-product-card):hover .card-info {background-color:#171717;}
   body :is(.heart,.hero-heart):hover {scale:1.06;transform:none;}
@@ -44,13 +44,13 @@ body .card-info {transition:background-color var(--motion-normal) var(--motion-e
 body :is(.dropdown.open,.qatools-user-menu,.user-section.active) {animation:qatools-enter var(--motion-normal) var(--motion-ease) both;}
 body .admin-workspace-content>section:not([hidden])>section:not([hidden]),
 body .admin-workspace-content :is(.admin-finance,.admin-products,.admin-orders,.admin-payment-review) {animation:qatools-enter var(--motion-normal) var(--motion-ease) both;}
-body .filter-chip {animation:qatools-tag-in 210ms var(--motion-spring) backwards;}
-body :is(.heart.liked,.hero-heart.liked) {animation:qatools-like 360ms var(--motion-ease);}
-body :is(.card-add-cart.in-cart,.buy-button.in-cart) {animation:qatools-selected 220ms var(--motion-ease);}
-body [role="status"] {animation:qatools-status 180ms ease-out both;}
-body .cart-drawer {border-radius:var(--radius-surface) 0 0 var(--radius-surface);transition:transform 240ms var(--motion-ease);}
+body .filter-chip {animation:qatools-tag-in 300ms var(--motion-spring) backwards;}
+body :is(.heart.liked,.hero-heart.liked) {animation:qatools-like 480ms var(--motion-ease);}
+body :is(.card-add-cart.in-cart,.buy-button.in-cart) {animation:qatools-selected 300ms var(--motion-ease);}
+body [role="status"] {animation:qatools-status 260ms ease-out both;}
+body .cart-drawer {border-radius:var(--radius-surface) 0 0 var(--radius-surface);transition:transform 340ms var(--motion-ease);}
 body .cart-overlay {transition:opacity var(--motion-normal) ease;}
-body .compact-nav-menu {border-radius:var(--radius-surface);transition:opacity 180ms var(--motion-ease),transform 180ms var(--motion-ease),visibility 180ms;}
+body .compact-nav-menu {border-radius:var(--radius-surface);transition:opacity 260ms var(--motion-ease),transform 260ms var(--motion-ease),visibility 260ms;}
 @keyframes qatools-enter {from{opacity:0;translate:0 -6px;}to{opacity:1;translate:0 0;}}
 @keyframes qatools-tag-in {from{opacity:0;scale:.92;}to{opacity:1;scale:1;}}
 @keyframes qatools-like {0%{scale:1;rotate:0deg;}35%{scale:1.2;rotate:-7deg;}65%{scale:.96;rotate:3deg;}100%{scale:1;rotate:0deg;}}
@@ -67,27 +67,27 @@ body .compact-nav-menu {border-radius:var(--radius-surface);transition:opacity 1
   body .admin-new-product:hover {translate:0 -2px;}
 }
 body :is(button:not(:disabled),summary,.icon-link,.user-nav,.admin-card-action,.check-cart-button):active {
-  scale:.96;translate:0 1px;rotate:0deg;transition-duration:80ms;
+  scale:.96;translate:0 1px;rotate:0deg;transition-duration:110ms;
 }
 body :is(.card-add-cart,.admin-card-action,.user-nav):active {translate:0 0;scale:.99;}
 body .admin-main-artwork:active {scale:.995;}
 body :is(button:disabled,[aria-disabled="true"]) {scale:1;translate:0 0;rotate:0deg;filter:none;}
-body :is(.filter-option.selected,.sort-option.selected,[aria-pressed="true"]):not(:disabled) {animation:qatools-choice 240ms var(--motion-ease);}
+body :is(.filter-option.selected,.sort-option.selected,[aria-pressed="true"]):not(:disabled) {animation:qatools-choice 340ms var(--motion-ease);}
 body .user-nav.active {box-shadow:inset 2px 0 0 #999;}
 body :is(input,select,textarea):focus-visible {box-shadow:0 0 0 3px #ffffff0d;}
-body label {transition:color 160ms ease;}
+body label {transition:color 230ms ease;}
 body label:focus-within {color:#e3e3df;}
 /* Light up quickly, then return to the resting color more slowly. */
-body .main-nav a {transition:color 420ms ease-out;}
-body .main-nav a:is(:hover,:focus-visible) {transition-duration:120ms;}
+body .main-nav a {transition:color 560ms ease-out;}
+body .main-nav a:is(:hover,:focus-visible) {transition-duration:180ms;}
 body :is(.dropdown.open,.qatools-user-menu) {transform-origin:top;}
 body .dropdown.open>:is(button,.filter-group),body .compact-nav-menu.open>a {
-  animation:qatools-menu-item 220ms var(--motion-ease) backwards;
+  animation:qatools-menu-item 300ms var(--motion-ease) backwards;
 }
 body .dropdown.open>:nth-child(2),body .compact-nav-menu.open>a:nth-child(2) {animation-delay:15ms;}
 body .dropdown.open>:nth-child(3),body .compact-nav-menu.open>a:nth-child(3) {animation-delay:30ms;}
 body :is(.admin-gallery-replace,.admin-new-product,.compact-nav-menu a,.sort-menu button,.filter-option) {
-  transition:background-color 160ms ease,box-shadow 160ms ease,translate 220ms var(--motion-spring),scale 220ms var(--motion-spring);
+  transition:background-color 230ms ease,box-shadow 230ms ease,translate 300ms var(--motion-spring),scale 300ms var(--motion-spring);
 }
 @keyframes qatools-choice {0%{scale:.97;}55%{scale:1.025;}100%{scale:1;}}
 @keyframes qatools-menu-item {from{opacity:.4;translate:-3px 0;}to{opacity:1;translate:0 0;}}
@@ -171,4 +171,13 @@ body .outline-icon.account-signed-in {color:#79c98e;}
 @media (max-width:899px) {
   body .site-header .brand img {height:37.8px!important;max-width:101.5px;}
   body .site-header .account-name {display:none;}
+}
+
+/* Shared vector hearts are independent of mobile/desktop font rendering. */
+body .liked-icon,body :is(.heart,.hero-heart) {display:inline-flex;align-items:center;justify-content:center;}
+body .hero-heart .outline-icon {width:28px;height:28px;}
+/* Reserve the logo footprint while its saved setting is loading. */
+body .brand-logo-placeholder {display:block;width:145px;height:54px;}
+@media(max-width:899px) {
+  body .brand-logo-placeholder {width:101.5px;height:37.8px;}
 }

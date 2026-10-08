@@ -98,8 +98,8 @@
     background: currentColor;
 
     transition:
-      transform 160ms ease,
-      opacity 160ms ease;
+      transform 230ms ease,
+      opacity 230ms ease;
   }
 
 
@@ -151,9 +151,9 @@
     pointer-events: none;
 
     transition:
-      opacity 120ms ease,
-      transform 120ms ease,
-      visibility 120ms ease;
+      opacity 180ms ease,
+      transform 180ms ease,
+      visibility 180ms ease;
   }
 
   .compact-nav-menu.open {
