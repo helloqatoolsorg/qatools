@@ -1,15 +1,16 @@
 "use client";
+import type { ProductContent } from "@/lib/productContent";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 export type GalleryMedia={id:number;file_path:string|null;role:string;sort_order:number};
 export type GalleryResult={id:number;updated_at:string;media:GalleryMedia[]};
 export type PendingMedia=GalleryMedia & {file?:File;preview?:string};
-export async function saveArtwork(productId:number,updatedAt:string,media:PendingMedia[]):Promise<GalleryResult>{
+export async function saveArtwork(productId:number,updatedAt:string,media:PendingMedia[] | null,content?:ProductContent):Promise<GalleryResult>{
  const session=await supabase.auth.getSession();if(session.error || !session.data.session)throw new Error("Please log in again.");
  const headers={Authorization:"Bearer "+session.data.session.access_token};
  const rows=[];
- for(const image of media){
+ for(const image of media ?? []){
   let path=image.file_path;
   if(image.file){
    const params=new URLSearchParams({productId:String(productId),expectedUpdatedAt:updatedAt});
@@ -18,7 +19,7 @@ export async function saveArtwork(productId:number,updatedAt:string,media:Pendin
   }
   rows.push({id:image.id>0?image.id:null,role:image.role,path:path ?? ""});
  }
- const response=await fetch("/api/admin/products/artwork",{method:"PUT",headers:{...headers,"Content-Type":"application/json"},body:JSON.stringify({productId,expectedUpdatedAt:updatedAt,media:rows})});
+ const response=await fetch(content ? "/api/admin/products/content" : "/api/admin/products/artwork",{method:"PUT",headers:{...headers,"Content-Type":"application/json"},body:JSON.stringify({productId,expectedUpdatedAt:updatedAt,media:media === null ? null : rows,...(content ? {content} : {})})});
  const result=await response.json();if(!response.ok)throw new Error(result.error ?? "Unable to update product images.");return result.gallery;
 }
 export default function AdminGallery({media,disabled,onChange}:{media:PendingMedia[];disabled:boolean;onChange:(media:PendingMedia[])=>void}){

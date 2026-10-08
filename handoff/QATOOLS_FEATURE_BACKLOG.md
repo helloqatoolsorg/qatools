@@ -168,3 +168,7 @@ Gallery add/replace/remove/reorder is now implemented locally for saved drafts a
 ### Explicit product image update — 2026-10-07
 
 Owner approved published card replacement and explicit Update product. Main/card and gallery edits now stage locally and bind together on Update. Migration/deployment and hosted owner review are pending; see QATOOLS_PRODUCT_GALLERY.md. Finance and recovery remain parked. General published metadata edits and Storage cleanup remain deferred.
+
+## Published product content editing — 2026-10-08
+
+Implemented locally: published subtitle, description, category and complexity edits share the explicit Update product transaction with staged artwork. Protected identity/commercial fields remain unchanged. Leaving the editor discards pending published edits; stale writes are rejected. See QATOOLS_PUBLISHED_PRODUCT_CONTENT.md for migration, validation and hosted review steps. Owner deployment/hosted verification pending.
