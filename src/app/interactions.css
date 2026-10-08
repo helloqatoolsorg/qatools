@@ -100,10 +100,20 @@ body .brand img {height:54px!important;width:auto;max-width:145px;object-fit:con
 body :is(.card-add-cart,.buy-button,#toolAddToCart).in-cart {
   background:#112b45!important;border-color:#356f9c!important;color:#98caff!important;
 }
-body :is(.card-add-cart,.buy-button,#toolAddToCart).in-cart:hover {
-  background:#163a5c!important;border-color:#4c8ec1!important;color:transparent!important;
+/* CSS alone owns the temporary removal label; touch devices keep IN CART. */
+@media (hover:hover) and (pointer:fine) {
+  body :is(.card-add-cart,.buy-button,#toolAddToCart).in-cart:not(:disabled):hover {
+    position:relative;background:#2a1111!important;border-color:#9e3d3d!important;color:transparent!important;
+  }
+  body :is(.card-add-cart,.buy-button,#toolAddToCart).in-cart:not(:disabled):hover::after {
+    content:"REMOVE FROM CART";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:#ea6d6d;pointer-events:none;
+  }
 }
-body :is(.card-add-cart,.buy-button,#toolAddToCart).in-cart:hover::after {color:#b9ddff;}
+/* Shared geometry and stroke weight, independent of platform font glyphs. */
+body .outline-icon {display:block;flex-shrink:0;}
+body #cartButton {display:flex;align-items:center;justify-content:center;}
+body .cart-state.show {display:inline-flex;align-items:center;justify-content:center;}
 body :is(.card-add-cart,.buy-button,#toolAddToCart).purchased,
 body :is(.card-add-cart,.buy-button,#toolAddToCart).purchased:hover {
   background:#142b20!important;border-color:#366b49!important;color:#98d5a9!important;

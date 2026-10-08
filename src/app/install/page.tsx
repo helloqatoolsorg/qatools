@@ -1,4 +1,5 @@
 "use client";
+import OutlineIcon from "@/components/OutlineIcon";
 import AccountName from "@/components/AccountName";
 
 import { useQAToolsState } from "@/context/QAToolsState";
@@ -68,7 +69,7 @@ export default function InstallPage() {
             aria-label="Account"
             title="Account"
           >
-            ○
+            <OutlineIcon kind="account" />
           </a>
 
           <button
@@ -82,7 +83,7 @@ export default function InstallPage() {
             title="Cart"
             type="button"
           >
-            □
+            <OutlineIcon kind="cart" />
 
             <span className="cart-count">
               {cartCount > 0

@@ -1,4 +1,5 @@
 "use client";
+import OutlineIcon from "@/components/OutlineIcon";
 import AccountName from "@/components/AccountName";
 
 import {
@@ -86,15 +87,7 @@ export default function LikedPage() {
     loading,
   } = useLikedProducts();
 
-  const [
-    hoveredCartItem,
-    setHoveredCartItem,
-  ] =
-    useState<string | null>(
-      null
-    );
-
-  const [
+const [
     activeFilters,
     setActiveFilters,
   ] = useState<ActiveFilter[]>([]);
@@ -541,7 +534,7 @@ export default function LikedPage() {
             aria-label="Account"
             title="Account"
           >
-            ○
+            <OutlineIcon kind="account" />
           </a>
 
           <button
@@ -555,7 +548,7 @@ export default function LikedPage() {
             title="Cart"
             type="button"
           >
-            □
+            <OutlineIcon kind="cart" />
 
             <span className="cart-count">
               {cartCount > 0
@@ -949,10 +942,6 @@ export default function LikedPage() {
                       product.slug
                     );
 
-                  const removing =
-                    hoveredCartItem ===
-                    product.slug;
-
                   return (
                     <article
                       className="product-card"
@@ -1036,7 +1025,7 @@ export default function LikedPage() {
                               }`}
                               title="In cart"
                             >
-                              ▣
+                              <OutlineIcon kind="cart" />
                             </span>
 
                             <button
@@ -1109,28 +1098,9 @@ export default function LikedPage() {
                             inCart
                               ? "in-cart"
                               : ""
-                          } ${
-                            removing
-                              ? "remove-state"
-                              : ""
                           }`}
                           type="button"
                           disabled={purchased}
-                          onMouseEnter={() => {
-                            if (
-                              !purchased &&
-                              inCart
-                            ) {
-                              setHoveredCartItem(
-                                product.slug
-                              );
-                            }
-                          }}
-                          onMouseLeave={() =>
-                            setHoveredCartItem(
-                              null
-                            )
-                          }
                           onClick={(
                             event
                           ) => {
@@ -1167,9 +1137,7 @@ export default function LikedPage() {
                             ? "PURCHASED"
                             : !inCart
                               ? "ADD TO CART"
-                              : removing
-                                ? "REMOVE FROM CART"
-                                : "IN CART"}
+                              : "IN CART"}
                         </button>
                       </div>
                     </article>

@@ -1843,25 +1843,6 @@ body:not(.products-page) .cart-overlay{
   color:#5b91f4
 }
 
-.card-add-cart.in-cart:hover,
-.buy-button.in-cart:hover{
-  color:transparent;
-  border-color:#a73b3b;
-  background:#2a1111;
-  position:relative
-}
-
-.card-add-cart.in-cart:hover::after,
-.buy-button.in-cart:hover::after{
-  content:'REMOVE FROM CART';
-  color:#e86565;
-  position:absolute;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center
-}
-
 .card-add-cart.purchased,
 .buy-button.purchased{
   opacity:.45
@@ -1984,29 +1965,6 @@ body:not(.products-page) .cart-overlay{
 }
 
 
-/* Hovering IN CART becomes REMOVE FROM CART */
-
-.card-add-cart.in-cart:hover,
-.buy-button.in-cart:hover{
-  background:#2a1111!important;
-  border-color:#9e3d3d!important;
-  color:transparent!important
-}
-
-.card-add-cart.in-cart:hover::after,
-.buy-button.in-cart:hover::after{
-  content:'REMOVE FROM CART';
-  position:absolute;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:#ea6d6d;
-  font:500 9px monospace;
-  letter-spacing:.04em
-}
-
-
 /* purchased remains disabled */
 
 .card-add-cart.purchased,
@@ -2028,25 +1986,6 @@ body:not(.products-page) .cart-overlay{
   color:#8b8b86!important;
   position:relative
 }
-
-#toolAddToCart.in-cart:hover{
-  background:#2a1111!important;
-  border-color:#9e3d3d!important;
-  color:transparent!important
-}
-
-#toolAddToCart.in-cart:hover::after{
-  content:'REMOVE FROM CART';
-  position:absolute;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:#ea6d6d;
-  font:500 9px monospace;
-  letter-spacing:.04em
-}
-
 
 /* Prototype 16 — top shelf counters */
 

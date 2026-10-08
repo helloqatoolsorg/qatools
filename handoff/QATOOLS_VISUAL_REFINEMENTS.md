@@ -19,3 +19,12 @@ git push
 ```
 
 Stop on failure. After Vercel Ready, hard-refresh and review logo sizing on desktop/mobile, all outlined hearts and red liked state, blue cart/green purchased buttons, card spacing without badges/dates/count, hover return and reduced motion. Hosted visual checks pending.
+
+
+## Cart hover and icon consistency — 2026-10-08
+
+Removed duplicate React hover state from products and likes, plus legacy unconditional CSS hover rules. One fine-pointer CSS rule now shows the red removal label; leaving the button restores the blue IN CART label. Touch devices retain IN CART. Cart actions and ownership state are unchanged.
+
+Added OutlineIcon as the shared thin-stroke cart/account geometry across customer and admin headers. Product cart indicators use the same cart icon. Hamburger lines are 1px, with corresponding open-state offsets corrected.
+
+Validation: TypeScript, CSS parsing and diff whitespace checks passed. Run the production build in normal CMD before committing. After deployment, verify repeated hover/exit on products, likes and the tool page; purchased buttons remain green and disabled. No migration is required.

@@ -1,4 +1,5 @@
 "use client";
+import OutlineIcon from "@/components/OutlineIcon";
 import IncludedTools from "@/components/IncludedTools";
 import AccountName from "@/components/AccountName";
 import { animateToCart } from "@/lib/cartAnimation";
@@ -358,7 +359,7 @@ export default function ProductPage() {
             aria-label="Account"
             title="Account"
           >
-            ○
+            <OutlineIcon kind="account" />
           </a>
 
           <button
@@ -372,7 +373,7 @@ export default function ProductPage() {
             title="Cart"
             type="button"
           >
-            □
+            <OutlineIcon kind="cart" />
 
             <span
               id="cartCount"
@@ -451,7 +452,7 @@ export default function ProductPage() {
                   }`}
                   title="In cart"
                 >
-                  ▣
+                  <OutlineIcon kind="cart" />
                 </span>
 
                 <button

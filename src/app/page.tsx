@@ -1,4 +1,5 @@
 "use client";
+import OutlineIcon from "@/components/OutlineIcon";
 import AccountName from "@/components/AccountName";
 
 import {
@@ -221,15 +222,7 @@ export default function Home() {
     setHighlightedSuggestion,
   ] = useState(-1);
 
-  const [
-    hoveredCartItem,
-    setHoveredCartItem,
-  ] =
-    useState<string | null>(
-      null
-    );
-
-  const [loading, setLoading] =
+const [loading, setLoading] =
     useState(true);
 
   const [error, setError] =
@@ -956,7 +949,7 @@ export default function Home() {
             aria-label="Account"
             title="Account"
           >
-            ○
+            <OutlineIcon kind="account" />
           </a>
 
           <button
@@ -970,7 +963,7 @@ export default function Home() {
             title="Cart"
             type="button"
           >
-            □
+            <OutlineIcon kind="cart" />
 
             <span
               id="cartCount"
@@ -1535,10 +1528,6 @@ export default function Home() {
                       product.slug
                     );
 
-                  const hoveringRemove =
-                    hoveredCartItem ===
-                    product.slug;
-
                   return (
                     <article
                       className="product-card"
@@ -1624,7 +1613,7 @@ export default function Home() {
                               }`}
                               title="In cart"
                             >
-                              ▣
+                              <OutlineIcon kind="cart" />
                             </span>
 
                             <button
@@ -1701,28 +1690,9 @@ export default function Home() {
                             inCart
                               ? "in-cart"
                               : ""
-                          } ${
-                            hoveringRemove
-                              ? "remove-state"
-                              : ""
                           }`}
                           type="button"
                           disabled={purchased}
-                          onMouseEnter={() => {
-                            if (
-                              !purchased &&
-                              inCart
-                            ) {
-                              setHoveredCartItem(
-                                product.slug
-                              );
-                            }
-                          }}
-                          onMouseLeave={() =>
-                            setHoveredCartItem(
-                              null
-                            )
-                          }
                           onClick={(
                             event
                           ) => {
@@ -1759,9 +1729,7 @@ export default function Home() {
                             ? "PURCHASED"
                             : !inCart
                               ? "ADD TO CART"
-                              : hoveringRemove
-                                ? "REMOVE FROM CART"
-                                : "IN CART"}
+                              : "IN CART"}
                         </button>
                       </div>
                     </article>

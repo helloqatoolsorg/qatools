@@ -1,4 +1,5 @@
 "use client";
+import OutlineIcon from "@/components/OutlineIcon";
 import AccountName from "@/components/AccountName";
 
 import { useState } from "react";
@@ -108,7 +109,7 @@ export default function CartPage() {
             aria-label="Account"
             title="Account"
           >
-            ○
+            <OutlineIcon kind="account" />
           </a>
 
           <button
@@ -122,7 +123,7 @@ export default function CartPage() {
             title="Cart"
             type="button"
           >
-            □
+            <OutlineIcon kind="cart" />
 
             <span className="cart-count">
               {cartCount > 0

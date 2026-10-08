@@ -1,4 +1,5 @@
 "use client";
+import OutlineIcon from "@/components/OutlineIcon";
 import type { AccountAccess, AccountPurchases } from "@/lib/accountPurchases";
 import AccountName from "@/components/AccountName";
 import { formatOrderNumber } from "@/lib/orderNumber";
@@ -895,7 +896,7 @@ export default function UserPage() {
             aria-label="Account"
             title="Account"
           >
-            ○
+            <OutlineIcon kind="account" />
           </a>
 
           <button
@@ -909,7 +910,7 @@ export default function UserPage() {
             title="Cart"
             type="button"
           >
-            □
+            <OutlineIcon kind="cart" />
 
             <span className="cart-count">
               {cartCount > 0
