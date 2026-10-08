@@ -16,11 +16,11 @@ function setup(options = {}) {
   const db = {
     from(table) { const q = { select() { return q; }, eq() { return q; }, async maybeSingle() {
       calls.push(table);
-      return { error: options.dbError ? {} : null, data: table === 'products' ? tool : table === 'admin_users' ? (options.nonAdmin ? null : { user_id: admin }) : table === 'sandbox_product_prices' ? (options.mapped ? mapping : null) : (options.prior ? { status: 'price_creating', paddle_product_id: pro, price_id: null } : null) };
+      return { error: options.dbError ? {} : null, data: table === 'products' ? tool : table === 'admin_users' ? (options.nonAdmin ? null : { user_id: admin }) : table.endsWith('_product_prices') ? (options.mapped ? mapping : null) : (options.prior ? { status: 'price_creating', paddle_product_id: pro, price_id: null } : null) };
     } }; return q; },
     async rpc(name, args) {
       calls.push({ name, args });
-      if (name === 'reserve_sandbox_catalog_setup') {
+      if (['reserve_sandbox_catalog_setup','reserve_live_catalog_setup'].includes(name)) {
         const created = !reservation && !options.concurrent; reservation = true;
         return { error: null, data: { ok: true, created, job: { attempt_id: attempt } } };
       }
@@ -43,7 +43,7 @@ function setup(options = {}) {
     const mod = { exports: {} }; cache.set(file, mod.exports);
     vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(repo, file), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, {
       exports: mod.exports, URL, Request, Response, Buffer, AbortSignal, fetch: remote,
-      process: { env: { NEXT_PUBLIC_SUPABASE_URL: 'https://synthetic.invalid', NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'synthetic' } },
+      process: { env:{ PADDLE_ENVIRONMENT: options.environment ?? 'sandbox', PADDLE_API_KEY:'pdl_sdbx_apikey_synthetic',NEXT_PUBLIC_PADDLE_CLIENT_TOKEN:'test_synthetic',PADDLE_WEBHOOK_SECRET:'synthetic-secret',PADDLE_LIVE_API_KEY:'pdl_live_apikey_synthetic',PADDLE_LIVE_CLIENT_TOKEN:'live_synthetic',PADDLE_LIVE_WEBHOOK_SECRET:'live-synthetic-secret',PADDLE_LIVE_CHECKOUT_ENABLED:options.disabled?'false':'true', NEXT_PUBLIC_SUPABASE_URL: 'https://synthetic.invalid', NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'synthetic' } },
       require(name) {
         if (name === 'server-only') return {};
         if (name === 'next/server') return { NextResponse: { json: Response.json } };
@@ -138,3 +138,10 @@ test('real SQL guards catalog attempts, immutable snapshots, stages, mapping and
 test('saved paid drafts can prepare Paddle without publishing',async()=>{const s=setup({unpublished:true});assert.equal((await s.post()).status,200);assert.equal(s.calls.some(c=>typeof c==='object'&&c.name==='publish_product_draft'),false);});
 
 test('draft setup reuses an existing matching Paddle price',async()=>{const s=setup({unpublished:true,existingPrice:true});assert.equal((await s.post()).status,200);assert.equal(s.network.filter(n=>n.method==='POST').length,0);});
+
+
+test('live catalog setup uses live reservations and APIs while customer checkout stays disabled',async()=>{
+ const s=setup({environment:'live',disabled:true}),r=await s.post({productId:2,expectedSlug:'synthetic-tool',expectedAmount:700,expectedEnvironment:'live'});assert.equal(r.status,200);assert.ok(s.calls.some(c=>c.name==='reserve_live_catalog_setup'));assert.ok(s.calls.some(c=>c.name==='complete_live_catalog_setup'));assert.ok(s.network.every(n=>n.url.startsWith('https://api.paddle.com/')));assert.equal(s.network.filter(n=>n.config.method==='POST').length,2);
+ const get=await s.get();assert.equal((await get.json()).environment,'live');
+ for(const expectedEnvironment of [undefined,'sandbox']){const stale=setup({environment:'live'});assert.equal((await stale.post({productId:2,expectedSlug:'synthetic-tool',expectedAmount:700,...(expectedEnvironment?{expectedEnvironment}:{})})).status,409);assert.equal(stale.network.length,0);}
+});

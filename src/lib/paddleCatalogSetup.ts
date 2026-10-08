@@ -1,32 +1,32 @@
 import "server-only";
-import { paddleSandboxApiConfig } from "./paddleSandbox";
+import { paddleApiConfig, paddleEnvironment, type PaddleEnvironment } from "./paddleEnvironment";
 import { CartPriceMismatchError, euroCents, verifyCatalogPrice, type CartProduct } from "./paddleCartCatalog";
 
 export class CatalogSetupError extends Error {}
 type ProviderProduct = { id: string; name: string; status: string; type: string; tax_category: string; prices?: { id: string }[] };
 
-// Fixed sandbox origin only. Mutating calls are never automatically retried.
-export async function catalogRequest(path: string, body?: object) {
-  const config = paddleSandboxApiConfig();
+// Fixed environment-specific origin only. Mutating calls are never automatically retried.
+export async function catalogRequest(path: string, body?: object, environment: PaddleEnvironment = paddleEnvironment()) {
+  const config = paddleApiConfig(environment);
   const response = await fetch(config.apiBase + path, {
     method: body ? "POST" : "GET", redirect: "error", cache: "no-store",
     headers: { Authorization: "Bearer " + config.apiKey, "Content-Type": "application/json" },
     signal: AbortSignal.timeout(10000), ...(body ? { body: JSON.stringify(body) } : {}),
   });
   if (response.status === 401 || response.status === 403) {
-    throw new CatalogSetupError("Check the Paddle sandbox API key permissions: Products Read and Write, and Prices Read and Write.");
+    throw new CatalogSetupError("Check the Paddle API key permissions: Products Read and Write, and Prices Read and Write.");
   }
   if (!response.ok) throw new CatalogSetupError("Unable to complete Paddle setup. Reload the price panel and check Paddle before trying again.");
   return response.json();
 }
 
-export async function findCatalogEntry(product: CartProduct) {
+export async function findCatalogEntry(product: CartProduct, environment: PaddleEnvironment = paddleEnvironment()) {
   euroCents(product.price_eur);
   const matches: ProviderProduct[] = [];
   let cursor = "";
   // Bound the scan and fail closed if it cannot finish. Never follow provider-supplied URLs.
   for (let page = 0; page < 10; page++) {
-    const result = await catalogRequest("/products?status=active,archived&include=prices&per_page=200&order_by=id[ASC]" + (cursor ? "&after=" + cursor : ""));
+    const result = await catalogRequest("/products?status=active,archived&include=prices&per_page=200&order_by=id[ASC]" + (cursor ? "&after=" + cursor : ""), undefined, environment);
     if (!Array.isArray(result.data) || typeof result.meta?.pagination?.has_more !== "boolean") throw new CatalogSetupError("Unable to check the existing Paddle catalog.");
     matches.push(...result.data.filter((p: ProviderProduct) => p.name === product.slug));
     if (!result.meta.pagination.has_more) break;
@@ -44,7 +44,7 @@ export async function findCatalogEntry(product: CartProduct) {
   if (existing.prices.length > 100) throw new CatalogSetupError("Connect this tool's price IDs manually.");
   for (const price of existing.prices) {
     try {
-      await verifyCatalogPrice(product, { product_id: product.id, paddle_product_id: existing.id, price_id: price.id, enabled: true });
+      await verifyCatalogPrice(product, { product_id: product.id, paddle_product_id: existing.id, price_id: price.id, enabled: true }, environment);
       valid.push(price.id);
     } catch (error) {
       // Only a verified mismatch permits another price. Transport/permission failures stop setup.

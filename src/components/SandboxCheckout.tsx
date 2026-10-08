@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useQAToolsState } from "@/context/QAToolsState";
 import type { CartProduct } from "@/hooks/useCartProducts";
 import { supabase } from "@/lib/supabase";
-import { checkoutMatchesExpectedPrice, loadSandboxPaddle, subscribeCheckout, type ExpectedCheckout } from "@/lib/paddleBrowser";
+import { checkoutMatchesExpectedPrice, loadPaddle, subscribeCheckout, type ExpectedCheckout } from "@/lib/paddleBrowser";
 
 export default function SandboxCheckout({ products, disabled }: { products: CartProduct[]; disabled: boolean }) {
   const { user } = useAuth();
@@ -23,11 +23,12 @@ function CheckoutSession({ products, disabled }: { products: CartProduct[]; disa
   const [error, setError] = useState<string | null>(null);
   const [supported, setSupported] = useState<number[]>([]);
   const [paidSlugs, setPaidSlugs] = useState<string[]>([]);
+  const [environment, setEnvironment] = useState<"sandbox" | "live">("sandbox");
   const transaction = useRef<string | null>(null);
   const busyRef = useRef(false);
   const owner = useRef<string | null>(null);
   const currentUser = useRef(user?.id);
-  const paddle = useRef<Awaited<ReturnType<typeof loadSandboxPaddle>> | null>(null);
+  const paddle = useRef<Awaited<ReturnType<typeof loadPaddle>> | null>(null);
   const alive = useRef(true);
   const paidItems = products.filter(item => Number(item.price_eur) > 0);
   const expected = useRef<ExpectedCheckout | undefined>(undefined);
@@ -48,7 +49,7 @@ function CheckoutSession({ products, disabled }: { products: CartProduct[]; disa
           headers: { Authorization: "Bearer " + data.session.access_token }, cache: "no-store", signal: AbortSignal.timeout(10000),
         });
         const config = await response.json();
-        if (!canceled && response.ok && config.enabled === true && config.environment === "sandbox" && /^test_[A-Za-z0-9_-]+$/.test(config.clientToken)) { setToken(config.clientToken); setSupported(Array.isArray(config.productIds) ? config.productIds : []); }
+        if (!canceled && response.ok && config.enabled === true && ((config.environment === "sandbox" && /^test_[A-Za-z0-9_-]+$/.test(config.clientToken)) || (config.environment === "live" && /^live_[A-Za-z0-9_-]+$/.test(config.clientToken)))) { setEnvironment(config.environment); setToken(config.clientToken); setSupported(Array.isArray(config.productIds) ? config.productIds : []); }
       } catch { /* Availability fails closed; free-item acquisition remains available. */ }
     })();
     return () => { canceled = true; alive.current = false; currentUser.current = undefined; paddle.current?.Checkout.close(); };
@@ -92,18 +93,19 @@ function CheckoutSession({ products, disabled }: { products: CartProduct[]; disa
     busyRef.current = true; setBusy(true); setError(null); setMessage(null);
     const accountId = user.id;
     try {
-      paddle.current = await loadSandboxPaddle(token);
+      paddle.current = await loadPaddle(token, environment);
       if (!alive.current || currentUser.current !== accountId) return;
       const { data } = await supabase.auth.getSession();
       if (!data.session || data.session.user.id !== accountId) throw new Error("Please log in again before checking out.");
       if (!alive.current || currentUser.current !== accountId) return;
       const response = await fetch("/api/account/cart-checkout", {
         method: "POST", cache: "no-store", headers: { "Content-Type": "application/json", Authorization: "Bearer " + data.session.access_token },
-        body: JSON.stringify({ productIds: paidItems.map(item => item.id) }), signal: AbortSignal.timeout(30000),
+        body: JSON.stringify({ productIds: paidItems.map(item => item.id), expectedEnvironment: environment }), signal: AbortSignal.timeout(30000),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Checkout unavailable.");
       if (!alive.current || currentUser.current !== accountId) return;
+      if ((environment === "live" || result.environment !== undefined) && result.environment !== environment) throw new Error("Checkout environment changed. Reload before paying.");
       if (!/^txn_[a-z0-9]{26}$/.test(result.transactionId)) throw new Error("Checkout could not be verified.");
       if (!result.expected || !Number.isFinite(result.expected.total) || result.expected.total !== paidItems.reduce((sum,item) => sum + Math.round(Number(item.price_eur) * 100),0) / 100 ||
           !Array.isArray(result.expected.items) || result.expected.items.length !== paidItems.length ||
@@ -126,7 +128,7 @@ function CheckoutSession({ products, disabled }: { products: CartProduct[]; disa
       <button className="cart-page-checkout" type="button" onClick={checkout} disabled={disabled || busy || waiting || !token || !available}>
         {waiting ? "CONFIRMING PAYMENT..." : busy ? "CHECKOUT OPEN..." : "CHECKOUT"}
       </button>
-      <p style={{ color: "#777", font: "10px monospace" }}>{!user ? <>Please <a href="/user">log in</a> to checkout.</> : !token ? "Paid checkout is not available yet." : !available ? "A paid item is not ready for checkout yet. Remove unavailable items or contact support." : "Sandbox checkout — test payments only. Prices include tax; business tax is calculated at checkout."}</p>
+      <p style={{ color: "#777", font: "10px monospace" }}>{!user ? <>Please <a href="/user">log in</a> to checkout.</> : !token ? "Paid checkout is not available yet." : !available ? "A paid item is not ready for checkout yet. Remove unavailable items or contact support." : (environment === "sandbox" ? "Sandbox checkout — test payments only. Prices include tax; business tax is calculated at checkout." : "Prices include tax; business tax is calculated at checkout.")}</p>
     </>}
     {error && <p role="alert" style={{ color: "#e86565", font: "10px monospace" }}>{error}</p>}
     {(message || confirmed) && <p role="status" style={{ color: "#55b86d", font: "10px monospace" }}>{confirmed ? "Your purchased items are now in your account. Refresh your Houdini license to include them." : message} <a href="/user?section=purchased">Your items</a></p>}

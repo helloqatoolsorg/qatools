@@ -4,7 +4,7 @@ import type { Database } from "./database.types";
 import { supabaseAdmin } from "./supabaseAdmin";
 
 // RPC schema from 20261003080000; kept alongside this integration.
-type CheckoutDatabase = Database & { public: Database["public"] & {
+type SandboxCheckoutDatabase = Database & { public: Database["public"] & {
   Functions: Database["public"]["Functions"] & {
     reserve_sandbox_checkout: {
       Args: { p_user_id: string; p_product_id: number };
@@ -15,5 +15,8 @@ type CheckoutDatabase = Database & { public: Database["public"] & {
       Returns: boolean;
     };
   };
+} };
+type CheckoutDatabase = SandboxCheckoutDatabase & { public: SandboxCheckoutDatabase["public"] & {
+ Functions: { finish_live_checkout: SandboxCheckoutDatabase["public"]["Functions"]["finish_sandbox_checkout"] };
 } };
 export const paddleCheckoutDatabase = supabaseAdmin as SupabaseClient<CheckoutDatabase>;

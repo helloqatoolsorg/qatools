@@ -1,3 +1,4 @@
+import type { PaddleEnvironment } from "./paddleEnvironment";
 import "server-only";
 import { validateCartTransaction } from "./paddleCartValidation";
 
@@ -7,7 +8,7 @@ const paddleId = (value: unknown, prefix: string): value is string => typeof val
 const cents = (value: unknown): number | null => typeof value === "string" && /^(0|[1-9][0-9]{0,8})$/.test(value) ? Number(value) : null;
 
 // Called only after raw-byte signature verification. Store normalized fields, not customer payloads.
-export function normalizePaddleEvent(value: unknown) {
+export function normalizePaddleEvent(value: unknown, environment: PaddleEnvironment = "sandbox") {
   const event = record(value), data = record(event.data);
   const simulation = paddleId(event.event_id, "ntfsimevt");
   if ((!paddleId(event.event_id, "evt") && !simulation) || typeof event.event_type !== "string" ||
@@ -41,7 +42,7 @@ export function normalizePaddleEvent(value: unknown) {
   const cartVersion = custom.qatools_checkout_version === "cart-v1";
   let cartPayment: ReturnType<typeof validateCartTransaction> | null = null;
   if (!simulation && type === "transaction.completed" && cartVersion && txnId && intentId) {
-    try { cartPayment = validateCartTransaction(data, intentId, undefined, true); } catch { /* Review invalid signed payments without granting ownership. */ }
+    try { cartPayment = validateCartTransaction(data, intentId, undefined, true, environment); } catch { /* Review invalid signed payments without granting ownership. */ }
   }
   const refundItems = items.map(value => { const i = record(value); return { providerItemId: i.item_id, amount: cents(record(i.totals).total), full: i.type === "full" }; });
   const refundedTools = !simulation && ["adjustment.created", "adjustment.updated"].includes(type) && !!txnId &&
@@ -52,7 +53,7 @@ export function normalizePaddleEvent(value: unknown) {
     refundItems.every(i => i.full && paddleId(i.providerItemId, "txnitm") && i.amount !== null && i.amount > 0) &&
     new Set(refundItems.map(i => i.providerItemId)).size === refundItems.length &&
     refundItems.reduce((sum,i) => sum + (i.amount ?? 0),0) === refundTotal;
-  const valid = !simulation && type === "transaction.completed" && !!txnId && !!intentId &&
+  const valid = environment === "sandbox" && !simulation && type === "transaction.completed" && !!txnId && !!intentId &&
     custom.qatools_environment === "sandbox" && data.status === "completed" &&
     data.collection_mode === "automatic" && data.currency_code === "EUR" && totals.currency_code === "EUR" &&
     data.subscription_id === null && data.discount_id === null && items.length === 1 && item.quantity === 1 &&
@@ -65,7 +66,7 @@ export function normalizePaddleEvent(value: unknown) {
     totals.grand_total === "500" && totals.discount === "0" && totals.credit === "0" &&
     totals.credit_to_balance === "0" && totals.balance === "0";
   return {
-    eventId: event.event_id as string, type, txnId: simulation ? null : txnId, intentId: simulation ? null : intentId, valid: cartVersion ? !!cartPayment : valid,
+    environment, eventId: event.event_id as string, type, txnId: simulation ? null : txnId, intentId: simulation ? null : intentId, valid: cartVersion ? !!cartPayment : valid,
     checkoutVersion: cartVersion ? "cart-v1" : "legacy", items: cartPayment?.items ?? [], refundedTools,
     taxAdjusted: cartPayment?.taxAdjusted ?? false,
     refundItems: refundedTools ? refundItems.map(i => ({ providerItemId: i.providerItemId as string, amount: i.amount as number })) : [],

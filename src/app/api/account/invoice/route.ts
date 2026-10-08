@@ -1,7 +1,8 @@
 import { requireAccount } from "@/lib/requireAccount";
 import { privateJson } from "@/lib/activationHttp";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { readSandboxInvoice } from "@/lib/paddleInvoice";
+import { readPaddleInvoice } from "@/lib/paddleInvoice";
+import { paddleEnvironmentForProvider } from "@/lib/paddleEnvironment";
 
 export async function GET(request: Request) {
   try {
@@ -17,14 +18,15 @@ export async function GET(request: Request) {
       .eq("id", Number(id)).eq("user_id", authorization.user.id).maybeSingle();
     if (order.error) throw new Error("Order lookup failed.");
     if (!order.data) return privateJson({ error: "Order not found." }, 404);
-    if (order.data.provider !== "paddle_sandbox" ||
+    const environment = paddleEnvironmentForProvider(order.data.provider);
+    if (!environment ||
         !["paid", "refunded", "partially_refunded"].includes(order.data.status) ||
         !Number.isFinite(Number(order.data.total)) || Number(order.data.total) <= 0 ||
         typeof order.data.provider_transaction_id !== "string" ||
         !/^txn_[a-z0-9]{26}$/.test(order.data.provider_transaction_id ?? "")) {
       return privateJson({ error: "An invoice is not available for this order." }, 409);
     }
-    return privateJson({ url: await readSandboxInvoice(order.data.provider_transaction_id) });
+    return privateJson({ url: await readPaddleInvoice(order.data.provider_transaction_id, environment) });
   } catch {
     return privateJson({ error: "Unable to prepare your invoice. Please try again later." }, 503);
   }

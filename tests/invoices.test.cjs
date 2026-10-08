@@ -27,7 +27,10 @@ function setup(options = {}) {
     vm.runInNewContext(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
     }).outputText, { exports: mod.exports, URL, AbortSignal, Buffer,
-      process: { env: { NEXT_PUBLIC_SUPABASE_URL: 'https://example.invalid', NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'synthetic' } },
+      process: { env: { NEXT_PUBLIC_SUPABASE_URL: 'https://example.invalid', NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'synthetic',
+        PADDLE_ENVIRONMENT: 'sandbox', PADDLE_API_KEY: options.configError ? '' : 'pdl_sdbx_apikey_synthetic',
+        PADDLE_SANDBOX_API_KEY: options.configError ? '' : 'pdl_sdbx_apikey_synthetic',
+        PADDLE_LIVE_API_KEY: options.configError ? '' : 'pdl_live_apikey_synthetic', ...options.env } },
       fetch: async (url, config) => {
         network.push({ url, config }); if (options.transportError) throw Error('private transport');
         return { ok: !options.httpError, json: async () => options.payload ?? { data: { url: 'https://provider.invalid/invoice.pdf?temporary=1' } } };
@@ -36,10 +39,7 @@ function setup(options = {}) {
         if (name === 'server-only') return {};
         if (name === 'next/server') return { NextResponse: { json: Response.json } };
         if (name === '@/lib/supabaseAdmin') return { supabaseAdmin: db };
-        if (name === './paddleSandbox') return { paddleSandboxApiConfig() {
-          if (options.configError) throw Error('private config');
-          return { apiBase: 'https://sandbox-api.paddle.com', apiKey: 'synthetic-server-secret' };
-        }};
+        if (name === './paddleEnvironment') return load('src/lib/paddleEnvironment.ts');
         if (name.startsWith('@/lib/')) return load('src/lib/' + name.slice(6) + '.ts');
         if (name === '@supabase/supabase-js') return { createClient: () => ({ auth: { getUser: async () => ({
           data: { user: options.invalidToken ? null : { id: 'customer', email_confirmed_at: options.unconfirmed ? null : '2026-10-04' } },
@@ -73,7 +73,7 @@ test('malformed order references never query orders', async () => {
   }
 });
 test('free, unsupported, pending and malformed orders cannot retrieve invoices', async () => {
-  for (const order of [{ total: 0 }, { total: 'bad' }, { provider: 'paddle' }, { provider: 'manual' },
+  for (const order of [{ total: 0 }, { total: 'bad' }, { provider: 'paddle_live' }, { provider: 'manual' },
     { status: 'pending' }, { status: 'cancelled' }, { provider_transaction_id: txn + '/other' }, { provider_transaction_id: null }]) {
     const s = setup({ order }); assert.equal((await s.get()).status, 409); assert.equal(s.network.length, 0);
   }
@@ -86,9 +86,32 @@ for (const status of ['paid', 'refunded', 'partially_refunded']) test('own ' + s
   const call = s.network[0];
   assert.equal(call.url, 'https://sandbox-api.paddle.com/transactions/' + txn + '/invoice?disposition=attachment');
   assert.equal(call.config.cache, 'no-store'); assert.equal(call.config.redirect, 'error'); assert.ok(call.config.signal);
-  assert.equal(call.config.headers.Authorization, 'Bearer synthetic-server-secret');
-  assert.ok(!JSON.stringify(body).includes('synthetic-server-secret'));
+  assert.equal(call.config.headers.Authorization, 'Bearer pdl_sdbx_apikey_synthetic');
+  assert.ok(!JSON.stringify(body).includes('apikey'));
   assert.ok(s.calls.filter(c => c.table).every(c => c.table === 'orders'));
+});
+
+test('stored provider chooses invoice environment even after checkout switches', async () => {
+  for (const active of ['sandbox', 'live']) for (const provider of ['paddle_sandbox', 'paddle']) {
+    for (const status of ['paid', 'refunded', 'partially_refunded']) {
+      const s = setup({ env: { PADDLE_ENVIRONMENT: active }, order: { provider, status } });
+      assert.equal((await s.get()).status, 200);
+      const live = provider === 'paddle';
+      assert.equal(s.network[0].url, (live ? 'https://api.paddle.com' : 'https://sandbox-api.paddle.com') + '/transactions/' + txn + '/invoice?disposition=attachment');
+      assert.equal(s.network[0].config.headers.Authorization, 'Bearer ' + (live ? 'pdl_live_apikey_synthetic' : 'pdl_sdbx_apikey_synthetic'));
+    }
+  }
+});
+
+test('missing or mismatched historical credentials never reach either API', async () => {
+  for (const env of [
+    { PADDLE_LIVE_API_KEY: '' }, { PADDLE_LIVE_API_KEY: 'pdl_sdbx_apikey_synthetic' },
+  ]) {
+    const s = setup({ env, order: { provider: 'paddle' } });
+    assert.equal((await s.get()).status, 503); assert.equal(s.network.length, 0);
+  }
+  const s = setup({ env: { PADDLE_ENVIRONMENT: 'live', PADDLE_SANDBOX_API_KEY: undefined, PADDLE_API_KEY: 'pdl_live_apikey_synthetic' } });
+  assert.equal((await s.get()).status, 503); assert.equal(s.network.length, 0);
 });
 test('provider, permission, configuration and database failures expose no private details', async () => {
   for (const option of ['dbError', 'httpError', 'transportError', 'configError']) {

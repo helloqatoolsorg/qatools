@@ -8,12 +8,13 @@ export type CheckoutEvent = { name?: string; data?: {
 } };
 type Paddle = {
   Environment: { set: (environment: "sandbox") => void };
-  Initialize: (options: { token: string; eventCallback: (event: CheckoutEvent) => void }) => void;
+  Initialize: (options: { token: string; pwCustomer?: Record<string, never>; eventCallback: (event: CheckoutEvent) => void }) => void;
   Checkout: { open: (options: { transactionId: string; settings: Record<string, unknown> }) => void; close: () => void };
 };
 declare global { interface Window { Paddle?: Paddle } }
 let loading: Promise<Paddle> | null = null;
 let initializedToken: string | null = null;
+let initializedEnvironment: "sandbox" | "live" | null = null;
 const listeners = new Set<(event: CheckoutEvent) => void>();
 
 export function subscribeCheckout(listener: (event: CheckoutEvent) => void) {
@@ -36,8 +37,10 @@ export function checkoutMatchesExpectedPrice(event: CheckoutEvent, transactionId
       data.items?.filter(i => i.price_id === item.priceId && i.quantity === 1).length === 1);
 }
 
-export async function loadSandboxPaddle(token: string): Promise<Paddle> {
-  if (!/^test_[A-Za-z0-9_-]+$/.test(token)) throw new Error("Sandbox checkout unavailable.");
+export function loadSandboxPaddle(token: string): Promise<Paddle> { return loadPaddle(token, "sandbox"); }
+export async function loadPaddle(token: string, environment: "sandbox" | "live"): Promise<Paddle> {
+  const valid = environment === "sandbox" ? /^test_[A-Za-z0-9_-]+$/.test(token) : environment === "live" && /^live_[A-Za-z0-9_-]+$/.test(token);
+  if (!valid || token.length > 512) throw new Error("Checkout unavailable.");
   if (!loading) loading = new Promise<Paddle>((resolve, reject) => {
     if (window.Paddle) { resolve(window.Paddle); return; }
     const script = document.createElement("script");
@@ -53,9 +56,9 @@ export async function loadSandboxPaddle(token: string): Promise<Paddle> {
   }).catch(reason => { loading = null; throw reason; });
   const paddle = await loading;
   if (!initializedToken) {
-    paddle.Environment.set("sandbox");
-    paddle.Initialize({ token, eventCallback: event => { for (const listener of listeners) listener(event); } });
-    initializedToken = token;
-  } else if (initializedToken !== token) throw new Error("Please reload the page before checking out.");
+    if (environment === "sandbox") paddle.Environment.set("sandbox");
+    paddle.Initialize({ token, ...(environment === "live" ? { pwCustomer: {} } : {}), eventCallback: event => { for (const listener of listeners) listener(event); } });
+    initializedToken = token; initializedEnvironment = environment;
+  } else if (initializedToken !== token || initializedEnvironment !== environment) throw new Error("Please reload the page before checking out.");
   return paddle;
 }

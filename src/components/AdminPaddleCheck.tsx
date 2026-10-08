@@ -7,7 +7,7 @@ import type { PaymentComparison } from "@/lib/paymentComparison";
 
 type Check = {
   transaction: { status: string; currency: string; totalCents: string | null; balanceCents: string | null;
-    checkoutId: string | null; sandboxAttribution: boolean;
+    checkoutId: string | null; sandboxAttribution: boolean; environmentAttribution?: boolean; environment?: "sandbox" | "live";
     adjustments: { available: boolean; truncated: boolean; records: {
       id: string; action: string; type: string; status: string; currency: string;
       totalCents: string | null; createdAt: string | null;
@@ -23,12 +23,12 @@ function amount(cents: string | null, currency: string) {
   return currency === "EUR" ? `${(Number(cents) / 100).toFixed(2)} EUR` : `${cents} minor units (${currency})`;
 }
 
-export default function AdminPaddleCheck({ transactionId }: { transactionId: string }) {
+export default function AdminPaddleCheck({ transactionId, environment = "sandbox" }: { transactionId: string; environment?: "sandbox" | "live" }) {
   const [result, setResult] = useState<Check | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const pending = useRef<AbortController | null>(null);
-  useEffect(() => () => { pending.current?.abort(); }, [transactionId]);
+  useEffect(() => () => { pending.current?.abort(); }, [transactionId, environment]);
 
   async function check() {
     pending.current?.abort();
@@ -38,7 +38,7 @@ export default function AdminPaddleCheck({ transactionId }: { transactionId: str
       const { data, error: sessionError } = await supabase.auth.getSession();
       if (controller.signal.aborted) return;
       if (sessionError || !data.session) throw new Error("Please log in again to check Paddle.");
-      const response = await fetch(`/api/admin/payment-review/transaction?id=${encodeURIComponent(transactionId)}`, {
+      const response = await fetch(`/api/admin/payment-review/transaction?id=${encodeURIComponent(transactionId)}&environment=${environment}`, {
         headers: { Authorization: `Bearer ${data.session.access_token}` }, cache: "no-store", signal: controller.signal,
       });
       const body = await response.json();
@@ -57,7 +57,7 @@ export default function AdminPaddleCheck({ transactionId }: { transactionId: str
       <dl><dt>Paddle status</dt><dd>{result.transaction.status}</dd>
         <dt>Paddle total</dt><dd>{amount(result.transaction.totalCents, result.transaction.currency)}</dd>
         <dt>Outstanding balance</dt><dd>{amount(result.transaction.balanceCents, result.transaction.currency)}</dd>
-        <dt>Sandbox attribution</dt><dd>{result.transaction.sandboxAttribution ? "Present" : "Missing"}</dd>
+        <dt>{environment === "live" ? "Live" : "Sandbox"} attribution</dt><dd>{(result.transaction.environmentAttribution ?? result.transaction.sandboxAttribution) ? "Present" : "Missing"}</dd>
         <dt>Paddle checkout ID</dt><dd>{result.transaction.checkoutId ?? "—"}</dd>
         <dt>Saved checkout</dt><dd>{result.checkout ? `${result.checkout.id} (${result.checkout.status})` : "No saved checkout"}</dd>
         <dt>Saved order</dt><dd>{result.order ? `${formatOrderNumber(result.order.order_number)} (${result.order.status})` : "No saved order"}</dd>
@@ -73,7 +73,7 @@ export default function AdminPaddleCheck({ transactionId }: { transactionId: str
       <p>These checks compare references and amounts. They do not resolve refunds or disputes.</p>
       <h3>Refunds and adjustments</h3>
       {!result.transaction.adjustments.available ? <p role="alert" className="admin-orders-error">
-        Adjustment details are unavailable. Check the Paddle sandbox dashboard before taking action.
+        Adjustment details are unavailable. Check the matching Paddle dashboard before taking action.
       </p> : result.transaction.adjustments.records.length === 0 ? <p>No adjustments returned by Paddle.</p> : <>
         {result.transaction.adjustments.truncated && <p role="alert">Showing the first 100 adjustments. Check Paddle for the remaining history.</p>}
         <div className="admin-order-items"><table>

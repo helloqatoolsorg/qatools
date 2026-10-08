@@ -9,18 +9,20 @@ function setup(options={}) {
   async maybeSingle(){
    if(table==='admin_users')return {data:options.nonAdmin?null:{user_id:'admin'},error:options.membershipError?{}:null};
    if(options.dbError)return {data:null,error:{message:'private SQL'}};
-   return {data:options.unknown?null:table==='orders'?{order_number:'sandbox-000001',status:'paid',currency:'EUR',total:5}:table==='sandbox_checkout_intents'?{id:intent,status:'completed',currency:'EUR',amount_cents:500}:null,error:null};
+   return {data:options.unknown?null:table==='orders'?{order_number:'sandbox-000001',status:'paid',currency:'EUR',total:5}:table.endsWith('_checkout_intents')?{id:intent,status:'completed',currency:'EUR',amount_cents:500}:null,error:null};
   }
  };return q;}};
  function load(file){if(cache.has(file))return cache.get(file);const mod={exports:{}};
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{
-   exports:mod.exports,URL,Date,AbortSignal,process:{env:{NEXT_PUBLIC_SUPABASE_URL:'https://example.invalid',NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'synthetic'}},
+   exports:mod.exports,URL,Date,AbortSignal,process:{env:{ PADDLE_ENVIRONMENT: options.environment ?? 'sandbox', PADDLE_API_KEY:options.noConfig?'':'pdl_sdbx_apikey_synthetic',NEXT_PUBLIC_PADDLE_CLIENT_TOKEN:'test_synthetic',PADDLE_WEBHOOK_SECRET:'synthetic-secret',PADDLE_LIVE_API_KEY:'pdl_live_apikey_synthetic',PADDLE_LIVE_CLIENT_TOKEN:'live_synthetic',PADDLE_LIVE_WEBHOOK_SECRET:'live-synthetic-secret',PADDLE_LIVE_CHECKOUT_ENABLED:options.disabled?'false':'true',NEXT_PUBLIC_SUPABASE_URL:'https://example.invalid',NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'synthetic'}},
    fetch:async(url,config)=>{network.push({url,config});if(options.timeout)throw Error('private transport');return {ok:!options.httpError,json:async()=>options.payload??fixture()};},
    require(name){if(name==='server-only')return {};if(name==='next/server')return {NextResponse:{json:Response.json}};
     if(name==='@/lib/paymentReviewDatabase')return {paymentReviewDatabase:db};if(name==='@/lib/supabaseAdmin')return {supabaseAdmin:db};
     if(name==='@/lib/requireAdmin')return load('src/lib/requireAdmin.ts');
     if(name==='@/lib/paymentComparison')return load('src/lib/paymentComparison.ts');
     if(name==='@/lib/paddleTransactionReview')return load('src/lib/paddleTransactionReview.ts');
+    if(name==='@/lib/paddleEnvironment'||name==='./paddleEnvironment'){return load('src/lib/paddleEnvironment.ts');}
+    if(name==='@/lib/paddleScope')return load('src/lib/paddleScope.ts');
     if(name==='./paddleSandbox')return {paddleSandboxApiConfig(){if(options.noConfig)throw Error('private configuration');return {apiBase:'https://sandbox-api.paddle.com',apiKey:'synthetic-server-secret'};}};
     if(name==='@supabase/supabase-js')return {createClient:()=>({auth:{getUser:async()=>({data:{user:options.invalidToken?null:{id:'admin'}},error:options.invalidToken?{}:null})}})};
     throw Error('Unexpected import '+name);}
@@ -99,4 +101,10 @@ test('large adjustment histories are bounded and visibly marked incomplete',asyn
  const p=fixture();p.data.adjustments=Array.from({length:101},(_,i)=>adjustment({id:'adj_'+String(i).padStart(26,'0')}));
  const history=(await (await setup({payload:p}).get()).json()).transaction.adjustments;
  assert.equal(history.available,true);assert.equal(history.records.length,100);assert.equal(history.truncated,true);
+});
+
+
+test('live transaction review binds the live provider and API without leaking customer data',async()=>{
+ const payload=fixture();payload.data.custom_data.qatools_environment='live';const s=setup({environment:'live',payload}),r=await s.get(),body=await r.json();assert.equal(r.status,200);assert.equal(body.environment,'live');assert.equal(body.transaction.environmentAttribution,true);assert.ok(s.calls.some(c=>c.column==='provider'&&c.value==='paddle'));assert.ok(s.calls.some(c=>c.table==='live_checkout_intents'));assert.equal(s.network[0].url,'https://api.paddle.com/transactions/'+txn+'?include=adjustments');assert.ok(!JSON.stringify(body).includes('secret@example'));
+ const unknown=setup({environment:'live',unknown:true});assert.equal((await unknown.get()).status,404);assert.equal(unknown.network.length,0);
 });

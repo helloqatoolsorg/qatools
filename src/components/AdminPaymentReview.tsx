@@ -18,6 +18,7 @@ function date(value: string | undefined) {
 }
 
 export default function AdminPaymentReview() {
+  const [environment, setEnvironment] = useState<"sandbox" | "live">("sandbox");
   const [kind, setKind] = useState("events");
   const [page, setPage] = useState(1);
   const [refresh, setRefresh] = useState(0);
@@ -34,7 +35,7 @@ export default function AdminPaymentReview() {
       try {
         const { data, error: sessionError } = await supabase.auth.getSession();
         if (sessionError || !data.session) throw new Error("Please log in again to view payment review.");
-        const response = await fetch(`/api/admin/payment-review?kind=${kind}&page=${page}`, {
+        const response = await fetch(`/api/admin/payment-review?kind=${kind}&page=${page}&environment=${environment}`, {
           headers: { Authorization: `Bearer ${data.session.access_token}` },
           cache: "no-store", signal: controller.signal,
         });
@@ -48,12 +49,13 @@ export default function AdminPaymentReview() {
     }
     load();
     return () => controller.abort();
-  }, [kind, page, refresh]);
+  }, [kind, page, refresh, environment]);
 
   return <section className="admin-orders" aria-labelledby="payment-review-heading">
     <div className="admin-orders-heading">
-      <div><span className="admin-orders-kicker">SANDBOX</span><h2 id="payment-review-heading">Payment review</h2></div>
+      <div><span className="admin-orders-kicker">{environment.toUpperCase()}</span><h2 id="payment-review-heading">Payment review</h2></div>
       <div className="admin-orders-controls">
+        <label>Environment <select value={environment} onChange={e => { setEnvironment(e.target.value as "sandbox" | "live"); setPage(1); setRecords([]); setLoading(true); }}><option value="sandbox">Sandbox</option><option value="live">Live</option></select></label>
         <label>Show <select value={kind} onChange={event => { setKind(event.target.value); setPage(1); }}>
           <option value="events">Payment events requiring review</option>
           <option value="checkouts">Unconfirmed checkout attempts</option>
@@ -63,15 +65,15 @@ export default function AdminPaymentReview() {
       </div>
     </div>
     <p>{kind === "refunds" ? "Approved full-refund events processed by qatools. Order numbers and purchase history are retained." : kind === "events"
-      ? "Compare these events with the matching Paddle sandbox transaction and order before taking action."
+      ? "Compare these events with the matching Paddle transaction in the selected environment and order before taking action."
       : "Shows creating or unknown attempts unchanged for at least five minutes. This does not confirm that payment failed. Check Paddle before retrying."}</p>
     <p>This view does not change payments, orders or ownership.</p>
     {loading ? <p role="status">Loading payment review…</p> : error ? <p role="alert" className="admin-orders-error">{error}</p> :
       records.length === 0 ? <p>No {kind === "refunds" ? "processed full refunds" : isEvent ? "payment events requiring review" : "unconfirmed checkout attempts"} found.</p> :
-      <div className="admin-orders-list">{records.map(record => <details key={record.event_id ?? record.id}>
+      <div className="admin-orders-list">{records.map(record => <details key={environment + ":" + (record.event_id ?? record.id)}>
         <summary><span>{record.event_type ?? record.status}</span>
           <span>{record.transaction_id ?? "No transaction recorded"}</span>
-          <span>{kind === "refunds" ? "refunded" : isEvent ? "review" : "unconfirmed"}</span><span>sandbox</span>
+          <span>{kind === "refunds" ? "refunded" : isEvent ? "review" : "unconfirmed"}</span><span>{environment}</span>
           <time>{date(record.received_at ?? record.updated_at)}</time></summary>
         <div className="admin-order-details"><dl>
           <dt>{isEvent ? "Event ID" : "Checkout ID"}</dt><dd>{record.event_id ?? record.id}</dd>
@@ -81,7 +83,7 @@ export default function AdminPaymentReview() {
             <dt>Customer ID</dt><dd>{record.user_id}</dd><dt>Item ID</dt><dd>{record.product_id}</dd>
             <dt>Created</dt><dd>{date(record.created_at)}</dd><dt>Updated</dt><dd>{date(record.updated_at)}</dd>
           </>}
-        </dl>{record.transaction_id && <AdminPaddleCheck transactionId={record.transaction_id} />}</div>
+        </dl>{record.transaction_id && <AdminPaddleCheck transactionId={record.transaction_id} environment={environment} />}</div>
       </details>)}</div>}
     <div className="admin-orders-paging">
       <button type="button" disabled={loading || page === 1} onClick={() => setPage(value => value - 1)}>PREVIOUS</button>

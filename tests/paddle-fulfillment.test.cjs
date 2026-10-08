@@ -10,7 +10,7 @@ function setup(options={}){
    if(name==='server-only')return {};if(name==='./paddleCartValidation')return load('src/lib/paddleCartValidation.ts');if(name==='node:crypto')return crypto;
    if(name==='next/server')return {NextResponse:{json:Response.json}};
    if(name==='@/lib/activationHttp')return load('src/lib/activationHttp.ts');
-   if(name==='@/lib/paddleSandbox')return {paddleSandboxConfig(){if(options.noConfig)throw Error('private');return {webhookSecret:'synthetic-secret'};}};
+   if(name==='@/lib/paddleEnvironment')return {paddleWebhookSecret(){if(options.noConfig)throw Error('private');return 'synthetic-secret';}};
    if(name==='@/lib/paddleWebhook')return load('src/lib/paddleWebhook.ts');
    if(name==='@/lib/paddleFulfillment')return load('src/lib/paddleFulfillment.ts');
    if(name==='@/lib/paddleWebhookDatabase')return {paddleWebhookDatabase:{rpc:async(name,args)=>{calls.push({name,args});return {data:{ok:!options.retry},error:options.dbError?{}:null};}}};

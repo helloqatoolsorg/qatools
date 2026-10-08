@@ -1,5 +1,5 @@
 type Transaction = { status: string; currency: string; totalCents: string | null;
-  balanceCents: string | null; checkoutId: string | null; sandboxAttribution: boolean };
+  balanceCents: string | null; checkoutId: string | null; sandboxAttribution: boolean; environment?: "sandbox" | "live"; environmentAttribution?: boolean };
 type Order = { currency: string; total: number | string };
 type Checkout = { id: string; currency: string; amount_cents: number; charged_amount_cents?: number | null };
 export type PaymentComparison = { label: string; state: "match" | "mismatch" | "unavailable" }[];
@@ -14,7 +14,7 @@ export function comparePayment(transaction: Transaction, order: Order | null, ch
   const compare = (label: string, actual: string | null, expected: string | null) => ({ label,
     state: actual === null || expected === null ? "unavailable" as const : actual === expected ? "match" as const : "mismatch" as const });
   const result: PaymentComparison = [
-    { label: "Sandbox attribution", state: transaction.sandboxAttribution ? "match" : "mismatch" },
+    { label: transaction.environment === "live" ? "Live attribution" : "Sandbox attribution", state: (transaction.environmentAttribution ?? transaction.sandboxAttribution) ? "match" : "mismatch" },
     compare("Checkout reference", transaction.checkoutId, checkout?.id ?? null),
     compare("Order currency", transaction.currency, order?.currency ?? null),
     compare("Checkout currency", transaction.currency, checkout?.currency ?? null),

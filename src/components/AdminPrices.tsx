@@ -10,7 +10,7 @@ type Setup = { status: string; paddle_product_id: string | null; price_id: strin
 export default function AdminPrices({ products }: { products: Product[] }) {
   const [id, setId] = useState("");
   return <section className="admin-orders">
-    <div className="admin-orders-heading"><div><span className="admin-orders-kicker">PAYMENTS · SANDBOX</span><h2>Tool prices</h2></div></div>
+    <div className="admin-orders-heading"><div><span className="admin-orders-kicker">PADDLE PRICES</span><h2>Tool prices</h2></div></div>
     <p className="user-muted">Choose a paid tool to set up its Paddle price using the website price, including tax.</p>
     <div className="admin-orders-controls"><label>Item<select value={id} onChange={e => setId(e.target.value)}><option value="">Choose an item</option>{products.map(p => <option className={p.published ? "publication-option-published" : "publication-option-unpublished"} key={p.id} value={p.id}>{p.name}</option>)}</select></label></div>
     {id && <PriceEditor key={id} productId={Number(id)} />}
@@ -18,6 +18,7 @@ export default function AdminPrices({ products }: { products: Product[] }) {
 }
 export function PriceEditor({ productId }: { productId: number }) {
   const [mapping, setMapping] = useState<Mapping | null>(null), [tool, setTool] = useState<Tool | null>(null), [setup, setSetup] = useState<Setup | null>(null);
+  const [environment, setEnvironment] = useState<"sandbox" | "live" | null>(null);
   const [loaded, setLoaded] = useState(false), [price, setPrice] = useState(""), [product, setProduct] = useState("");
   const [enabled, setEnabled] = useState(true), [busy, setBusy] = useState(false), [message, setMessage] = useState<string | null>(null), [error, setError] = useState<string | null>(null);
   async function authorizedFetch(url: string, body?: object) {
@@ -32,6 +33,8 @@ export function PriceEditor({ productId }: { productId: number }) {
   }
   async function load() {
     const data = await authorizedFetch("/api/admin/prices/create?productId=" + productId);
+    if (data.environment !== "sandbox" && data.environment !== "live") throw new Error("Reload the website to manage Paddle prices.");
+    setEnvironment(data.environment);
     const found = data.mapping as Mapping | null, job = data.setup as Setup | null;
     setMapping(found); setTool(data.product); setSetup(job);
     setPrice(found?.price_id ?? job?.price_id ?? ""); setProduct(found?.paddle_product_id ?? job?.paddle_product_id ?? "");
@@ -44,8 +47,8 @@ export function PriceEditor({ productId }: { productId: number }) {
       if (action === "load") { await load(); return; }
       if (action === "create" && !tool) return;
       const data = action === "create"
-        ? await authorizedFetch("/api/admin/prices/create", { productId, expectedSlug: tool!.slug, expectedAmount: Math.round(Number(tool!.price_eur) * 100) })
-        : await authorizedFetch("/api/admin/prices", { productId, priceId: price, paddleProductId: product, enabled, expectedPrice: mapping?.price_id ?? "", expectedEnabled: mapping?.enabled ?? false });
+        ? await authorizedFetch("/api/admin/prices/create", { productId, expectedEnvironment: environment, expectedSlug: tool!.slug, expectedAmount: Math.round(Number(tool!.price_eur) * 100) })
+        : await authorizedFetch("/api/admin/prices", { productId, expectedEnvironment: environment, priceId: price, paddleProductId: product, enabled, expectedPrice: mapping?.price_id ?? "", expectedEnabled: mapping?.enabled ?? false });
       await load(); setMessage(data.message);
     } catch (reason) {
       const text = reason instanceof Error ? reason.message : "Unable to manage price.";
@@ -57,8 +60,9 @@ export function PriceEditor({ productId }: { productId: number }) {
   return <div>
     <button type="button" disabled={busy} onClick={() => request("load")}>{loaded ? "REFRESH PRICE" : "LOAD PRICE"}</button>
     {loaded && tool && <>
+      <p>Paddle {environment}</p>
       <PublicationState published={tool.published} /><p>{tool.slug} · {tool.price_eur === null ? "Price not set" : Number(tool.price_eur).toFixed(2) + " EUR including tax"} · One-time purchase</p>
-      {mapping ? <p role="status">{mapping.enabled ? "Paddle checkout enabled." : "Paddle checkout disabled."}</p> : <>
+      {mapping ? <p role="status">{mapping.enabled ? "Paddle price enabled." : "Paddle price disabled."}</p> : <>
         <button type="button" disabled={busy || !canCreate} onClick={() => request("create")}>{busy ? "PLEASE WAIT…" : "SET UP PADDLE PRICE"}</button>
         {setup && <p className="user-muted">A setup attempt is recorded. Connect the existing IDs below; check Paddle if an ID is missing.</p>}
         {!tool.published && <p className="user-muted">Price setup does not publish this draft.</p>}

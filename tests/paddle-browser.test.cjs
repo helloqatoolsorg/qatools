@@ -45,3 +45,11 @@ test('browser completion only requests ownership refresh and ignores other trans
 test('changed display total closes checkout without starting fulfillment or altering ownership',()=>{
  const c=component();c.event({...matching,data:{...matching.data,totals:{total:6}}});assert.equal(c.closed,1);assert.equal(c.refs[0].current,null);assert.equal(c.refreshes,0);assert.deepEqual(c.writes,[]);assert.match(c.states[4],/price changed/);
 });
+
+
+test('live SDK never selects sandbox, initializes once and refuses cross-environment reuse',async()=>{
+ let initialized=0,options;const paddle={Environment:{set(){throw Error('Live must not set sandbox mode');}},Initialize:value=>{options=value;initialized++;},Checkout:{}};
+ const api=load('src/lib/paddleBrowser.ts',{window:{Paddle:paddle}});await assert.rejects(api.loadPaddle('test_synthetic','live'));assert.equal(initialized,0);
+ await Promise.all([api.loadPaddle('live_synthetic','live'),api.loadPaddle('live_synthetic','live')]);assert.equal(initialized,1);assert.equal(Object.keys(options.pwCustomer).length,0);assert.equal(options.token,'live_synthetic');
+ await assert.rejects(api.loadPaddle('test_synthetic','sandbox'));await assert.rejects(api.loadPaddle('live_other','live'));assert.equal(initialized,1);
+});

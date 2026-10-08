@@ -1,5 +1,5 @@
 import "server-only";
-import { paddleSandboxApiConfig } from "./paddleSandbox";
+import { paddleApiConfig, type PaddleEnvironment } from "./paddleEnvironment";
 
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value)
   ? value as Record<string, unknown> : {};
@@ -31,9 +31,10 @@ function adjustmentHistory(value: unknown, transactionId: string) {
   return { available: true, truncated: value.length > 100, records };
 }
 
-export async function readSandboxTransaction(transactionId: string) {
+export function readSandboxTransaction(transactionId: string) { return readPaddleTransaction(transactionId, "sandbox"); }
+export async function readPaddleTransaction(transactionId: string, environment: PaddleEnvironment) {
   if (!/^txn_[a-z0-9]{26}$/.test(transactionId)) throw new Error("Invalid transaction.");
-  const config = paddleSandboxApiConfig();
+  const config = paddleApiConfig(environment);
   const response = await fetch(`${config.apiBase}/transactions/${transactionId}?include=adjustments`, {
     method: "GET", headers: { Authorization: `Bearer ${config.apiKey}` },
     cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10000),
@@ -53,6 +54,6 @@ export async function readSandboxTransaction(transactionId: string) {
   return { id: transactionId, status: txn.status, currency: txn.currency_code,
     totalCents: totals.currency_code === txn.currency_code ? cents(totals.grand_total) : null,
     balanceCents: totals.currency_code === txn.currency_code ? cents(totals.balance) : null,
-    checkoutId, sandboxAttribution: custom.qatools_environment === "sandbox",
+    environment, environmentAttribution: custom.qatools_environment === environment, checkoutId, sandboxAttribution: custom.qatools_environment === "sandbox",
     adjustments: adjustmentHistory(txn.adjustments, transactionId) };
 }

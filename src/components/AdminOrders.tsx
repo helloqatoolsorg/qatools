@@ -88,8 +88,8 @@ export default function AdminOrders() {
               <dt>Total</dt><dd>{money(order.total, order.currency)}</dd>
               {order.provider_created_at && <><dt>Provider date</dt><dd>{date(order.provider_created_at)}</dd></>}
             </dl>
-            {order.provider === "paddle_sandbox" && order.provider_transaction_id &&
-              <AdminPaddleCheck transactionId={order.provider_transaction_id} />}
+            {["paddle_sandbox", "paddle"].includes(order.provider) && order.provider_transaction_id &&
+              <AdminPaddleCheck transactionId={order.provider_transaction_id} environment={order.provider === "paddle" ? "live" : "sandbox"} />}
             {order.items.length ? <div className="admin-order-items"><table>
               <thead><tr><th>Item</th><th>Quantity</th><th>Unit price</th><th>Line total</th></tr></thead>
               <tbody>{order.items.map(item => <tr key={item.id}><td>{item.product?.name ?? `Product #${item.product_id}`}</td>

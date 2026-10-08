@@ -233,6 +233,50 @@ test('actual PostgreSQL bundle sources, pinned checkout, overlapping refunds and
  const projectAgain=await purchase([200],203,projectBuyer);await refund(ownedProject,204);assert.equal(await state(200,projectBuyer),'active');await refund(ownedTool,205);assert.equal(await state(1,projectBuyer),'active');await refund(projectAgain,206);assert.equal(await state(1,projectBuyer),'refunded');
  const grantUser='00000000-0000-4000-8000-000000000202';await db.query('INSERT INTO auth.users VALUES($1,now(),null)',[grantUser]);await db.query("INSERT INTO entitlements(user_id,product_id,source,status) VALUES($1,200,'admin','active')",[grantUser]);assert.equal(await state(2,grantUser),'active');
  for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'set_assembled_project_download(uuid,bigint,text,text,text,jsonb,text)','EXECUTE') allowed",[role])).rows[0].allowed,false);
+
+ // The new live ledger starts empty and preserves sandbox rows and bundle snapshots.
+ const sandboxCount=(await db.query('SELECT count(*)::int n FROM sandbox_payment_events')).rows[0].n;
+ await db.exec(read('20261008130000_live_paddle_flows.sql'));
+ assert.equal((await db.query('SELECT count(*)::int n FROM live_product_prices')).rows[0].n,0);
+ assert.equal((await db.query('SELECT count(*)::int n FROM sandbox_payment_events')).rows[0].n,sandboxCount);
+ const liveChecks=(await db.query('SELECT live_product_publication_checks($1,10) r',[admin])).rows[0].r;assert.ok(liveChecks.missing.includes('Verified Paddle price'));
+ await db.exec('UPDATE products SET price_eur=7 WHERE id=2');
+ const job=(await db.query('SELECT reserve_live_catalog_setup($1,2,$2,700) r',[admin,'two'])).rows[0].r;assert.equal(job.ok,true);assert.equal(job.created,true);
+ const attempt=job.job.attempt_id,livePro='pro_'+String(2).padStart(26,'0'),livePri='pri_'+String(2).padStart(26,'0');
+ assert.equal((await db.query("SELECT advance_live_catalog_setup($1,$2,'reserved','product_ready',$3,null) r",[admin,attempt,livePro])).rows[0].r,true);
+ assert.equal((await db.query("SELECT advance_live_catalog_setup($1,$2,'product_ready','price_ready',$3,$4) r",[admin,attempt,livePro,livePri])).rows[0].r,true);
+ assert.equal((await db.query('SELECT complete_live_catalog_setup($1,$2) r',[admin,attempt])).rows[0].r,true);
+ assert.equal((await db.query('SELECT reserve_live_catalog_setup($1,2,$2,700) r',[admin,'two'])).rows[0].r.code,'mapped');
+ const liveBuyer='00000000-0000-4000-8000-000000000303';await db.query('INSERT INTO auth.users VALUES($1,now(),null)',[liveBuyer]);
+ for(const id of [1,10])await db.query("SELECT set_live_product_price($1,$2,'',false,$3,$4,true)",[admin,id,'pri_'+String(id).padStart(26,'0'),'pro_'+String(id).padStart(26,'0')]);
+ async function livePurchase(ids,n){
+  const rows=(await db.query('SELECT id,slug,price_eur FROM products WHERE id=ANY($1::bigint[]) ORDER BY id',[ids])).rows;
+  const lines=rows.map(p=>({productId:Number(p.id),slug:p.slug,priceId:'pri_'+String(p.id).padStart(26,'0'),paddleProductId:'pro_'+String(p.id).padStart(26,'0'),amount:Number(p.price_eur)*100}));
+  const r=(await db.query('SELECT reserve_live_cart($1,$2) r',[liveBuyer,lines])).rows[0].r;assert.equal(r.ok,true);assert.equal(r.intent.version,'cart-v1');
+  const transaction='txn_'+String(n).padStart(26,'0');assert.equal((await db.query('SELECT finish_live_checkout($1,$2,$3) r',[liveBuyer,r.intent.id,transaction])).rows[0].r,true);
+  const total=lines.reduce((v,i)=>v+i.amount,0),event={environment:'live',eventId:'evt_'+String(n).padStart(26,'0'),type:'transaction.completed',txnId:transaction,intentId:r.intent.id,valid:true,checkoutVersion:'cart-v1',items:lines.map((l,i)=>({...l,providerItemId:'txnitm_'+String(n*100+i).padStart(26,'0')})),total,subtotal:total,occurredAt:'2026-10-08T12:00:00Z',eventHash:String(n).padStart(64,'0')};
+  assert.equal((await db.query('SELECT process_live_payment_event($1,$2) r',[{...event,environment:'sandbox'},'a'.repeat(64)])).rows[0].r.ok,false);
+  assert.equal((await db.query('SELECT process_live_payment_event($1,$2) r',[event,'a'.repeat(64)])).rows[0].r.outcome,'fulfilled');
+  assert.equal((await db.query('SELECT process_live_payment_event($1,$2) r',[event,'b'.repeat(64)])).rows[0].r.outcome,'fulfilled');
+  const simulated={...event,eventId:'ntfsimevt_'+String(n).padStart(26,'0')};
+  assert.equal((await db.query('SELECT process_live_payment_event($1,$2) r',[simulated,'a'.repeat(64)])).rows[0].r.outcome,'ignored');
+  assert.equal((await db.query('SELECT process_live_payment_event($1,$2) r',[{...event,eventHash:'f'.repeat(64)},'a'.repeat(64)])).rows[0].r.ok,false);
+  return {transaction,total,event};
+ }
+ // Same transaction reference as an earlier sandbox purchase stays independently bound.
+ const liveTool=await livePurchase([1],1),liveBundle=await livePurchase([10],2);
+ assert.equal((await db.query("SELECT count(*)::int n FROM orders WHERE provider_transaction_id=$1",[liveTool.transaction])).rows[0].n,2);
+ assert.equal((await db.query("SELECT bundled_tool_ids FROM order_items i JOIN orders o ON o.id=i.order_id WHERE o.provider='paddle' AND i.product_id=10")).rows[0].bundled_tool_ids.length,2);
+ async function liveRefund(p,n){const e={environment:'live',eventId:'evt_'+String(n).padStart(26,'0'),type:'adjustment.updated',refundId:'adj_'+String(n).padStart(26,'0'),txnId:p.transaction,fullRefund:true,refundTotal:p.total,occurredAt:'2026-10-08T13:00:00Z',eventHash:String(n).padStart(64,'0')};assert.equal((await db.query('SELECT process_live_payment_event($1,$2) r',[e,'b'.repeat(64)])).rows[0].r.outcome,'refunded');}
+ await liveRefund(liveBundle,304);assert.equal(await state(1,liveBuyer),'active');assert.equal(await state(2,liveBuyer),'refunded');
+ const liveAgain=await livePurchase([10],305);await liveRefund(liveBundle,306);assert.equal(await state(10,liveBuyer),'active');await liveRefund(liveAgain,307);assert.equal(await state(1,liveBuyer),'active');
+ assert.equal((await db.query('SELECT count(*)::int n FROM sandbox_payment_events')).rows[0].n,sandboxCount);
+ for(const role of ['anon','authenticated']){
+  for(const table of ['live_product_prices','live_catalog_setups','live_checkout_intents','live_payment_events'])assert.equal((await db.query("SELECT has_table_privilege($1,$2,'SELECT') allowed",[role,table])).rows[0].allowed,false);
+  for(const fn of ['process_live_payment_event(jsonb,text)','reserve_live_cart(uuid,jsonb)','set_live_product_price(uuid,bigint,text,boolean,text,text,boolean)'])assert.equal((await db.query("SELECT has_function_privilege($1,$2,'EXECUTE') allowed",[role,fn])).rows[0].allowed,false);
+ }
+ assert.equal((await db.query("SELECT has_function_privilege('service_role','process_cart_live_payment_event(jsonb,text)','EXECUTE') allowed")).rows[0].allowed,false);
+
  }finally{await db.close();}
 });
 

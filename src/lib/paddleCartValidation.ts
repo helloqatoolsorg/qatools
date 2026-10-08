@@ -1,14 +1,15 @@
+import type { PaddleEnvironment } from "./paddleEnvironment";
 import type { CartLine } from "./paddleCartDatabase";
 type Value = Record<string, unknown>;
 export const cartRecord = (v: unknown): Value => v && typeof v === "object" && !Array.isArray(v) ? v as Value : {};
 export const cartCents = (v: unknown): number | null => typeof v === "string" && /^(0|[1-9][0-9]{0,8})$/.test(v) ? Number(v) : null;
-export function validateCartTransaction(value: unknown, intentId: string, expected?: CartLine[], paid = false) {
+export function validateCartTransaction(value: unknown, intentId: string, expected?: CartLine[], paid = false, environment: PaddleEnvironment = "sandbox") {
   const t = cartRecord(value), custom = cartRecord(t.custom_data), totals = cartRecord(cartRecord(t.details).totals);
   const items = Array.isArray(t.items) ? t.items : [], lines = cartRecord(t.details).line_items;
   if (typeof t.id !== "string" || !/^txn_[a-z0-9]{26}$/.test(t.id) ||
       !(paid ? ["completed"] : ["draft", "ready"]).includes(String(t.status)) || t.collection_mode !== "automatic" ||
       t.currency_code !== "EUR" || t.subscription_id !== null || t.discount_id !== null ||
-      custom.qatools_environment !== "sandbox" || custom.qatools_checkout_version !== "cart-v1" || custom.qatools_checkout_id !== intentId ||
+      custom.qatools_environment !== environment || custom.qatools_checkout_version !== "cart-v1" || custom.qatools_checkout_id !== intentId ||
       items.length < 1 || items.length > 20 || !Array.isArray(lines) || lines.length !== items.length) throw new Error("Unexpected checkout.");
   const normalized: { priceId: string; paddleProductId: string; amount: number; chargedAmount: number; providerItemId: string }[] = [];
   const business = typeof t.business_id === "string" && /^biz_[a-z0-9]{26}$/.test(t.business_id);

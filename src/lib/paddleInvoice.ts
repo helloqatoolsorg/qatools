@@ -1,9 +1,13 @@
 import "server-only";
-import { paddleSandboxApiConfig } from "./paddleSandbox";
+import { paddleApiConfig, type PaddleEnvironment } from "./paddleEnvironment";
 
 export async function readSandboxInvoice(transactionId: string): Promise<string> {
+  return readPaddleInvoice(transactionId, "sandbox");
+}
+
+export async function readPaddleInvoice(transactionId: string, environment: PaddleEnvironment): Promise<string> {
   if (!/^txn_[a-z0-9]{26}$/.test(transactionId)) throw new Error("Invalid transaction.");
-  const config = paddleSandboxApiConfig();
+  const config = paddleApiConfig(environment);
   const response = await fetch(config.apiBase + "/transactions/" + transactionId + "/invoice?disposition=attachment", {
     headers: { Authorization: "Bearer " + config.apiKey },
     cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10000),

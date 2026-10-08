@@ -1821,7 +1821,7 @@ export default function UserPage() {
                         >
                           <strong>
                             {productNames}
-                            {order.provider === "paddle_sandbox" &&
+                            {["paddle_sandbox", "paddle"].includes(order.provider ?? "") &&
                               ["paid", "refunded", "partially_refunded"].includes(order.status) &&
                               Number(order.total) > 0 && order.provider_transaction_id && (
                                 <OrderInvoice orderId={order.id} />

@@ -1,5 +1,6 @@
 import "server-only";
-import { paddleSandboxApiConfig } from "./paddleSandbox";
+import { paddleApiConfig, paddleEnvironment, type PaddleEnvironment } from "./paddleEnvironment";
+import { paddleScope } from "./paddleScope";
 import { paddleCartDatabase, type PriceMapping, type CartLine } from "./paddleCartDatabase";
 export type CartProduct = { id: number; slug: string; price_eur: number | string | null; published: boolean };
 export class CartPriceMismatchError extends Error {}
@@ -11,16 +12,16 @@ export function euroCents(value: number | string | null): number {
   if (cents <= 0 || cents > 99999999) throw new Error("Invalid paid item price.");
   return cents;
 }
-export async function validateCartPrice(product: CartProduct, mapping: PriceMapping): Promise<CartLine> {
+export async function validateCartPrice(product: CartProduct, mapping: PriceMapping, environment: PaddleEnvironment = paddleEnvironment()): Promise<CartLine> {
   if (!product.published) throw new Error("Item unavailable.");
-  return verifyCatalogPrice(product,mapping);
+  return verifyCatalogPrice(product,mapping,environment);
 }
 // Admin setup can verify a saved draft without enabling customer checkout.
-export async function verifyCatalogPrice(product: CartProduct, mapping: PriceMapping): Promise<CartLine> {
+export async function verifyCatalogPrice(product: CartProduct, mapping: PriceMapping, environment: PaddleEnvironment = paddleEnvironment()): Promise<CartLine> {
   const amount = euroCents(product.price_eur);
   if (product.id !== mapping.product_id || !mapping.enabled ||
       !/^pri_[a-z0-9]{26}$/.test(mapping.price_id) || !/^pro_[a-z0-9]{26}$/.test(mapping.paddle_product_id)) throw new Error("Item unavailable.");
-  const config = paddleSandboxApiConfig();
+  const config = paddleApiConfig(environment);
   const response = await fetch(config.apiBase + "/prices/" + mapping.price_id + "?include=product", {
     headers: { Authorization: "Bearer " + config.apiKey }, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10000),
   });
@@ -35,8 +36,8 @@ export async function verifyCatalogPrice(product: CartProduct, mapping: PriceMap
   }
   return { productId: product.id, slug: product.slug, amount, priceId: mapping.price_id, paddleProductId: mapping.paddle_product_id };
 }
-export async function cartMappings() {
-  const result = await paddleCartDatabase.from("sandbox_product_prices").select("product_id,price_id,paddle_product_id,enabled");
+export async function cartMappings(environment: PaddleEnvironment = paddleEnvironment()) {
+  const result = await paddleCartDatabase.from(paddleScope(environment).prices).select("product_id,price_id,paddle_product_id,enabled");
   if (result.error) throw new Error("Price mapping unavailable.");
   return result.data ?? [];
 }

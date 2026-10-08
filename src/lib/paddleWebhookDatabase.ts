@@ -12,4 +12,8 @@ type WebhookDatabase = Database & { public: Database["public"] & {
     };
   };
 } };
+type LiveWebhookDatabase = WebhookDatabase & { public: WebhookDatabase["public"] & {
+  Functions: { process_live_payment_event: WebhookDatabase["public"]["Functions"]["process_sandbox_payment_event"] };
+} };
+export const paddleLiveWebhookDatabase = supabaseAdmin as SupabaseClient<LiveWebhookDatabase>;
 export const paddleWebhookDatabase = supabaseAdmin as SupabaseClient<WebhookDatabase>;

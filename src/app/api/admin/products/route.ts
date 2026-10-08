@@ -1,3 +1,5 @@
+import { paddleEnvironment } from "@/lib/paddleEnvironment";
+import { paddleScope } from "@/lib/paddleScope";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/requireAdmin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -64,9 +66,11 @@ export async function PATCH(request: Request) {
     const raw = await readText(request, 1000);
     if (raw === null) return json({ error: "Invalid publishing request." }, 400);
     let body; try { body = JSON.parse(raw); } catch { return json({ error: "Invalid publishing request." }, 400); }
-    if (!body || typeof body !== "object" || Object.keys(body).some(k => !["productId", "expectedUpdatedAt"].includes(k))
+    if (!body || typeof body !== "object" || Object.keys(body).some(k => !["productId", "expectedUpdatedAt", "expectedEnvironment"].includes(k))
       || !Number.isSafeInteger(body.productId) || body.productId < 1 || typeof body.expectedUpdatedAt !== "string" || !Number.isFinite(Date.parse(body.expectedUpdatedAt))) return json({ error: "Invalid publishing request." }, 400);
-    const checks = await supabaseAdmin.rpc("product_publication_checks",{p_admin_id:auth.user.id,p_product_id:body.productId});
+    const environment=paddleEnvironment(), scope=paddleScope(environment);
+    if ((environment === "live" || body.expectedEnvironment !== undefined) && body.expectedEnvironment !== environment) return json({error:"Paddle environment changed. Check readiness again."},409);
+    const checks = await paddleCartDatabase.rpc(scope.checks,{p_admin_id:auth.user.id,p_product_id:body.productId});
     if (checks.error || !checks.data) return json({error:"Unable to check publication requirements."},503);
     if (!checks.data.ready) return json({error:"Complete the missing publication requirements.",missing:checks.data.missing},400);
     const product = await supabaseAdmin.from("products").select("id,slug,price_eur,published,updated_at").eq("id",body.productId).maybeSingle();
@@ -74,12 +78,12 @@ export async function PATCH(request: Request) {
     if (Date.parse(product.data.updated_at) !== Date.parse(body.expectedUpdatedAt)) return json({error:"This draft changed. Reload before publishing."},409);
     let priceId: string | null = null;
     if (Number(product.data.price_eur)>0) {
-      const mapping=await paddleCartDatabase.from("sandbox_product_prices").select("product_id,price_id,paddle_product_id,enabled").eq("product_id",body.productId).maybeSingle();
+      const mapping=await paddleCartDatabase.from(scope.prices).select("product_id,price_id,paddle_product_id,enabled").eq("product_id",body.productId).maybeSingle();
       if(mapping.error || !mapping.data) return json({error:"Set up and verify the Paddle price before publishing."},409);
-      try { await verifyCatalogPrice(product.data,mapping.data); } catch { return json({error:"The Paddle price no longer matches this draft. Refresh its price setup."},409); }
+      try { await verifyCatalogPrice(product.data,mapping.data,environment); } catch { return json({error:"The Paddle price no longer matches this draft. Refresh its price setup."},409); }
       priceId=mapping.data.price_id;
     }
-    const { data, error } = await supabaseAdmin.rpc("publish_product_draft", { p_admin_id: auth.user.id, p_product_id: body.productId, p_expected_updated_at: body.expectedUpdatedAt, p_expected_price_id: priceId });
+    const { data, error } = await paddleCartDatabase.rpc(scope.publish, { p_admin_id: auth.user.id, p_product_id: body.productId, p_expected_updated_at: body.expectedUpdatedAt, p_expected_price_id: priceId });
     if (error?.code === "22023") return json({ error: "Complete the publication checklist before publishing." }, 400);
     if (error?.code === "40001") return json({ error: "This draft changed or was already published. Reload it first." }, 409);
     if (error) return json({ error: "Unable to publish tool." }, 503);
