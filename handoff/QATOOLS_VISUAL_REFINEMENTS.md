@@ -28,3 +28,11 @@ Removed duplicate React hover state from products and likes, plus legacy uncondi
 Added OutlineIcon as the shared thin-stroke cart/account geometry across customer and admin headers. Product cart indicators use the same cart icon. Hamburger lines are 1px, with corresponding open-state offsets corrected.
 
 Validation: TypeScript, CSS parsing and diff whitespace checks passed. Run the production build in normal CMD before committing. After deployment, verify repeated hover/exit on products, likes and the tool page; purchased buttons remain green and disabled. No migration is required.
+
+## Account presentation — 2026-10-08
+
+Dashboard replaces MY qatools in the sidebar and uses a prominent button, as does Log out. The overview title is the saved user name (Dashboard fallback when absent). Details are ordered: email, active machine, license key, activation date, purchased tools.
+
+Dashboard and License Data share one key component: a clear masked/read-only field, Reveal/Hide and Copy controls. Removed machine-limit and obsolete integration/explanatory paragraphs. Replacement stays available under Manage key with its existing confirmation; authenticated key endpoints, clipboard fallback and reveal handling are preserved. Active status is green. No database changes.
+
+Validation: TypeScript, CSS parsing and whitespace checks passed. Run npm run build in normal CMD and check account presentation at desktop/mobile widths after deployment.

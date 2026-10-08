@@ -949,7 +949,7 @@ export default function UserPage() {
           ================================================ */}
 
           <aside className="user-sidebar">
-            <button type="button" className="user-title overview-link" onClick={() => changeSection("overview")}>MY qatools</button>
+            <button type="button" className={`user-title overview-link ${activeSection === "overview" ? "active" : ""}`} aria-current={activeSection === "overview" ? "page" : undefined} onClick={() => changeSection("overview")}>Dashboard</button>
 
             <nav>
               <button
@@ -1043,15 +1043,14 @@ export default function UserPage() {
 
           <section className="user-content">
             {activeSection === "overview" && <section className="user-section active">
-              <div className="user-section-head"><h1>Account overview</h1></div>
+              <div className="user-section-head"><h1>{profileLoading ? "Loading…" : profileName || "Dashboard"}</h1></div>
               <dl className="account-overview">
-                <div><dt>User name</dt><dd>{profileLoading ? "Loading…" : profileName || "—"}</dd></div>
                 <div><dt>Email</dt><dd>{user.email || "—"}</dd></div>
                 <div><dt>Active machine</dt><dd>{entitlementsLoading ? "Loading…" : accountActivations.find(a => a.status === "active")?.machine_id || "Not activated"}</dd></div>
+                <div className="overview-license"><dt>License key</dt><dd><AccountActivationKey key={user.id} embedded /></dd></div>
                 <div><dt>Activation date</dt><dd>{entitlementsLoading ? "Loading…" : formatDate(accountActivations.find(a => a.status === "active")?.activated_at ?? null)}</dd></div>
                 <div><dt>Purchased tools</dt><dd>{entitlementsLoading ? "Loading…" : entitlements.filter(e => e.status === "active" && ["purchase","bundle"].includes(e.source) && e.products?.product_type === "tool").length}</dd></div>
               </dl>
-              <AccountActivationKey key={user.id} />
             </section>}
 
             {/* ==============================================

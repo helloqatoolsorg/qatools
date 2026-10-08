@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 
 type Credential = { id: string; key_prefix: string; created_at: string; updated_at: string; reveal_available: boolean };
 
-export default function AccountActivationKey() {
+export default function AccountActivationKey({ embedded = false }: { embedded?: boolean }) {
   const [credential, setCredential] = useState<Credential | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,7 +56,7 @@ export default function AccountActivationKey() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Unable to create an activation key.");
       setCredential(result.credential); setConfirming(false);
-      setMessage("Your key is ready. You can reveal or copy it here whenever you need it.");
+      setMessage("License key ready.");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The response was interrupted. Refresh to check the key status before trying again.");
     } finally { inFlight.current = false; setBusy(false); }
@@ -76,7 +76,7 @@ export default function AccountActivationKey() {
       if (!response.ok) throw new Error(result.error ?? "Unable to retrieve your activation key.");
       if (action === "reveal") { setSecret(result.key); }
       else {
-        try { await navigator.clipboard.writeText(result.key); setMessage("Activation key copied."); }
+        try { await navigator.clipboard.writeText(result.key); setMessage("License key copied."); }
         catch { setSecret(result.key); setMessage("Select the revealed key and copy it manually."); }
       }
     } catch (reason) {
@@ -85,31 +85,31 @@ export default function AccountActivationKey() {
     } finally { inFlight.current = false; setBusy(false); }
   }
 
-  return <div className="profile-form password-form" aria-label="Account activation key">
-    <p>Machine limit: 1 active computer per account, shared by all your owned tools. Contact support to move your activation to another computer.</p>
-    <h2>Account activation key</h2>
-    <p className="user-muted">One key for all tools you own, independent of the Houdini version. You can reveal or copy it here whenever you need it.</p>
-    <p className="user-muted">You can prepare your key now. Activation inside Houdini is coming in the next integration step.</p>
-    {loading ? <p role="status">Loading key status...</p> : <>
-      {credential && <p>Current key: <code>{credential.key_prefix}…</code></p>}
-      {credential && !credential.reveal_available && <p className="user-muted">This older key cannot be revealed. Replace it once to enable Reveal and Copy. Your owned tools and assigned computer will be kept.</p>}
-      {secret && <label>Your activation key
-        <input type="text" readOnly value={secret} autoComplete="off" spellCheck={false} onFocus={event => event.target.select()} />
-      </label>}
-      {credential?.reveal_available && <div>
-        <button type="button" disabled={busy || Boolean(error)} onClick={() => secret ? setSecret(null) : accessKey("reveal")}>{secret ? "HIDE KEY" : "REVEAL KEY"}</button>
-        <button type="button" disabled={busy || Boolean(error)} onClick={() => accessKey("copy")}>COPY KEY</button>
+  return <div className={`account-license-key ${embedded ? "embedded" : ""}`} aria-label="License key">
+    {!embedded && <h2>License key</h2>}
+    {loading ? <p role="status">Loading license key…</p> : <>
+      <input className="license-key-value" aria-label="License key" type="text" readOnly
+        value={secret ?? (credential ? `${credential.key_prefix}••••••••••••` : "No license key yet")}
+        autoComplete="off" spellCheck={false} onFocus={event => event.target.select()} />
+      {credential?.reveal_available && <div className="license-key-actions">
+        <button type="button" disabled={busy || Boolean(error)} onClick={() => secret ? setSecret(null) : accessKey("reveal")}>{secret ? "Hide key" : "Reveal key"}</button>
+        <button type="button" disabled={busy || Boolean(error)} onClick={() => accessKey("copy")}>Copy key</button>
       </div>}
-      {!error && !confirming && <button type="button" disabled={busy} onClick={() => credential ? setConfirming(true) : create()}>
-        {busy ? "PLEASE WAIT..." : credential ? "REPLACE ACTIVATION KEY" : "CREATE ACTIVATION KEY"}
-      </button>}
-      {confirming && <div>
-        <p>Replace your account activation key? The old key will stop working for online activation. Your owned tools and assigned computer will be kept. Existing offline licenses are not immediately disabled.</p>
-        <button type="button" disabled={busy} onClick={create}>{busy ? "REPLACING..." : "CONFIRM REPLACEMENT"}</button>
-        <button type="button" disabled={busy} onClick={() => setConfirming(false)}>CANCEL</button>
-      </div>}
+      {!credential && !error && <button type="button" disabled={busy} onClick={create}>{busy ? "Please wait…" : "Create license key"}</button>}
+      {credential && <details className="license-key-manage">
+        <summary>Manage key</summary>
+        {!credential.reveal_available && <p>This older key needs replacing to enable Reveal and Copy.</p>}
+        {!error && !confirming && <button type="button" disabled={busy} onClick={() => setConfirming(true)}>Replace key</button>}
+        {confirming && <div>
+          <p>The old key will stop working for online activation. Your tools and assigned computer are retained. Existing offline licenses are not immediately disabled.</p>
+          <div className="license-key-actions">
+            <button type="button" disabled={busy} onClick={create}>{busy ? "Replacing…" : "Confirm replacement"}</button>
+            <button type="button" disabled={busy} onClick={() => setConfirming(false)}>Cancel</button>
+          </div>
+        </div>}
+      </details>}
     </>}
-    {error && <div role="alert"><p className="password-error">{error}</p><button type="button" disabled={busy || loading} onClick={() => setRefresh(value => value + 1)}>REFRESH KEY STATUS</button></div>}
+    {error && <div role="alert"><p className="password-error">{error}</p><button type="button" disabled={busy || loading} onClick={() => setRefresh(value => value + 1)}>Retry</button></div>}
     {message && <p role="status" className="password-success">{message}</p>}
   </div>;
 }

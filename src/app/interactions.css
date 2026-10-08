@@ -129,3 +129,28 @@ body :is(.card-add-cart,.buy-button,#toolAddToCart).purchased:hover::after {cont
   body .product-card:hover .media-frame img {transform:none;}
   body .cart-flyer {display:none;}
 }
+
+/* Clear account navigation and a single, prominent license key field. */
+body .user-page .overview-link,
+body .user-page .sidebar-logout {
+  display:block;width:100%;padding:13px 16px;border:1px solid #3a3a3a;
+  background:#181818;color:#d6d6d2;text-align:left;cursor:pointer;border-radius:var(--radius-control);
+}
+body .user-page .overview-link {font:14px monospace;letter-spacing:.02em;margin-bottom:22px;}
+body .user-page .overview-link.active {background:#232323;border-color:#62625d;color:#fff;}
+body .user-page :is(.overview-link,.sidebar-logout):hover {background:#292929;color:#fff;}
+body .user-page .sidebar-logout:disabled {opacity:.5;cursor:default;}
+body .user-page .account-overview {grid-template-columns:1fr;gap:12px;max-width:720px;}
+body .user-page .account-overview>div {border:1px solid #252525;border-radius:var(--radius-surface);}
+body .account-license-key {padding:22px;background:#161616;border:1px solid #373737;border-radius:var(--radius-surface);margin:0 0 28px;max-width:720px;min-width:0;}
+body .account-license-key.embedded {border:0;padding:0;background:transparent;margin:0;}
+body .account-license-key h2 {margin:0 0 16px;font:18px monospace;color:#e5e5e1;}
+body .account-license-key .license-key-value {display:block;width:100%;min-width:0;box-sizing:border-box;padding:16px;background:#0e0e0e;border:1px solid #484842;color:#efefea;font:15px monospace;letter-spacing:.025em;}
+body .account-license-key button {padding:10px 14px;background:#242424;border:1px solid #444;color:#dcdcd7;font:11px monospace;cursor:pointer;}
+body .account-license-key button:hover {background:#333;color:#fff;}
+body .account-license-key button:disabled {opacity:.5;cursor:default;}
+body .license-key-actions {display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;}
+body .license-key-manage {margin-top:16px;color:#8e8e89;font:11px monospace;}
+body .license-key-manage summary {cursor:pointer;width:fit-content;}
+body .license-key-manage p {max-width:58ch;line-height:1.6;margin:12px 0;}
+body .user-page .status-ok {color:#79c98e;}
