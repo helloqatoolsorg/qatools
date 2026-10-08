@@ -54,3 +54,7 @@ Interaction timing is about one-third slower: ordinary transitions 200/300 ms, s
 The framework starter favicon.ico is removed. Metadata references /api/site-icon, a public, no-store redirect to the current allowed branding/logo path (packaged PNG fallback). It reads public settings with the publishable key, never the service role. The provider also updates browser favicon links after an admin logo change. No paid hosting feature or environment-variable change is involved. No migration is required.
 
 Validation: four branding rendering/favicon regressions plus six existing logo-upload tests passed. CSS parsing and whitespace checks passed. Run the production build in normal CMD before committing; after deployment check the heart on phone/desktop, logo clicks, hover feel and browser-tab icon.
+
+## Editor keyboard and icon balance — 2026-10-08
+
+Single-line inputs in the product editor leave focus on Enter without submitting Save/Update product. Description retains normal line breaks, IME composition remains uninterrupted, and keyboard activation of the explicit submit button still works. Shared heart artwork is scaled around its centre to match the visual footprint of the cart square/account circle without changing the heart shape or stroke weight. Desktop/mobile headers and product cards reuse this shared icon. No migration needed. Owner visual review after deployment remains pending.

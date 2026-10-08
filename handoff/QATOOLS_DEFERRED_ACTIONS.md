@@ -112,3 +112,7 @@ Gallery add/replace/remove/reorder is now implemented locally for saved drafts a
 ### Explicit product image update — 2026-10-07
 
 Owner approved published card replacement and explicit Update product. Main/card and gallery edits now stage locally and bind together on Update. Migration/deployment and hosted owner review are pending; see QATOOLS_PRODUCT_GALLERY.md. Finance and recovery remain parked. General published metadata edits and Storage cleanup remain deferred.
+
+## Owner verification checkpoint — 2026-10-08
+
+Owner confirms the complete project workflow works and offline Houdini use was tested successfully. Published content editing also passed owner review. These confirmations supersede older pending notes for those workflows; they do not establish live Paddle readiness, every Houdini version/platform, or a full backup restoration. Finance, recovery and customer Download selection remain parked by owner request.
