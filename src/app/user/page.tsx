@@ -18,6 +18,7 @@ import { useQAToolsState } from "@/context/QAToolsState";
 import { supabase } from "@/lib/supabase";
 import PasswordForm from "@/components/PasswordForm";
 import AccountActivationKey from "@/components/AccountActivationKey";
+import AccountTrial from "@/components/AccountTrial";
 import ProductDownload from "@/components/ProductDownload";
 import OrderInvoice from "@/components/OrderInvoice";
 
@@ -147,6 +148,11 @@ export default function UserPage() {
     signOut,
     sendPasswordReset,
   } = useAuth();
+  useEffect(() => {
+    if (!user) return;
+    const slug = new URLSearchParams(window.location.search).get("purchase");
+    if (slug && /^[a-z0-9][a-z0-9_-]{0,127}$/.test(slug)) window.location.replace("/purchase?tool=" + encodeURIComponent(slug));
+  }, [user]);
 
   const {
     likedCount,
@@ -1047,7 +1053,7 @@ export default function UserPage() {
               <dl className="account-overview">
                 <div><dt>Email</dt><dd>{user.email || "—"}</dd></div>
                 <div><dt>Active machine</dt><dd>{entitlementsLoading ? "Loading…" : accountActivations.find(a => a.status === "active")?.machine_id || "Not activated"}</dd></div>
-                <div className="overview-license"><dt>License key</dt><dd><AccountActivationKey key={user.id} embedded /></dd></div>
+                <div className="overview-license"><dt>License key</dt><dd><AccountActivationKey key={user.id} embedded /><AccountTrial key={user.id}/></dd></div>
                 <div><dt>Activation date</dt><dd>{entitlementsLoading ? "Loading…" : formatDate(accountActivations.find(a => a.status === "active")?.activated_at ?? null)}</dd></div>
                 <div><dt>Purchased tools</dt><dd>{entitlementsLoading ? "Loading…" : entitlements.filter(e => e.status === "active" && ["purchase","bundle"].includes(e.source) && e.products?.product_type === "tool").length}</dd></div>
               </dl>

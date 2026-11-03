@@ -87,7 +87,7 @@ def _signed_payload(envelope, public_keys):
         if not isinstance(public_key, Ed25519PublicKey):
             raise LicenseError("Invalid verification algorithm.")
         public_key.verify(signature, raw)
-        if payload.get("vendor") != "qatools" or type(payload.get("version")) is not int or payload["version"] != 2:
+        if payload.get("vendor") != "qatools" or type(payload.get("version")) is not int or payload["version"] not in (2, 3):
             raise LicenseError("Unsupported qatools license format.")
         return payload
     except LicenseError:
@@ -100,6 +100,9 @@ def verify_license(envelope, public_keys, machine_id, now=None, allow_expired=Fa
     payload = _signed_payload(envelope, public_keys)
     now = int(time.time()) if now is None else int(now)
     activation_id = payload.get("activationId")
+    if payload.get("version") == 3:
+        _validate_trial(payload, now)
+        payload["products"] = list(dict.fromkeys(payload["purchased"] + payload["free"] + (payload["trial"] if now < payload["trialEndsAt"] else [])))
     products = payload.get("products")
     issued = payload.get("issuedAt")
     expiry = payload.get("expiresAt")
@@ -108,7 +111,7 @@ def verify_license(envelope, public_keys, machine_id, now=None, allow_expired=Fa
             or not isinstance(payload.get("credentialId"), str) or not UUID.fullmatch(payload["credentialId"])
             or not isinstance(payload.get("machineId"), str) or not re.fullmatch(r"[A-F0-9]{16}", payload["machineId"])
             or payload["machineId"] != machine_id
-            or not isinstance(products, list) or not 1 <= len(products) <= 1000
+            or not isinstance(products, list) or not (0 if payload.get("version") == 3 else 1) <= len(products) <= (3000 if payload.get("version") == 3 else 1000)
             or any(not isinstance(p, str) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,127}", p) for p in products)
             or len(set(products)) != len(products)
             or type(issued) is not int or type(expiry) is not int or issued <= 0
@@ -122,6 +125,20 @@ def verify_license(envelope, public_keys, machine_id, now=None, allow_expired=Fa
             or (activated is not None and (type(activated) is not int or activated <= 0 or activated > issued + 300))):
         raise LicenseError("Invalid signed account identity.")
     return payload
+
+
+def _validate_trial(payload, now):
+    for name in ("purchased", "free", "trial"):
+        items = payload.get(name)
+        if (not isinstance(items, list) or len(items) > 1000
+                or any(not isinstance(s, str) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,127}", s) for s in items)
+                or len(set(items)) != len(items)):
+            raise LicenseError("Invalid trial access list.")
+    start, end = payload.get("trialStartedAt"), payload.get("trialEndsAt")
+    issued, expiry = payload.get("issuedAt"), payload.get("expiresAt")
+    if (any(type(t) is not int or t <= 0 for t in (start, end, issued, expiry))
+            or end - start != OFFLINE_SECONDS or start > issued or expiry - issued != OFFLINE_SECONDS):
+        raise LicenseError("Invalid trial deadline.")
 
 
 def license_digest(envelope):
@@ -269,6 +286,8 @@ class Client:
                 return {"valid": False, "message": "NOT ACTIVATED"}
             payload = self._payload(state)
             return {"valid": True, "products": payload["products"], "machineId": payload["machineId"],
+                    "purchased": payload.get("purchased", payload["products"]), "free": payload.get("free", []),
+                    "trialEndsAt": payload.get("trialEndsAt"),
                     "accountEmail": payload.get("accountEmail", ""), "activatedAt": payload.get("activatedAt"),
                     "expiresAt": payload["expiresAt"], "validUntil": datetime.fromtimestamp(payload["expiresAt"], timezone.utc).isoformat()}
         except LicenseError as error:
@@ -283,7 +302,7 @@ class Client:
         if not isinstance(key, str) or not re.fullmatch(r"QA_[A-Za-z0-9_-]{43}", key.strip()):
             raise LicenseError("Enter your qatools account activation key.")
         with self._exclusive():
-            status, result = self._request("/api/licensing/activate", {"machineId": self.machine_id, "offlineDays": 7}, key.strip())
+            status, result = self._request("/api/licensing/activate", {"machineId": self.machine_id, "offlineDays": 7, "licenseVersion": 3}, key.strip())
             if status != 200:
                 if status in (429, 503):
                     raise TemporaryError("Activation temporarily unavailable. Please try again shortly.")

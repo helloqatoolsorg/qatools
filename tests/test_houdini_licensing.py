@@ -51,6 +51,20 @@ class LicensingTests(unittest.TestCase):
     def activate(self):
         return self.client.activate(KEY)
 
+    def test_trial_deadline_is_independent_of_offline_expiry(self):
+        start = self.now - 6 * 86400
+        proof = self.license(version=3, purchased=["owned"], free=["free"], trial=["demo"],
+                             trialStartedAt=start, trialEndsAt=start + OFFLINE_SECONDS)
+        before = verify_license(proof, self.keys, MACHINE, start + OFFLINE_SECONDS - 1)
+        self.assertIn("demo", before["products"])
+        after = verify_license(proof, self.keys, MACHINE, start + OFFLINE_SECONDS)
+        self.assertNotIn("demo", after["products"])
+        self.assertIn("owned", after["products"])
+        self.assertIn("free", after["products"])
+        with self.assertRaises(LicenseError):
+            verify_license(self.license(version=3, purchased=[], free=[], trial=["demo"],
+                trialStartedAt=start, trialEndsAt=start + OFFLINE_SECONDS + 1), self.keys, MACHINE, self.now)
+
     def test_one_activation_all_owned_tools_and_no_key_saved(self):
         self.activate()
         self.assertEqual(len(self.calls), 1)

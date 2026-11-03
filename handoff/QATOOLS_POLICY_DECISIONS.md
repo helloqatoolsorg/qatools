@@ -307,3 +307,9 @@ Owner explicitly left public postal address and registration/tax disclosures pen
 ## Legal notice presentation — 2026-10-08
 
 Owner approved a separate public Legal notice instead of repeating personal operator identity on the terms/support pages. Name and applicable business disclosures must remain directly accessible in that page, not available only on email request. Operator record is centralized for a possible future SLU transition; the entity change itself is not decided or performed. Postal/tax details remain explicitly pending. Current operator is still Quim Amat Heinert in Spain.
+
+## Approved account trial — 3 November 2026
+
+Owner approved one fixed seven-day trial for all tools and bundles, excluding projects. Confirmed accounts may download published tools/bundles and create account keys before purchasing. The first trial-capable explicit Houdini activation starts the account deadline. Free tools and effective owned tools remain usable afterwards; renewal, credential replacement, reinstall and machine release do not restart it. Trials do not create purchased ownership. Purchase from Houdini opens the website cart and preserves login continuation; payment is never automatic. The existing account machine limit and source-based bundle/refund ownership remain applicable.
+
+Implemented locally; migration, real Houdini export verification, production build and hosted owner acceptance are pending. See QATOOLS_ACCOUNT_TRIALS.md. Older v2 installers remain owned-only until updated and explicitly activated.

@@ -33,6 +33,8 @@ type QAToolsStateContextType = {
 
   toggleLike: (id: string) => void;
   toggleCart: (id: string) => void;
+  addToCart: (id: string) => void;
+  cartReady: boolean;
   removeFromCart: (id: string) => void;
   refreshPurchases: () => void;
 };
@@ -506,6 +508,10 @@ export function QAToolsStateProvider({
     );
   }
 
+  const addToCart = useCallback((id: string) => {
+    setCartItems(items => items.includes(id) ? items : [...items, id]);
+  }, []);
+
   function removeFromCart(
     id: string
   ) {
@@ -547,6 +553,8 @@ export function QAToolsStateProvider({
 
         toggleLike,
         toggleCart,
+        addToCart,
+        cartReady: ready,
         removeFromCart,
         refreshPurchases,
       }),
@@ -556,6 +564,8 @@ export function QAToolsStateProvider({
         purchasedItems,
         purchasedLoading,
         refreshPurchases,
+        addToCart,
+        ready,
       ]
     );
 

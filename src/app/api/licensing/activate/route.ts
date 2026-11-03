@@ -5,6 +5,7 @@ import { activationFailure, privateJson, readActivationBody } from "@/lib/activa
 
 import { issueLicense, signingConfiguration, LEGACY_OFFLINE_SECONDS, OFFLINE_SECONDS } from "@/lib/signedLicense";
 import { licenseIdentity } from "@/lib/licenseIdentity";
+import { trialActivation } from "@/lib/trialActivation";
 
 export const runtime = "nodejs";
 
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
     if (keyLimit) return keyLimit;
     // Check signing configuration before any machine-assignment mutation.
     signingConfiguration();
+    if (body.licenseVersion === 3) return await trialActivation(hashActivationKey(key), body.machineId);
     const { data, error } = await supabaseAdmin.rpc("activate_account_machine", {
       p_secret_hash: hashActivationKey(key), p_machine_id: body.machineId,
     });

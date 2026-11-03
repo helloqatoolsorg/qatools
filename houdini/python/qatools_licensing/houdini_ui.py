@@ -1,6 +1,9 @@
 """Shared Houdini activation UI. Keys are never stored on HDA node parameters."""
 import threading
 import platform
+import re
+import webbrowser
+from urllib.parse import quote
 from datetime import datetime, timezone
 from .client import default_client, LicenseError
 
@@ -32,6 +35,22 @@ def license_field(field, product_slug="qafit01"):
         return platform.node()
     return ""
 
+def purchase_state(product_slug):
+    status = default_client().status()
+    if not status.get("valid"):
+        return "Purchase tool"
+    if product_slug in status.get("purchased", []):
+        return "Purchased"
+    if product_slug in status.get("free", []):
+        return "Free tool"
+    return "Purchase tool"
+
+def purchase_tool(product_slug):
+    if not isinstance(product_slug, str) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,127}", product_slug):
+        raise LicenseError("Invalid tool identity.")
+    if purchase_state(product_slug) == "Purchase tool":
+        webbrowser.open("https://www.qatools.org/purchase?tool=" + quote(product_slug, safe=""))
+
 def clear_local_license():
     import hou
     if hou.ui.displayMessage("Clear the local qatools license for all tools on this computer?\nYour account ownership and server machine assignment are retained.",
@@ -51,7 +70,7 @@ def show_account_dialog():
             buttons=("Activate", "Refresh", "Close"), title="License key activation", default_choice=0, close_choice=2)
         if action == 0:
             client.activate(values[0])
-            hou.ui.displayMessage("qatools account activated for all owned tools.", title="qatools")
+            hou.ui.displayMessage("qatools account activated. Free and purchased tools remain available after your seven-day trial.", title="qatools")
         elif action == 1:
             result = client.refresh(force=True)
             hou.ui.displayMessage("qatools license refreshed." if result.get("renewed") else result.get("message", "License status unchanged."), title="qatools")

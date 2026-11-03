@@ -10,7 +10,7 @@ from .prepared_tool import identity, export_definition
 MARKER = "qatools-preparation.json"
 GUARD = "qatools_license_guard"
 PARAMETERS = ("license_state", "license_email", "license_machine", "license_date",
-              "activate_online", "clear_local_license", "qatools_license", "qatools_license_gap")
+              "activate_online", "clear_local_license", "qatools_license", "qatools_license_gap", "qatools_purchase", "qatools_purchase_disabled")
 GUARD_CODE = "hou.pwd().parent().hdaModule()._qatools_require()"
 
 
@@ -41,6 +41,21 @@ def _qatools_setup(node):
         parm = node.parm("license_" + field)
         if parm is not None:
             parm.setExpression('hou.pwd().hdaModule()._qatools_field("' + field + '")', hou.exprLanguage.Python)
+    from qatools_licensing import houdini_ui
+    state = houdini_ui.purchase_state(_qatools_slug)
+    disabled = node.parm("qatools_purchase_disabled")
+    if disabled is not None:
+        disabled.set(int(state != "Purchase tool"))
+    group = node.parmTemplateGroup()
+    button = group.find("qatools_purchase")
+    if button is not None and button.label() != state:
+        button.setLabel(state)
+        group.replace("qatools_purchase", button)
+        node.setParmTemplateGroup(group)
+
+def _qatools_purchase(node):
+    from qatools_licensing import houdini_ui
+    houdini_ui.purchase_tool(_qatools_slug)
 
 def _qatools_recook_all():
     import hou
@@ -106,6 +121,14 @@ def add_license_tab(definition):
     activate.setScriptCallback('kwargs["node"].hdaModule()._qatools_activate(kwargs["node"])')
     activate.setScriptCallbackLanguage(hou.scriptLanguage.Python)
     folder.addParmTemplate(activate)
+    disabled = hou.IntParmTemplate("qatools_purchase_disabled", "Purchase unavailable", 1, default_value=(0,))
+    disabled.hide(True)
+    folder.addParmTemplate(disabled)
+    purchase = hou.ButtonParmTemplate("qatools_purchase", "Purchase tool")
+    purchase.setConditional(hou.parmCondType.DisableWhen, "{ qatools_purchase_disabled == 1 }")
+    purchase.setScriptCallback('kwargs["node"].hdaModule()._qatools_purchase(kwargs["node"])')
+    purchase.setScriptCallbackLanguage(hou.scriptLanguage.Python)
+    folder.addParmTemplate(purchase)
     folder.addParmTemplate(hou.SeparatorParmTemplate("qatools_license_gap"))
     clear = hou.ButtonParmTemplate("clear_local_license", "Clear local license")
     clear.setScriptCallback('kwargs["node"].hdaModule()._qatools_clear(kwargs["node"])')

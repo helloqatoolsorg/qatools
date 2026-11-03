@@ -15,7 +15,11 @@ export async function POST(request: Request) {
     const ownership = await supabaseAdmin.from("entitlements").select("id")
       .eq("user_id", authorization.user.id).eq("product_id", id).eq("status", "active").maybeSingle();
     if (ownership.error) return privateJson({ error: "Download service unavailable. Please try again later." }, 503);
-    if (!ownership.data) return privateJson({ error: "You need active ownership to download this item." }, 403);
+    if (!ownership.data) {
+      const product = await supabaseAdmin.from("products").select("product_type,published").eq("id", id).maybeSingle();
+      if (product.error) return privateJson({error:"Download service unavailable. Please try again later."},503);
+      if (!product.data?.published || !["tool","bundle"].includes(product.data.product_type)) return privateJson({error:"You need active ownership to download this item."},403);
+    }
     const file = await supabaseAdmin.from("product_downloads").select("file_path,file_name")
       .eq("product_id", id).eq("enabled", true).maybeSingle();
     if (file.error) return privateJson({ error: "Download service unavailable. Please try again later." }, 503);

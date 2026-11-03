@@ -181,3 +181,35 @@ test('conflicting legacy computers abort the entire foundation migration', { ski
     assert.equal((await db.query('SELECT count(*)::int AS n FROM public.license_activations')).rows[0].n,2);
   } finally { await db.close(); }
 });
+
+test('account trial integration: new account, fixed deadline, download isolation and revoked assignment', {skip:!runtimePath}, async()=>{
+ const db=await fixture();
+ try {
+  for(const name of ['20261002220000_account_machine_activations.sql','20261003010000_account_activation_credentials.sql','20261003020000_reveal_activation_keys.sql','20261003030000_signed_license_renewal.sql']) await db.exec(migration(name));
+  await db.exec(`ALTER TABLE products ADD COLUMN product_type text DEFAULT 'tool', ADD COLUMN published boolean DEFAULT true, ADD COLUMN price_eur numeric DEFAULT 5;
+   ALTER TABLE entitlements ADD COLUMN source text DEFAULT 'purchase';
+   CREATE TABLE product_downloads(product_id bigint,enabled boolean,file_path text);
+   CREATE TABLE entitlement_origins(root_id bigint,tool_id bigint,status text);
+   CREATE TABLE product_download_events(id uuid PRIMARY KEY,product_id bigint,source text);
+   INSERT INTO products(id,slug,name,product_type,price_eur) VALUES(4,'free','Free','tool',0),(5,'project','Project','project',20),(6,'bundle','Bundle','bundle',10);
+   INSERT INTO product_downloads VALUES(1,true,'one.zip'),(5,true,'project.zip'),(6,true,'bundle.zip');`);
+  await db.exec(fs.readFileSync('supabase/migrations/20261103100000_account_tool_trials.sql','utf8'));
+  const key=await issue(db,userC,hashA);assert.equal(key.ok,true);
+  assert.equal((await db.query('SELECT count(*)::int n FROM account_trials')).rows[0].n,0);
+  const download=async id=>(await db.query('SELECT record_product_download(gen_random_uuid(),$1,$2,$3) ok',[userC,id,id===1?'one.zip':id===5?'project.zip':'bundle.zip'])).rows[0].ok;
+  assert.equal(await download(1),true);assert.equal(await download(6),true);assert.equal(await download(5),false);
+  assert.equal((await db.query('SELECT count(*)::int n FROM account_trials')).rows[0].n,0);
+  const start=async machine=>(await db.query('SELECT activate_trial_machine($1,$2) r',[hashA,machine])).rows[0].r;
+  const first=await start(machineA);assert.equal(first.ok,true);
+  const read=async()=>(await db.query('SELECT read_trial_license($1,$2,$3) r',[first.activation.id,key.credential.id,machineA])).rows[0].r;
+  const proof=await read();assert.equal(proof.ok,true);assert.equal(proof.trialEndsAt-proof.trialStartedAt,604800);
+  assert.deepEqual(proof.purchased,[]);assert.deepEqual(proof.free,['free']);assert.ok(proof.trial.includes('tool-a'));assert.ok(!proof.trial.includes('project'));
+  assert.equal((await start(machineB)).code,'machine_in_use');assert.equal((await read()).trialEndsAt,proof.trialEndsAt);
+  await db.query("UPDATE account_activations SET status='revoked' WHERE id=$1",[first.activation.id]);assert.equal((await read()).code,'assignment_inactive');
+  const second=await start(machineB);assert.equal(second.ok,true);
+  const secondProof=(await db.query('SELECT read_trial_license($1,$2,$3) r',[second.activation.id,key.credential.id,machineB])).rows[0].r;assert.equal(secondProof.trialEndsAt,proof.trialEndsAt);
+  for(const role of ['anon','authenticated']){
+   const privilege=(await db.query("SELECT has_function_privilege($1,'activate_trial_machine(text,text)','EXECUTE') a,has_function_privilege($1,'read_account_trial(uuid)','EXECUTE') b,has_table_privilege($1,'account_trials','UPDATE') c",[role])).rows[0];assert.deepEqual(privilege,{a:false,b:false,c:false});
+  }
+ } finally {await db.close();}
+});

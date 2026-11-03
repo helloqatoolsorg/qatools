@@ -4,6 +4,7 @@ import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
 import IncludedTools from "@/components/IncludedTools";
+import ProductDownload from "@/components/ProductDownload";
 import AccountName from "@/components/AccountName";
 import { animateToCart } from "@/lib/cartAnimation";
 
@@ -31,6 +32,7 @@ type Product = {
   subtitle: string;
   description: string;
   price_eur: number | string;
+  product_type: string;
   compatibility: string;
   current_version: string;
   release_date: string | null;
@@ -140,6 +142,7 @@ export default function ProductPage() {
           subtitle,
           description,
           price_eur,
+          product_type,
           compatibility,
           current_version,
           release_date,
@@ -501,6 +504,10 @@ export default function ProductPage() {
             </div>
 
             <IncludedTools key={product.id} productId={product.id}/>
+            {(product.product_type === "tool" || product.product_type === "bundle" || purchased) && <div style={{margin: "16px 0"}}>
+              <ProductDownload productId={product.id}/>
+              {!purchased && product.product_type !== "project" && <p style={{fontSize:12,color:"#aaa"}}>Download with your account. Your seven-day trial starts when you first activate in Houdini. Free tools stay active; projects are excluded.</p>}
+            </div>}
             <div className="buy-row">
               <strong>
                 {formatPrice(

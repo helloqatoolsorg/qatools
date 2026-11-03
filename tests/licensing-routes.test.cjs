@@ -47,6 +47,7 @@ function setup(options = {}) {
       return { data: options.code ? { ok:false, code:options.code } : {
         ok:true, credential:metadata, activation:{id:1,machine_id:'0123456789ABCDEF',credential_id:credentialId,activated_at:'2026-10-01T12:00:00Z'},
         products:[{id:1,slug:'tool-a',name:'Tool A'},{id:2,slug:'tool-b',name:'Tool B'}],
+        purchased:['tool-a'],free:['free-tool'],trial:['demo-tool'],trialStartedAt:Math.floor(Date.now()/1000)-86400,trialEndsAt:Math.floor(Date.now()/1000)+5*86400+86400,
       }, error:options.databaseError ? {message:'sensitive database diagnostic'}:null };
     },
   };
@@ -65,6 +66,7 @@ function setup(options = {}) {
         if(name==='next/server') return {NextResponse:{json:(body,init)=>Response.json(body,init)}};
         if(name==='@/lib/supabaseAdmin'||name==='./supabaseAdmin') return {supabaseAdmin:db};
         if(name.startsWith('@/lib/')) return load(name.replace('@/','src/')+'.ts');
+        if(name.startsWith('./')) return load(path.posix.join(path.posix.dirname(file),name)+'.ts');
         if(name==='@supabase/supabase-js') return {createClient:()=>({auth:{getUser:async token=>{
           calls.push({verifiedToken:token});
           return {data:{user:options.invalidToken?null:{id:'verified-user',email_confirmed_at:options.unconfirmed?null:'2026-10-03'}},error:options.invalidToken?{}:null};
@@ -357,4 +359,15 @@ test('updated clients get seven days; legacy proofs renew during installer trans
   const active=helper.verifyLicense((await activation.json()).license);
   assert.equal(active.expiresAt-active.issuedAt,7*86400);
   for(const duration of [0,8*86400,31*86400]) assert.throws(()=>helper.issueLicense({id:1,machine_id:'0123456789ABCDEF',credential_id:credentialId},[{slug:'tool-a'}],now,{},duration));
+});
+
+test('trial-capable activation and renewal use signed scope and retain the fixed deadline',async()=>{
+ const s=setup(),response=await s.load(activateRoute).POST(s.request({machineId:'0123456789ABCDEF',licenseVersion:3},testKey));
+ assert.equal(response.status,200);const {license}=await response.json();
+ const payload=s.load('src/lib/signedTrialLicense.ts').verifyTrialLicense(license);
+ assert.equal(payload.version,3);assert.equal(payload.accountEmail,'owner@example.com');assert.ok(payload.trial.includes('demo-tool'));
+ assert.ok(s.calls.some(c=>c.rpc==='activate_trial_machine'));assert.ok(!s.calls.some(c=>c.rpc==='activate_account_machine'));
+ const renewed=await s.load(renewRoute).POST(s.request({license,machineId:payload.machineId,nonce:'a'.repeat(32)}));assert.equal(renewed.status,200);
+ const after=s.load('src/lib/signedTrialLicense.ts').verifyTrialLicense((await renewed.json()).license);assert.equal(after.trialEndsAt,payload.trialEndsAt);
+ const revoked=setup({code:'assignment_inactive'});const rejected=await revoked.load(renewRoute).POST(revoked.request({license,machineId:payload.machineId,nonce:'b'.repeat(32)}));assert.equal(rejected.status,403);assert.ok((await rejected.json()).denial);
 });
