@@ -55,6 +55,19 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   const [busy, setBusy] = useState(false);
   const [packageBusy, setPackageBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [useTestData, setUseTestData] = useState(false);
+  function testDefaults(value: DraftInput): DraftInput {
+    const pick = (values: Lookup[]) => { const active = values.filter(v => v.active); return active.length ? active[Math.floor(Math.random() * active.length)].id : 0; };
+    return {...value,
+      name: value.name || (value.product_type === "tool" ? "" : "Lorem Ipsum"),
+      subtitle: value.subtitle || "Lorem ipsum dolor sit amet.",
+      description: value.description || "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      compatibility: value.compatibility || "Lorem ipsum — test content",
+      current_version: value.current_version || "1.0",
+      category_id: value.category_id || pick(catalog?.categories ?? []),
+      complexity_id: value.complexity_id || pick(catalog?.complexities ?? []),
+    };
+  }
   const [revision, setRevision] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const artworkInput = useRef<HTMLInputElement>(null);
@@ -127,7 +140,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
       const result=await response.json();
       if(result.draft){
         const imported:DraftInput={name:result.draft.name,slug:result.draft.slug,product_type:"tool",subtitle:"",description:"",price_eur:null,compatibility:"",current_version:"",release_date:null,category_id:0,complexity_id:0,tool_ids:[]};
-        setId(result.draft.id);setUpdatedAt(result.draft.updated_at);setDraft(imported);setPriceText("");setDirty(true);
+        setId(result.draft.id);setUpdatedAt(result.draft.updated_at);setDraft(useTestData ? testDefaults(imported) : imported);setPriceText("");setDirty(true);
         setCatalog(c=>c?{...c,products:[...c.products.filter(p=>p.id!==result.draft.id),{...imported,id:result.draft.id,slug:result.draft.slug,updated_at:result.draft.updated_at,published:false,prepared_identity:{},has_installer:response.ok,product_media:[]}]}:c);
       }
       if(!response.ok){setExistingProductId(result.existingProduct?.id ?? null);throw Error(result.error ?? "Unable to import tool.");}
@@ -138,7 +151,8 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   function choose(kind: ProductType) {
     requestId.current=crypto.randomUUID();setPendingTools([]);setImportFile(null);setImportPending(false);
     setPriceText("0");
-    setDraft({ name: "", product_type: kind, subtitle: "", description: "", price_eur: 0, compatibility: "", current_version: "", release_date: null, category_id: 0, complexity_id: 0, tool_ids: [] }); setDirty(true);
+    const empty: DraftInput = { name: "", product_type: kind, subtitle: "", description: "", price_eur: 0, compatibility: "", current_version: "", release_date: null, category_id: 0, complexity_id: 0, tool_ids: [] };
+    setDraft(useTestData ? testDefaults(empty) : empty); setDirty(true);
   }
   function change<K extends keyof DraftInput>(key: K, value: DraftInput[K]) { setDraft(d => d ? { ...d, [key]: value } : d); setDirty(true); setMessage(null); }
   async function saveMetadata() {
@@ -226,6 +240,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   return <section className="admin-products admin-product-editor"><a href="/admin?section=products">← Admin products</a><div className="admin-product-title"><h1>{id ? draft?.name : "New product"}</h1><PublicationState published={readOnly} /></div>
     {(pendingArtwork || pendingGallery.length>0 || editedMedia) && <p role="status">Pending image changes. Leaving this editor will not apply them.</p>}
     {dirty && readOnly && <p role="status">Pending product changes. Click Update product to apply them. Leaving this editor discards them.</p>}{dirty && !readOnly && <p>Unsaved changes are kept in this browser. Use Continue editing to return to this product.</p>}
+    {!readOnly && <div style={{margin:"16px 0"}}><label><input type="checkbox" checked={useTestData} disabled={busy || packageBusy} onChange={event => { const checked=event.target.checked;setUseTestData(checked);if(checked && draft){setDraft(testDefaults(draft));setDirty(true);} }}/> Use test data</label>{useTestData && <p>Fills empty text fields and chooses random active tags. Review placeholders before publishing. Price, files and included tools stay manual.</p>}</div>}
     {recoveryWarning && <p role="alert" className="admin-product-error">{recoveryWarning}</p>}{error && <p role="alert" className="admin-product-error">{error} {id && <button type="button" disabled={busy || packageBusy} onClick={()=>setRevision(v=>v+1)}>Reload saved product</button>}</p>}{existingProductId && <p><a href={"/admin/products/edit?id="+existingProductId}>Open existing product</a></p>}{message && <p role="status">{message}</p>}
     {!draft ? <div className="admin-type-choice" role="dialog" aria-modal="false" aria-labelledby="product-type-title"><h2 id="product-type-title">Choose product type</h2>{productTypes.map(t => <button key={t} type="button" onClick={() => choose(t)}>{t.toUpperCase()}</button>)}</div> : draft.product_type==="tool" && (!id || importPending || (selected?.prepared_identity && selected.has_installer===false)) ? <section className="admin-type-choice"><h2>Upload prepared tool</h2><p>Choose the ZIP exported by Prepare qatools tool. Its Asset Label and Internal Name set the title and locked slug.</p><input type="file" accept=".zip" disabled={busy} onChange={e=>{const file=e.target.files?.[0];e.target.value="";if(file)void importTool(file);}} />{importFile && <button type="button" disabled={busy} onClick={()=>void importTool(importFile)}>Retry import</button>}</section> : <>
       {selected?.prepared_identity && <p>Prepared tool installer · qatools.json and shared licensing files included automatically.</p>}{readOnly && <p>This product is published. Edit subtitle, description, category, complexity and images, then click Update product. Identity, price, version and included tools stay protected. <a href={"/product?slug=" + selected?.slug}>View product</a></p>}

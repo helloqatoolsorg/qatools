@@ -288,6 +288,7 @@ class Client:
             return {"valid": True, "products": payload["products"], "machineId": payload["machineId"],
                     "purchased": payload.get("purchased", payload["products"]), "free": payload.get("free", []),
                     "trialEndsAt": payload.get("trialEndsAt"),
+                    "trial": payload.get("trial", []),
                     "accountEmail": payload.get("accountEmail", ""), "activatedAt": payload.get("activatedAt"),
                     "expiresAt": payload["expiresAt"], "validUntil": datetime.fromtimestamp(payload["expiresAt"], timezone.utc).isoformat()}
         except LicenseError as error:

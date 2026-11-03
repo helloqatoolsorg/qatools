@@ -3,6 +3,7 @@ import threading
 import platform
 import re
 import webbrowser
+import math
 from urllib.parse import quote
 from datetime import datetime, timezone
 from .client import default_client, LicenseError
@@ -22,7 +23,8 @@ def is_license_valid(product_slug="qafit01"):
         return False
 
 def license_field(field, product_slug="qafit01"):
-    status = default_client().status()
+    client = default_client()
+    status = client.status()
     active = status.get("valid") and product_slug in status.get("products", [])
     if field == "state":
         return "\u2705 active" if active else "\u274c inactive"
@@ -33,6 +35,15 @@ def license_field(field, product_slug="qafit01"):
         return datetime.fromtimestamp(date, timezone.utc).strftime("%Y/%m/%d") if date else "\u2014"
     if field == "machine":
         return platform.node()
+    if field == "trial":
+        if (not status.get("valid") or product_slug in status.get("purchased", [])
+                or product_slug in status.get("free", []) or product_slug not in status.get("trial", [])):
+            return ""
+        deadline = status.get("trialEndsAt")
+        if not isinstance(deadline, (int, float)):
+            return ""
+        days = max(0, math.ceil((deadline - client.clock()) / 86400))
+        return (str(days) + (" day remaining" if days == 1 else " days remaining")) if days else "Trial ended"
     return ""
 
 def purchase_state(product_slug):

@@ -17,6 +17,12 @@ class Definition:
     def copyToHDAFile(self, path): Path(path).write_bytes(CONTENT)
 
 class PreparedTests(unittest.TestCase):
+    def test_release_names_come_from_development_internal_name(self):
+        self.assertEqual(module.release_names("QA_Tool_A_dev"), ("QA Tool A", "QA_Tool_A"))
+        self.assertEqual(module.release_names("QA_Rand_Cd_dev"), ("QA Rand Cd", "QA_Rand_Cd"))
+        for invalid in ("QA_Tool_A", "QA_Tool_A_dev_dev", "QA Tool A_dev", "QA_Tool_2_dev"):
+            with self.assertRaises(ValueError):
+                module.release_names(invalid)
     def test_identity_and_naming(self):
         value = module.identity("Beautiful Noise", "Beautiful_Noise", "beautiful_noise.hda", CONTENT)
         self.assertEqual(value["slug"], "beautiful_noise")

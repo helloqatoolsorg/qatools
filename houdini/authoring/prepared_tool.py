@@ -10,6 +10,15 @@ import tempfile
 import zipfile
 
 
+def release_names(source_internal):
+    if not isinstance(source_internal, str) or not re.fullmatch(r"[A-Za-z]+(?:_[A-Za-z]+)*_dev", source_internal):
+        raise ValueError("Use a development Internal Name such as QA_Tool_A_dev (letters, underscores, and one final _dev).")
+    internal = source_internal[:-4]
+    if internal.endswith("_dev"):
+        raise ValueError("Use only one final _dev suffix in the development Internal Name.")
+    return internal.replace("_", " "), internal
+
+
 def identity(label, internal_name, filename, content):
     if (not isinstance(label, str) or len(label) > 80
             or not re.fullmatch(r"[A-Za-z][A-Za-z0-9]*(?: [A-Za-z0-9]+)*", label)):

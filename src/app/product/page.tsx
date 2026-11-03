@@ -505,7 +505,6 @@ export default function ProductPage() {
 
             <IncludedTools key={product.id} productId={product.id}/>
             {(product.product_type === "tool" || product.product_type === "bundle" || purchased) && <div style={{margin: "16px 0"}}>
-              <ProductDownload productId={product.id}/>
               {!purchased && product.product_type !== "project" && <p style={{fontSize:12,color:"#aaa"}}>Download with your account. Your seven-day trial starts when you first activate in Houdini. Free tools stay active; projects are excluded.</p>}
             </div>}
             <div className="buy-row">
@@ -515,6 +514,8 @@ export default function ProductPage() {
                 )}
               </strong>
 
+              <div className="tool-purchase-actions">
+              {(product.product_type === "tool" || product.product_type === "bundle" || purchased) && <ProductDownload key={product.id} productId={product.id} label={purchased ? "DOWNLOAD" : "FREE DOWNLOAD"} buttonClassName="buy-button try-button"/>}
               <button
                 id="toolAddToCart"
                 className={`buy-button ${purchased ? "purchased" : ""} ${
@@ -548,6 +549,7 @@ export default function ProductPage() {
                     ? "IN CART"
                     : "ADD TO CART"}
               </button>
+              </div>
             </div>
 
             <div className="micro-info">

@@ -1,17 +1,16 @@
 """Prepare a copy of a saved single-output SOP asset for qatools publication."""
 import ast
 import json
-import re
 from pathlib import Path
 import tempfile
 import uuid
 
-from .prepared_tool import identity, export_definition
+from .prepared_tool import identity, export_definition, release_names
 
 MARKER = "qatools-preparation.json"
 GUARD = "qatools_license_guard"
 PARAMETERS = ("license_state", "license_email", "license_machine", "license_date",
-              "activate_online", "clear_local_license", "qatools_license", "qatools_license_gap", "qatools_purchase", "qatools_purchase_disabled")
+              "license_trial", "activate_online", "clear_local_license", "qatools_license", "qatools_license_gap", "qatools_purchase", "qatools_purchase_disabled")
 GUARD_CODE = 'hou.pwd().parent().evalParm("qatools_license_revision")\nhou.pwd().parent().hdaModule()._qatools_require()'
 
 
@@ -36,14 +35,27 @@ def _qatools_field(field):
     except ImportError:
         return "\\u274c inactive" if field == "state" else "\\u2014"
 
+def _qatools_purchase_state():
+    from qatools_licensing import houdini_ui
+    helper = getattr(houdini_ui, "purchase_state", None)
+    if callable(helper):
+        return helper(_qatools_slug)
+    # Older v2 runtimes expose owned products but no purchase UI helpers.
+    status = houdini_ui.default_client().status()
+    if status.get("valid"):
+        if _qatools_slug in status.get("purchased", status.get("products", [])):
+            return "Purchased"
+        if _qatools_slug in status.get("free", []):
+            return "Free tool"
+    return "Purchase tool"
+
 def _qatools_setup(node):
     import hou
-    for field in ("state", "email", "machine", "date"):
+    for field in ("state", "email", "machine", "date", "trial"):
         parm = node.parm("license_" + field)
         if parm is not None:
             parm.setExpression('hou.pwd().hdaModule()._qatools_field("' + field + '")', hou.exprLanguage.Python)
-    from qatools_licensing import houdini_ui
-    state = houdini_ui.purchase_state(_qatools_slug)
+    state = _qatools_purchase_state()
     disabled = node.parm("qatools_purchase_disabled")
     if disabled is not None:
         disabled.set(int(state != "Purchase tool"))
@@ -56,7 +68,13 @@ def _qatools_setup(node):
 
 def _qatools_purchase(node):
     from qatools_licensing import houdini_ui
-    houdini_ui.purchase_tool(_qatools_slug)
+    helper = getattr(houdini_ui, "purchase_tool", None)
+    if callable(helper):
+        helper(_qatools_slug)
+    elif _qatools_purchase_state() == "Purchase tool":
+        import webbrowser
+        from urllib.parse import quote
+        webbrowser.open("https://www.qatools.org/purchase?tool=" + quote(_qatools_slug, safe=""))
 
 def _qatools_recook_all():
     import hou
@@ -111,13 +129,22 @@ def output_plan(node):
 def add_license_tab(definition):
     import hou
     group = definition.parmTemplateGroup()
-    for name in PARAMETERS + ("qatools_license_revision",):
+    for name in PARAMETERS + ("qatools_license_revision", "qatools_controls"):
         if group.find(name) is not None:
             raise ValueError("An existing parameter conflicts with qatools licensing: " + name)
-    folder = hou.FolderParmTemplate("qatools_license", "License", folder_type=hou.folderType.Simple)
+    # Tabs keep licensing out of the normal tool controls. Preserve the author's
+    # complete layout inside the first tab, including any existing subfolders.
+    controls = hou.FolderParmTemplate("qatools_controls", "Tool", folder_type=hou.folderType.Tabs)
+    for entry in group.entries():
+        controls.addParmTemplate(entry)
+    folder = hou.FolderParmTemplate("qatools_license", "License", folder_type=hou.folderType.Tabs)
     revision = hou.IntParmTemplate("qatools_license_revision", "License revision", 1, default_value=(0,))
     revision.hide(True)
     folder.addParmTemplate(revision)
+    trial = hou.StringParmTemplate("license_trial", "Trial", 1)
+    trial.setConditional(hou.parmCondType.DisableWhen, "{ 1 }")
+    trial.setConditional(hou.parmCondType.HideWhen, '{ license_trial == "" }')
+    folder.addParmTemplate(trial)
     for field, label in (("state", "State"), ("email", "E-mail"), ("machine", "Machine"), ("date", "Date")):
         parm = hou.StringParmTemplate("license_" + field, label, 1)
         parm.setConditional(hou.parmCondType.DisableWhen, "{ 1 }")
@@ -139,11 +166,13 @@ def add_license_tab(definition):
     clear.setScriptCallback('kwargs["node"].hdaModule()._qatools_clear(kwargs["node"])')
     clear.setScriptCallbackLanguage(hou.scriptLanguage.Python)
     folder.addParmTemplate(clear)
-    group.append(folder)
-    definition.setParmTemplateGroup(group)
+    tabs = hou.ParmTemplateGroup()
+    tabs.append(controls)
+    tabs.append(folder)
+    definition.setParmTemplateGroup(tabs)
 
 
-def prepare(node, destination):
+def prepare(node, destination, icon_path=None):
     """Return export metadata; never change the selected asset or its library."""
     import hou
     definition = node.type().definition()
@@ -151,12 +180,8 @@ def prepare(node, destination):
         raise ValueError("Save and lock the asset definition in Houdini before preparing it.")
     if MARKER in definition.sections():
         raise ValueError("Prepare the original authoring HDA. This asset is already prepared.")
-    label, source_internal = definition.description(), definition.nodeTypeName()
-    if not re.fullmatch(r"[A-Za-z]+(?: [A-Za-z]+)*", label):
-        raise ValueError("Use letters and single spaces in the Asset Label, for example QA Test A.")
-    internal = label.replace(" ", "_")
-    if source_internal != internal + "_dev":
-        raise ValueError("Development Internal Name must be " + internal + "_dev.")
+    source_internal = definition.nodeTypeName()
+    label, internal = release_names(source_internal)
     source_path = Path(definition.libraryFilePath())
     if source_path.name != source_internal + ".hdalc":
         raise ValueError("Save the limited-commercial source as " + source_internal + ".hdalc.")
@@ -164,6 +189,14 @@ def prepare(node, destination):
     slug = internal.lower()
     identity(label, internal, internal + extension, b"INDX" + b"x" * 25)
     sections = definition.sections()
+    icon_bytes = None
+    if icon_path:
+        icon_file = Path(icon_path)
+        if icon_file.stat().st_size > 1024 * 1024:
+            raise ValueError("Choose a PNG node icon smaller than 1 MB.")
+        icon_bytes = icon_file.read_bytes()
+        if icon_file.suffix.lower() != ".png" or not icon_bytes.startswith(b"\x89PNG\r\n\x1a\n") or len(icon_bytes) > 1024 * 1024:
+            raise ValueError("Choose a PNG node icon smaller than 1 MB.")
     if MARKER in sections or node.node(GUARD) is not None:
         raise ValueError("Prepare the original authoring HDA. This asset is already prepared.")
     output_plan(node)
@@ -195,6 +228,9 @@ def prepare(node, destination):
             hou.hda.installFile(library, change_oplibraries_file=False)
             library_installed = True
             staged_definition = hou.hda.definitionsInFile(library)[0]
+            if icon_bytes is not None:
+                staged_definition.addSection("qatools-node-icon.png", icon_bytes)
+                staged_definition.setIcon("opdef:/Sop/" + internal + "?qatools-node-icon.png")
             staged_definition.addSection("PythonModule", python + "\n" + bridge(slug))
             add_license_tab(staged_definition)
             geometry = hou.node("/obj").createNode("geo", run_init_scripts=False)
@@ -248,17 +284,100 @@ def prepare(node, destination):
                 hou.hda.uninstallFile(library, change_oplibraries_file=False)
 
 
+def export_dialog(definition):
+    import hou
+    from PySide6 import QtCore, QtWidgets
+    settings = QtCore.QSettings("qatools", "dev-export")
+    label, internal = release_names(definition.nodeTypeName())
+    source = Path(definition.libraryFilePath()).resolve()
+    default = source.parent / "exports"
+    for parent in source.parents:
+        if parent.name == "qatools_dev":
+            default = parent.parent / "qatools"
+            break
+    dialog = QtWidgets.QDialog(hou.qt.mainWindow())
+    dialog.setWindowTitle("Export qatools tool")
+    dialog.setMinimumWidth(650)
+    layout = QtWidgets.QVBoxLayout(dialog)
+    layout.addWidget(QtWidgets.QLabel("Select an export folder. Filenames are generated from the selected asset."))
+    form = QtWidgets.QFormLayout()
+    layout.addLayout(form)
+    folder = QtWidgets.QLineEdit(str(settings.value("export_folder", str(default))))
+    browse = QtWidgets.QPushButton("Browse…")
+    row = QtWidgets.QHBoxLayout()
+    row.addWidget(folder)
+    row.addWidget(browse)
+    form.addRow("Export folder", row)
+    icon = QtWidgets.QLineEdit(str(settings.value("node_icon", "")))
+    icon.setPlaceholderText("Optional PNG icon — leave empty to keep the source icon")
+    icon_browse = QtWidgets.QPushButton("Browse…")
+    icon_row = QtWidgets.QHBoxLayout()
+    icon_row.addWidget(icon)
+    icon_row.addWidget(icon_browse)
+    form.addRow("Node miniature", icon_row)
+    def choose_icon():
+        chosen, _ = QtWidgets.QFileDialog.getOpenFileName(dialog, "Node icon", icon.text(), "PNG image (*.png)")
+        if chosen:
+            icon.setText(chosen)
+            settings.setValue("node_icon", chosen)
+            settings.sync()
+    icon_browse.clicked.connect(choose_icon)
+    for title, value in (("Source Internal Name", definition.nodeTypeName()), ("Release name", label),
+                         ("Black-box HDA in ZIP", internal + ".hdalc"), ("ZIP filename", internal + ".zip")):
+        preview = QtWidgets.QLineEdit(value)
+        preview.setReadOnly(True)
+        form.addRow(title, preview)
+    full_path = QtWidgets.QLineEdit()
+    full_path.setReadOnly(True)
+    form.addRow("Full export path", full_path)
+    def update_path():
+        full_path.setText(str(Path(hou.expandString(folder.text().strip())).expanduser().resolve() / (internal + ".zip")))
+    folder.textChanged.connect(update_path)
+    update_path()
+    def choose_folder():
+        chosen = QtWidgets.QFileDialog.getExistingDirectory(dialog, "Export folder", folder.text())
+        if chosen:
+            folder.setText(chosen)
+            settings.setValue("export_folder", chosen)
+            settings.sync()
+    browse.clicked.connect(choose_folder)
+    buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+    buttons.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setText("Export ZIP")
+    buttons.accepted.connect(dialog.accept)
+    buttons.rejected.connect(dialog.reject)
+    layout.addWidget(buttons)
+    if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+        return None
+    if not folder.text().strip():
+        raise ValueError("Choose an export folder.")
+    target = Path(full_path.text())
+    if target.exists():
+        raise ValueError("Export already exists: " + str(target) + ". Move it or choose another folder.")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    icon_text = hou.expandString(icon.text().strip())
+    selected_icon = str(Path(icon_text).expanduser().resolve()) if icon_text else None
+    if selected_icon and not Path(selected_icon).is_file():
+        raise ValueError("The selected node icon does not exist.")
+    settings.setValue("export_folder", str(target.parent))
+    settings.setValue("node_icon", selected_icon or "")
+    settings.sync()
+    return target, selected_icon
+
+
 def shelf_action():
     import hou
     try:
         selected = hou.selectedNodes()
         if len(selected) != 1:
             raise ValueError("Select one saved SOP digital asset to prepare.")
-        path = hou.ui.selectFile(title="Choose export folder — ZIP name is automatic", file_type=hou.fileType.Directory,
-                                 chooser_mode=hou.fileChooserMode.Read)
-        if not path:
+        definition = selected[0].type().definition()
+        if definition is None:
+            raise ValueError("Select a saved development HDA.")
+        selection = export_dialog(definition)
+        if not selection:
             return
-        result = prepare(selected[0], str(Path(hou.expandString(path)) / "automatic.zip"))
+        path, icon_path = selection
+        result = prepare(selected[0], path, icon_path=icon_path)
         hou.ui.displayMessage("Prepared black-box export: " + result["label"] + ". Your source HDA is unchanged. Upload this ZIP through New product → Tool.", title="qatools")
     except (ValueError, OSError, hou.Error) as error:
         hou.ui.displayMessage(str(error), title="qatools", severity=hou.severityType.Error)

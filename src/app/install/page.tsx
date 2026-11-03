@@ -164,8 +164,8 @@ export default function InstallPage() {
                   lineHeight: 1.75,
                 }}
               >
-                Log in and open <a href="/user?section=purchased">Purchased products</a>.
-                Download your tool, bundle or project, then extract the complete ZIP. For projects, extract the ZIP inside the project folder into a separate working folder, preserving its structure.
+                Log in to download tools and bundles from their product pages using Free download. Purchased items are also available under <a href="/user?section=purchased">Purchased products</a>. Projects require a purchase.
+                Extract the complete ZIP. For projects, extract the ZIP inside the project folder into a separate working folder, preserving its structure.
                 Inside you will find qatools.json and a qatools folder.
               </p>
             </div>
@@ -277,11 +277,11 @@ export default function InstallPage() {
                   lineHeight: 1.75,
                 }}
               >
-                Restart Houdini and place one of your owned tools. In your website
+                Restart Houdini and place a downloaded tool. In your website
                 account, open <a href="/user?section=license">License</a>, reveal your
-                activation key and copy it. In the tool&apos;s License tab, click
+                activation key (or create one) and copy it. In the tool&apos;s License tab, click
                 License key activation, paste the key and click Activate.
-                Keep your key private.
+                Your first activation starts your single seven-day account trial. Downloading does not start it. Keep your key private.
               </p>
             </div>
           </article>
@@ -335,8 +335,8 @@ export default function InstallPage() {
                 }}
               >
                 Check that State is active in the tool&apos;s License tab.
-                One account activation covers your owned tools, including tools in
-                bundles. Newly placed owned tools use the same shared license.
+                One account activation covers your tools, including tools in
+                bundles. Paid trial access ends at the original seven-day deadline, including offline; free and purchased tools remain available. Projects are excluded from the trial. Newly placed tools use the same shared license.
                 After acquiring another tool, connect to the internet and click
                 Refresh to update your access.
               </p>

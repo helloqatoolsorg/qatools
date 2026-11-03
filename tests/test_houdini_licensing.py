@@ -75,6 +75,22 @@ class LicensingTests(unittest.TestCase):
         with self.assertRaises(LicenseError):
             self.client.require_product("unowned")
 
+    def test_trial_countdown_uses_signed_deadline_and_hides_when_owned(self):
+        from qatools_licensing import houdini_ui
+        proof = self.license(version=3, purchased=["owned"], free=["free"], trial=["demo", "owned", "free"],
+                             trialStartedAt=self.now, trialEndsAt=self.now + OFFLINE_SECONDS)
+        self.client._save({"license": proof})
+        with patch.object(houdini_ui, "default_client", return_value=self.client):
+            self.assertEqual(houdini_ui.license_field("trial", "demo"), "7 days remaining")
+            self.assertEqual(houdini_ui.license_field("trial", "owned"), "")
+            self.assertEqual(houdini_ui.license_field("trial", "free"), "")
+            self.assertEqual(houdini_ui.license_field("trial", "unknown"), "")
+            self.now += 6 * 86400
+            self.assertEqual(houdini_ui.license_field("trial", "demo"), "1 day remaining")
+            self.client._save({"license": self.license(version=3, purchased=["demo"], free=[], trial=["demo"],
+                trialStartedAt=self.now - 6 * 86400, trialEndsAt=self.now + 86400)})
+            self.assertEqual(houdini_ui.license_field("trial", "demo"), "")
+
     def test_signed_identity_and_explicit_local_clear(self):
         proof = self.license(accountEmail="owner@example.com", activatedAt=self.now - 86400)
         self.client._save({"license": proof})

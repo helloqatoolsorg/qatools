@@ -2339,3 +2339,13 @@ body:not(.products-page) .cart-overlay{
 
 .purchase-included-tools{grid-column:1 / -1}
 .purchase-included-tools .tags{margin-top:8px}
+
+.tool-purchase-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; }
+.tool-purchase-actions .buy-button { min-width:145px; }
+.tool-purchase-actions .try-button { background:transparent; color:var(--text, #ededeb); border-color:#555; }
+.tool-purchase-actions .try-button:hover { background:#252525; border-color:#999; }
+@media(max-width:680px) {
+  .tool-purchase-actions { width:100%; justify-content:stretch; }
+  .tool-purchase-actions > * { flex:1 1 140px; }
+  .tool-purchase-actions .product-download-control .buy-button { width:100%; }
+}

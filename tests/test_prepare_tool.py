@@ -129,6 +129,11 @@ class PrepareTests(unittest.TestCase):
 
     def test_guard_geometry_identity_and_license_tab(self):
         node, metadata = self.prepared_instance(self.asset(), "tool")
+        tabs = node.type().definition().parmTemplateGroup().entries()
+        self.assertEqual([tab.label() for tab in tabs], ["Tool", "License"])
+        self.assertTrue(all(tab.folderType() == hou.folderType.Tabs for tab in tabs))
+        self.assertNotIn("license_state", [parm.name() for parm in tabs[0].parmTemplates()])
+        self.assertIn("license_state", [parm.name() for parm in tabs[1].parmTemplates()])
         self.assertEqual(metadata["slug"], "beautiful_noise")
         self.assertTrue(self.cook(node))
         self.assertEqual(node.parm("license_state").evalAsString(), "\u274c inactive")
@@ -197,6 +202,36 @@ class PrepareTests(unittest.TestCase):
         self.assertEqual(node.hdaModule().author_function(), 42)
         with self.assertRaisesRegex(ValueError, "already prepared"):
             prepare_tool.prepare(node, self.directory / "again.zip")
+
+    def test_development_display_label_does_not_add_dev_to_release(self):
+        asset = self.asset("QA_Tool_A", "QA Tool A dev")
+        source = Path(asset.type().definition().libraryFilePath())
+        original = source.read_bytes()
+        result = prepare_tool.prepare(asset, self.directory / "ignored.zip")
+        self.assertEqual(result["label"], "QA Tool A")
+        self.assertEqual(result["internal_name"], "QA_Tool_A")
+        self.assertEqual(result["file"], "QA_Tool_A.hdalc")
+        self.assertTrue((self.directory / "QA_Tool_A.zip").exists())
+        self.assertFalse((self.directory / "ignored.zip").exists())
+        self.assertEqual(source.read_bytes(), original)
+
+    def test_node_icon_is_embedded_in_export_without_changing_source(self):
+        from PySide6 import QtGui
+        icon = self.directory / "icon.png"
+        image = QtGui.QImage(32, 32, QtGui.QImage.Format.Format_ARGB32)
+        image.fill(0xff55aa77)
+        self.assertTrue(image.save(str(icon), "PNG"))
+        asset = self.asset("Icon_Tool", "Icon Tool")
+        source = Path(asset.type().definition().libraryFilePath())
+        before = source.read_bytes()
+        result = prepare_tool.prepare(asset, self.directory / "ignored.zip", icon_path=icon)
+        with zipfile.ZipFile(self.directory / "Icon_Tool.zip") as archive:
+            exported = self.directory / "icon-release.hdalc"
+            exported.write_bytes(archive.read(result["file"]))
+        definition = hou.hda.definitionsInFile(str(exported))[0]
+        self.assertIn("qatools-node-icon.png", definition.sections())
+        self.assertEqual(definition.icon(), "opdef:/Sop/Icon_Tool?qatools-node-icon.png")
+        self.assertEqual(source.read_bytes(), before)
 
     def test_unsupported_output_and_parameter_conflict_preserve_source(self):
         asset = self.asset("Unsupported_Tool", "Unsupported Tool", explicit=True)

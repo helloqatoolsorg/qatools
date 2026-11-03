@@ -43,6 +43,7 @@ export default function UserMenu() {
     setEmail,
   ] = useState("");
 
+
   const [
     password,
     setPassword,
@@ -60,6 +61,20 @@ export default function UserMenu() {
     useState<string | null>(
       null
     );
+
+  useEffect(() => {
+    function openForAction(event: Event) {
+      if (user || loading) return;
+      const anchor = (event as CustomEvent<{anchor?: HTMLElement}>).detail?.anchor;
+      const rect = anchor?.getBoundingClientRect();
+      setPosition({top: rect ? Math.min(rect.bottom + 8, Math.max(16, window.innerHeight - 400)) : 76,
+        right: rect ? Math.max(16, Math.min(window.innerWidth - rect.right, window.innerWidth - 280)) : 26});
+      setError(null);
+      setOpen(true);
+    }
+    window.addEventListener("qatools:login", openForAction);
+    return () => window.removeEventListener("qatools:login", openForAction);
+  }, [user, loading]);
 
   /*
     Intercept clicks on the existing
@@ -182,6 +197,7 @@ export default function UserMenu() {
       }
 
       setOpen(false);
+      window.dispatchEvent(new Event("qatools:login-cancelled"));
     }
 
     function handleEscape(
@@ -191,6 +207,7 @@ export default function UserMenu() {
         event.key === "Escape"
       ) {
         setOpen(false);
+        window.dispatchEvent(new Event("qatools:login-cancelled"));
       }
     }
 
