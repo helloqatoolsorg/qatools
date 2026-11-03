@@ -27,7 +27,7 @@ export function bundleTools(bytes:Buffer, tools:BundleTool[]):{name:string;bytes
   else {
    if(!name.startsWith("qatools/otls/") || !validHda(name.slice(13),data))throw new Error("Bundle ZIP must contain only selected HDAs under qatools/otls and standard installer files.");
    const file=name.slice(13),stem=file.replace(/\.hda(lc|nc)?$/i,"");
-   const matches=tools.filter(t=>stem===t.slug || stem===t.slug+"_online");
+   const matches=tools.filter(t=>stem.toLowerCase()===t.slug || stem.toLowerCase()===t.slug+"_online");
    if(matches.length!==1 || found.has(matches[0].id))throw new Error("Use one HDA per selected tool, named tool-slug.hda (or tool-slug_online.hdalc).");
    found.set(matches[0].id,{name:file,bytes:data});
   }

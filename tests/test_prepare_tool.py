@@ -51,8 +51,8 @@ class PrepareTests(unittest.TestCase):
             final.setInput(0, source)
         final.setDisplayFlag(True)
         final.setRenderFlag(True)
-        path = str(self.directory / (name + ".hdalc"))
-        asset = subnet.createDigitalAsset(name=name, hda_file_name=path, description=label)
+        path = str(self.directory / (name + "_dev.hdalc"))
+        asset = subnet.createDigitalAsset(name=name + "_dev", hda_file_name=path, description=label)
         self.installed.append(path)
         asset.matchCurrentDefinition()
         return asset
@@ -68,11 +68,16 @@ class PrepareTests(unittest.TestCase):
         self.license._save({"license":{"payload":b64(encoded),"signature":b64(self.private.sign(encoded))}})
 
     def prepared_instance(self, asset, name):
-        path = self.directory / (name + ".zip")
+        export_dir = self.directory / name
+        export_dir.mkdir()
+        path = export_dir / (asset.type().definition().description().replace(" ", "_") + ".zip")
         original = Path(asset.type().definition().libraryFilePath()).read_bytes()
         metadata = prepare_tool.prepare(asset, path)
         self.assertEqual(Path(asset.type().definition().libraryFilePath()).read_bytes(), original)
         self.assertTrue(asset.matchesCurrentDefinition())
+        asset.allowEditingOfContents()
+        self.assertFalse(asset.matchesCurrentDefinition())
+        asset.matchCurrentDefinition()
         with zipfile.ZipFile(path) as archive:
             self.assertEqual(len(archive.namelist()), 2)
             self.assertEqual(json.loads(archive.read("qatools-tool.json")), metadata)
@@ -83,21 +88,49 @@ class PrepareTests(unittest.TestCase):
         definition = hou.hda.definitionsInFile(str(library))[0]
         definition.setIsPreferred(True)
         node = self.geo.createNode(definition.nodeTypeName())
+        actual_library = node.type().definition().libraryFilePath()
+        self.assertEqual(Path(actual_library).resolve(), library.resolve(), "Houdini loaded a different definition")
+        diagnostic = {
+            "library": actual_library,
+            "isCompiled": node.isCompiled(),
+            "sections": sorted(node.type().definition().sections()),
+        }
+        def assert_hidden():
+            try:
+                node.children()
+            except hou.PermissionError:
+                return  # Black-box network traversal is explicitly forbidden.
+            self.fail("Export does not protect network traversal: " + repr(diagnostic))
+        assert_hidden()
+        # A fresh instance is locked. Indie permits adding nodes after unlocking,
+        # but still refuses access to the original black-box network.
+        try:
+            probe = node.createNode("null", "qatools_editability_probe")
+        except hou.Error:
+            pass
+        else:
+            probe.destroy()
+            self.fail("Fresh export is unexpectedly unlocked: " + repr(diagnostic))
+        try:
+            node.allowEditingOfContents()
+        except hou.Error:
+            pass
+        assert_hidden()
+        node.matchCurrentDefinition()
         return node, metadata
 
     def cook(self, node):
-        for target in (node.node(prepare_tool.GUARD), node):
-            try:
-                target.cook(force=True)
-            except hou.OperationFailed:
-                pass
-        return bool(node.errors() or node.node(prepare_tool.GUARD).errors())
+        # Exercise the public black-box boundary, never its private guard node.
+        try:
+            node.cook(force=True)
+        except hou.OperationFailed:
+            pass
+        return bool(node.errors())
 
     def test_guard_geometry_identity_and_license_tab(self):
         node, metadata = self.prepared_instance(self.asset(), "tool")
         self.assertEqual(metadata["slug"], "beautiful_noise")
         self.assertTrue(self.cook(node))
-        self.assertFalse(node.node(prepare_tool.GUARD).isBypassed())
         self.assertEqual(node.parm("license_state").evalAsString(), "\u274c inactive")
         self.proof([metadata["slug"]])
         node.hdaModule()._qatools_recook_all()
@@ -110,8 +143,10 @@ class PrepareTests(unittest.TestCase):
         fields = node.parm("license_state").parmTemplate().name(), node.parm("license_machine").parmTemplate().label()
         self.assertEqual(fields, ("license_state", "Machine"))
         self.proof(["other_tool"])
+        node.hdaModule()._qatools_recook_all()
         self.assertTrue(self.cook(node))
         self.proof([metadata["slug"]], expired=True)
+        node.hdaModule()._qatools_recook_all()
         self.assertTrue(self.cook(node))
 
     def test_explicit_output_and_account_wide_callback(self):
@@ -196,10 +231,12 @@ class PrepareTests(unittest.TestCase):
         node, _ = self.prepared_instance(asset, "events")
         self.assertEqual(node.userData("author_event"), "kept")
         # The original authoring definition remains reusable after exporting.
-        original = hou.hda.definitionsInFile(str(self.directory / "Events_Tool.hdalc"))[0]
+        original = hou.hda.definitionsInFile(str(self.directory / "Events_Tool_dev.hdalc"))[0]
         original.setIsPreferred(True)
-        authoring = self.geo.createNode("Events_Tool")
-        result = prepare_tool.prepare(authoring, self.directory / "events-new.zip")
+        authoring = self.geo.createNode("Events_Tool_dev")
+        second_dir = self.directory / "second-export"
+        second_dir.mkdir()
+        result = prepare_tool.prepare(authoring, second_dir / "ignored-name.zip")
         self.assertEqual(result["slug"], "events_tool")
 
 

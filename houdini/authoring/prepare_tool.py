@@ -1,6 +1,7 @@
 """Prepare a copy of a saved single-output SOP asset for qatools publication."""
 import ast
 import json
+import re
 from pathlib import Path
 import tempfile
 import uuid
@@ -11,7 +12,7 @@ MARKER = "qatools-preparation.json"
 GUARD = "qatools_license_guard"
 PARAMETERS = ("license_state", "license_email", "license_machine", "license_date",
               "activate_online", "clear_local_license", "qatools_license", "qatools_license_gap", "qatools_purchase", "qatools_purchase_disabled")
-GUARD_CODE = "hou.pwd().parent().hdaModule()._qatools_require()"
+GUARD_CODE = 'hou.pwd().parent().evalParm("qatools_license_revision")\nhou.pwd().parent().hdaModule()._qatools_require()'
 
 
 def bridge(slug):
@@ -60,17 +61,18 @@ def _qatools_purchase(node):
 def _qatools_recook_all():
     import hou
     # The shared cache covers every owned tool; refresh existing instances too.
-    for node in hou.node("/").allSubChildren():
+    for node in hou.node("/").allSubChildren(recurse_in_locked_nodes=False):
         definition = node.type().definition()
         if definition is None or "qatools-preparation.json" not in definition.sections():
             continue
         node.hdaModule()._qatools_setup(node)
-        for target in (node.node("qatools_license_guard"), node):
-            if target is not None:
-                try:
-                    target.cook(force=True)
-                except hou.OperationFailed:
-                    pass
+        revision = node.parm("qatools_license_revision")
+        if revision is not None:
+            revision.set((revision.evalAsInt() + 1) %% 1000000)
+        try:
+            node.cook(force=True)
+        except hou.OperationFailed:
+            pass
 
 def _qatools_activate(node):
     from qatools_licensing import houdini_ui
@@ -109,10 +111,13 @@ def output_plan(node):
 def add_license_tab(definition):
     import hou
     group = definition.parmTemplateGroup()
-    for name in PARAMETERS:
+    for name in PARAMETERS + ("qatools_license_revision",):
         if group.find(name) is not None:
             raise ValueError("An existing parameter conflicts with qatools licensing: " + name)
     folder = hou.FolderParmTemplate("qatools_license", "License", folder_type=hou.folderType.Simple)
+    revision = hou.IntParmTemplate("qatools_license_revision", "License revision", 1, default_value=(0,))
+    revision.hide(True)
+    folder.addParmTemplate(revision)
     for field, label in (("state", "State"), ("email", "E-mail"), ("machine", "Machine"), ("date", "Date")):
         parm = hou.StringParmTemplate("license_" + field, label, 1)
         parm.setConditional(hou.parmCondType.DisableWhen, "{ 1 }")
@@ -144,10 +149,20 @@ def prepare(node, destination):
     definition = node.type().definition()
     if definition is None or not node.matchesCurrentDefinition():
         raise ValueError("Save and lock the asset definition in Houdini before preparing it.")
-    label, internal = definition.description(), definition.nodeTypeName()
+    if MARKER in definition.sections():
+        raise ValueError("Prepare the original authoring HDA. This asset is already prepared.")
+    label, source_internal = definition.description(), definition.nodeTypeName()
+    if not re.fullmatch(r"[A-Za-z]+(?: [A-Za-z]+)*", label):
+        raise ValueError("Use letters and single spaces in the Asset Label, for example QA Test A.")
+    internal = label.replace(" ", "_")
+    if source_internal != internal + "_dev":
+        raise ValueError("Development Internal Name must be " + internal + "_dev.")
+    source_path = Path(definition.libraryFilePath())
+    if source_path.name != source_internal + ".hdalc":
+        raise ValueError("Save the limited-commercial source as " + source_internal + ".hdalc.")
     extension = Path(definition.libraryFilePath()).suffix.lower()
     slug = internal.lower()
-    identity(label, internal, slug + extension, b"INDX" + b"x" * 25)
+    identity(label, internal, internal + extension, b"INDX" + b"x" * 25)
     sections = definition.sections()
     if MARKER in sections or node.node(GUARD) is not None:
         raise ValueError("Prepare the original authoring HDA. This asset is already prepared.")
@@ -165,9 +180,9 @@ def prepare(node, destination):
             options = definition.extraFileOptions()
             if options.get(event + "/IsPython") is not True:
                 raise ValueError("Convert the existing " + event + " script to Python before preparation.")
-    target = Path(destination)
+    target = Path(destination).parent / (internal + ".zip")
     if target.exists() or target.suffix.lower() != ".zip":
-        raise ValueError("Choose a new ZIP path; existing exports are retained.")
+        raise ValueError("Export already exists: " + str(target) + ". Choose another folder or move the previous export; its name is automatic.")
     # A uniquely named staging definition prevents replacing loaded user tools.
     staging_name = "qatools_staging_" + uuid.uuid4().hex
     geometry = None
@@ -175,6 +190,7 @@ def prepare(node, destination):
         library = str(Path(temporary) / ("staging" + extension))
         definition.copyToHDAFile(library, new_name=staging_name)
         library_installed = False
+        final_installed = False
         try:
             hou.hda.installFile(library, change_oplibraries_file=False)
             library_installed = True
@@ -210,15 +226,24 @@ def prepare(node, destination):
                 previous = sections[event].contents() if event in sections else ""
                 staged_definition.addSection(event, previous + '\nkwargs["node"].hdaModule()._qatools_setup(kwargs["node"])\n')
                 staged_definition.setExtraFileOption(event + "/IsPython", True)
-            final_path = str(Path(temporary) / (slug + extension))
+            final_path = str(Path(temporary) / (internal + extension))
+            # Assign the release identity while this disposable copy is editable.
+            # Compile only when writing the exact HDA bytes that go into the ZIP.
             staged_definition.copyToHDAFile(final_path, new_name=internal, new_menu_name=label)
             final = hou.hda.definitionsInFile(final_path)[0]
             if final.sections()[MARKER].contents() != json.dumps({"schema": 1, "slug": slug, "guard": GUARD}):
                 raise ValueError("Prepared definition validation failed.")
-            return export_definition(final, target)
+            hou.hda.installFile(final_path, change_oplibraries_file=False)
+            final_installed = True
+            final.setIsPreferred(True)
+            release_node = geometry.createNode(internal)
+            release_node.allowEditingOfContents()
+            return export_definition(final, target, template_node=release_node)
         finally:
             if geometry is not None:
                 geometry.destroy()
+            if final_installed:
+                hou.hda.uninstallFile(final_path, change_oplibraries_file=False)
             if library_installed:
                 hou.hda.uninstallFile(library, change_oplibraries_file=False)
 
@@ -229,11 +254,11 @@ def shelf_action():
         selected = hou.selectedNodes()
         if len(selected) != 1:
             raise ValueError("Select one saved SOP digital asset to prepare.")
-        path = hou.ui.selectFile(title="Export prepared qatools tool", file_type=hou.fileType.Any,
-                                 chooser_mode=hou.fileChooserMode.Write, pattern="*.zip")
+        path = hou.ui.selectFile(title="Choose export folder — ZIP name is automatic", file_type=hou.fileType.Directory,
+                                 chooser_mode=hou.fileChooserMode.Read)
         if not path:
             return
-        result = prepare(selected[0], hou.expandString(path))
-        hou.ui.displayMessage("Prepared " + result["label"] + ". Upload this ZIP through New product → Tool.", title="qatools")
+        result = prepare(selected[0], str(Path(hou.expandString(path)) / "automatic.zip"))
+        hou.ui.displayMessage("Prepared black-box export: " + result["label"] + ". Your source HDA is unchanged. Upload this ZIP through New product → Tool.", title="qatools")
     except (ValueError, OSError, hou.Error) as error:
         hou.ui.displayMessage(str(error), title="qatools", severity=hou.severityType.Error)

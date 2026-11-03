@@ -31,7 +31,7 @@ export async function POST(request:Request) {
   const incomplete=(error:string)=>privateJson({error,draft},503);
   if(current.error)return incomplete("Draft created, but its installer could not be checked. Retry the same ZIP or open the draft.");
   if(current.data?.file_path)return privateJson({draft,message:"Prepared tool imported. Complete its details before publishing."});
-  const fileName=prepared.identity.slug+"-houdini22.zip",path=draft.id+"/"+randomUUID()+"/"+fileName;
+  const fileName=prepared.identity.internal_name+".zip",path=draft.id+"/"+randomUUID()+"/"+fileName;
   const uploaded=await supabaseAdmin.storage.from("qatools-downloads").upload(path,bytes,{contentType:"application/zip",upsert:false});
   if(uploaded.error)return incomplete("Draft created, but the installer upload failed. Retry this ZIP; the same draft will be used.");
   const mapped=await supabaseAdmin.rpc("set_product_download",{p_admin_id:auth.user.id,p_product_id:draft.id,p_expected_path:null,p_file_path:path,p_file_name:fileName,p_enabled:true});

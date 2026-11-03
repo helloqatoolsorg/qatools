@@ -34,12 +34,12 @@ class PreparedTests(unittest.TestCase):
 
     def test_export_reads_definition_and_never_overwrites(self):
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "tool.zip"
+            path = Path(directory) / "Beautiful_Noise.zip"
             exported = module.export_definition(Definition(), path)
             with zipfile.ZipFile(path) as archive:
-                self.assertEqual(archive.namelist(), ["qatools-tool.json", "beautiful_noise.hdalc"])
+                self.assertEqual(archive.namelist(), ["qatools-tool.json", "Beautiful_Noise.hdalc"])
                 self.assertEqual(json.loads(archive.read("qatools-tool.json")), exported)
-                self.assertEqual(archive.read("beautiful_noise.hdalc"), CONTENT)
+                self.assertEqual(archive.read("Beautiful_Noise.hdalc"), CONTENT)
             before = path.read_bytes()
             with self.assertRaises(FileExistsError): module.export_definition(Definition(), path)
             self.assertEqual(path.read_bytes(), before)
@@ -53,12 +53,37 @@ class PreparedTests(unittest.TestCase):
                 asset = subnet.createDigitalAsset(name="Beautiful_Noise", hda_file_name=str(Path(directory) / "source.hdalc"), description="Beautiful Noise")
                 definition = asset.type().definition()
                 original = Path(definition.libraryFilePath()).read_bytes()
-                target = Path(directory) / "export.zip"
+                target = Path(directory) / "Beautiful_Noise.zip"
                 result = module.export_definition(definition, target)
                 self.assertEqual(result["slug"], "beautiful_noise")
                 self.assertEqual(Path(definition.libraryFilePath()).read_bytes(), original)
                 with zipfile.ZipFile(target) as archive:
                     self.assertTrue(archive.read(result["file"]).startswith(b"INDX"))
             finally: geometry.destroy()
+
+    def test_zip_name_is_derived_even_when_another_name_is_requested(self):
+        with tempfile.TemporaryDirectory() as directory:
+            requested = Path(directory) / "wrong-name.zip"
+            module.export_definition(Definition(), requested)
+            canonical = Path(directory) / "Beautiful_Noise.zip"
+            self.assertTrue(canonical.exists())
+            self.assertFalse(requested.exists())
+            with self.assertRaises(FileExistsError):
+                module.export_definition(Definition(), Path(directory) / "another-name.zip")
+
+    def test_blackbox_save_is_the_last_hda_write_before_packaging(self):
+        calls = []
+        template = object()
+        class BlackBoxDefinition(Definition):
+            def copyToHDAFile(self, path):
+                raise AssertionError("Do not copy after black-box saving")
+            def save(self, path, **options):
+                calls.append(options)
+                Path(path).write_bytes(CONTENT)
+        with tempfile.TemporaryDirectory() as directory:
+            module.export_definition(BlackBoxDefinition(), Path(directory) / "ignored.zip", template_node=template)
+            self.assertEqual(calls, [{"template_node": template, "black_box": True, "create_backup": False}])
+            with zipfile.ZipFile(Path(directory) / "Beautiful_Noise.zip") as archive:
+                self.assertEqual(archive.read("Beautiful_Noise.hdalc"), CONTENT)
 
 if __name__ == "__main__": unittest.main()

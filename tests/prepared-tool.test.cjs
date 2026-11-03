@@ -14,3 +14,9 @@ test('import authenticates before parsing or storage and rejects bad ZIPs before
 test('import creates trusted draft and canonical private installer',async()=>{const s=setup(),response=await s.post();assert.equal(response.status,200);assert.equal(response.headers.get('Cache-Control'),'no-store');assert.equal(s.calls.find(c=>c.rpc).args.p_admin_id,'trusted');const upload=s.calls.find(c=>c.upload);assert.ok(upload.bytes.includes(Buffer.from('qatools/otls/beautiful_noise.hda')));assert.ok(!upload.bytes.includes(Buffer.from('qatools-tool.json')));assert.equal(s.calls.at(-1).rpc,'set_product_download');assert.equal((await response.json()).draft.name,identity.label);});
 test('failed installer upload leaves a visible draft and retry uses existing attached package',async()=>{const failed=setup({uploadFailure:true}),response=await failed.post();assert.equal(response.status,503);assert.equal((await response.json()).draft.id,12);const retry=setup({existing:true});assert.equal((await retry.post()).status,200);assert.ok(!retry.calls.some(c=>c.upload));const conflict=setup({conflict:true});assert.equal((await conflict.post()).status,503);assert.ok(conflict.calls.some(c=>c.removed));});
 test('duplicate slug returns its real existing product without exposing SQL',async()=>{const s=setup({duplicate:true}),response=await s.post();assert.equal(response.status,409);assert.equal((await response.json()).existingProduct.id,99);assert.ok(!s.calls.some(c=>c.upload));});
+
+test('capitalized limited-commercial filenames preserve display identity and lowercase slug',()=>{
+ const value={...identity,file:'Beautiful_Noise.hdalc'};
+ const bytes=pack.makePackageZip([{name:'qatools-tool.json',bytes:Buffer.from(JSON.stringify(value))},{name:value.file,bytes:hda}]);
+ const result=lib.preparedTool(bytes);assert.equal(result.tool.name,'Beautiful_Noise.hdalc');assert.equal(result.identity.slug,'beautiful_noise');
+});

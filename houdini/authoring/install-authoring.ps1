@@ -19,5 +19,5 @@ $taskConfigPath = Join-Path $taskPackages 'qatools-authoring.json'
 if (Test-Path -LiteralPath $taskConfigPath) {Copy-Item -LiteralPath $taskConfigPath -Destination ($taskConfigPath + '.backup-' + $taskStamp)}
 $taskConfig = '{"env":[{"qatools_authoring":"$HOUDINI_PACKAGE_PATH/qatools-authoring"}],"path":[{"HOUDINI_PATH":"$qatools_authoring"}]}'
 [System.IO.File]::WriteAllText($taskConfigPath,$taskConfig)
-Write-Output 'qatools authoring installed. Restart Houdini and enable the qatools authoring shelf.'
+Write-Output 'qatools authoring installed. Restart Houdini and enable the qatools dev shelf tab.'
 Write-Output ('Package: ' + $taskDestination)

@@ -24,7 +24,7 @@ def identity(label, internal_name, filename, content):
                          "Capitalization must match the Asset Label; replace each space with an underscore. "
                          "This helper currently rejects namespace prefixes and version suffixes (names containing ::).")
     slug = internal_name.lower()
-    if filename not in [slug + ext for ext in (".hda", ".hdalc", ".hdanc")]:
+    if filename not in [stem + ext for stem in (slug, internal_name) for ext in (".hda", ".hdalc", ".hdanc")]:
         raise ValueError("The HDA filename must match its stable slug.")
     if not 24 < len(content) <= 4 * 1024 * 1024 or content[:4] != b"INDX":
         raise ValueError("Choose a valid HDA smaller than 4 MB.")
@@ -32,7 +32,7 @@ def identity(label, internal_name, filename, content):
             "slug": slug, "file": filename, "sha256": hashlib.sha256(content).hexdigest()}
 
 
-def export_definition(definition, destination):
+def export_definition(definition, destination, template_node=None):
     """Copy one saved definition to a new ZIP, without changing its source HDA.
 
     Never overwrites an existing export. Call after the licensing preparation
@@ -45,14 +45,19 @@ def export_definition(definition, destination):
     extension = source.suffix.lower()
     if extension not in (".hda", ".hdalc", ".hdanc"):
         raise ValueError("Save the asset to an HDA library before exporting.")
-    filename = slug + extension
+    filename = internal_name + extension
     identity(label, internal_name, filename, b"INDX" + b"x" * 25)
-    target = Path(destination)
+    target = Path(destination).parent / (internal_name + ".zip")
     if target.suffix.lower() != ".zip":
         raise ValueError("Choose a ZIP export path.")
     with tempfile.TemporaryDirectory(prefix="qatools-export-") as temporary:
         copied = Path(temporary) / filename
-        definition.copyToHDAFile(str(copied))
+        if template_node is None:
+            definition.copyToHDAFile(str(copied))
+        else:
+            # This must be the last HDA write. Package these exact saved bytes.
+            definition.save(str(copied), template_node=template_node,
+                            black_box=True, create_backup=False)
         content = copied.read_bytes()
         metadata = identity(label, internal_name, filename, content)
         # Exclusive creation also prevents accidental replacement during races.
