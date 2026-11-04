@@ -141,4 +141,3 @@
 .admin-products button.admin-publish-primary:hover { background:#215439; color:#b9f2ca; }
 .admin-products button.admin-publish-primary:disabled { opacity:.4; }
 .admin-zip-replace { display:inline-block; position:relative; padding:10px 14px; border:1px solid #444; cursor:pointer; }
-.admin-zip-contents { max-height:240px; overflow:auto; font:11px/1.7 monospace; white-space:pre-wrap; overflow-wrap:anywhere; color:#999; }

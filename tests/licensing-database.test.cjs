@@ -208,6 +208,45 @@ test('account trial integration: new account, fixed deadline, download isolation
   await db.query("UPDATE account_activations SET status='revoked' WHERE id=$1",[first.activation.id]);assert.equal((await read()).code,'assignment_inactive');
   const second=await start(machineB);assert.equal(second.ok,true);
   const secondProof=(await db.query('SELECT read_trial_license($1,$2,$3) r',[second.activation.id,key.credential.id,machineB])).rows[0].r;assert.equal(secondProof.trialEndsAt,proof.trialEndsAt);
+  await db.exec(migration('20261104120000_houdini_browser_connection.sql'));
+  const connectionId='00000000-0000-4000-8000-000000000099',secret='d'.repeat(64);
+  const connect=async(action,patch={})=>(await db.query('SELECT houdini_connection($1,$2,$3,$4,$5,$6,$7) r',[action,patch.id??connectionId,patch.hash??secret,patch.machine??machineB,'Test computer','123456',patch.user??null])).rows[0].r;
+  assert.equal((await connect('start')).ok,true);
+  assert.equal((await connect('claim',{hash:hashB})).code,'connection_unavailable');
+  assert.equal((await connect('claim')).pending,true);
+  assert.equal((await connect('approve',{user:userD})).code,'account_unavailable');
+  assert.equal((await connect('approve',{user:userC})).ok,true);
+  assert.equal((await connect('approve',{user:userA})).code,'connection_unavailable');
+  assert.equal((await connect('claim',{machine:machineA})).code,'connection_unavailable');
+  const linked=await connect('claim');assert.equal(linked.ok,true);assert.equal(linked.activation.id,second.activation.id);
+  const retried=await connect('claim');assert.equal(retried.trialEndsAt,proof.trialEndsAt);
+  await db.query("UPDATE houdini_connections SET expires_at=now()-interval '1 second' WHERE id=$1",[connectionId]);
+  assert.equal((await connect('claim')).code,'connection_expired');
+  await db.exec(migration('20261104130000_individual_tool_trials.sql'));
+  const toolTrial=async slug=>(await db.query('SELECT start_tool_trial($1,$2,$3,$4) r',[second.activation.id,key.credential.id,machineB,slug])).rows[0].r;
+  const readTools=async()=>(await db.query('SELECT read_tool_trial_license($1,$2,$3) r',[second.activation.id,key.credential.id,machineB])).rows[0].r;
+  assert.deepEqual((await readTools()).toolTrials,{}); // Connecting alone starts no individual trial.
+  const one=await toolTrial('tool-a');assert.equal(one.ok,true);assert.equal(one.toolTrials['tool-a'].endsAt-one.toolTrials['tool-a'].startedAt,604800);
+  assert.deepEqual((await toolTrial('tool-a')).toolTrials,one.toolTrials);
+  assert.equal((await db.query('SELECT count(*)::int n FROM account_tool_trials')).rows[0].n,1);
+  await db.query("UPDATE account_tool_trials SET started_at=now()-interval '8 days',ends_at=now()-interval '1 day' WHERE user_id=$1 AND product_id=1",[userC]);
+  const expired=(await readTools()).toolTrials['tool-a'];
+  assert.deepEqual((await toolTrial('tool-a')).toolTrials['tool-a'],expired);
+  const two=await toolTrial('tool-b');assert.ok(two.toolTrials['tool-b'].endsAt>expired.endsAt);assert.deepEqual(two.toolTrials['tool-a'],expired);
+  await db.query("INSERT INTO entitlements(id,user_id,product_id,status) VALUES(99,$1,1,'active')",[userC]);
+  assert.ok((await readTools()).purchased.includes('tool-a'));
+  await db.exec("UPDATE entitlements SET status='revoked' WHERE id=99");
+  assert.ok(!(await readTools()).purchased.includes('tool-a'));assert.deepEqual((await toolTrial('tool-a')).toolTrials['tool-a'],expired);
+  assert.equal((await toolTrial('free')).ok,true);assert.equal((await toolTrial('project')).code,'tool_unavailable');
+  assert.equal((await db.query('SELECT count(*)::int n FROM account_tool_trials')).rows[0].n,2);
+  await db.query("UPDATE account_activations SET status='released',released_at=now() WHERE id=$1",[second.activation.id]);
+  assert.equal((await toolTrial('tool-c')).code,'assignment_inactive');
+  for(const role of ['anon','authenticated','service_role']){
+   const rights=(await db.query("SELECT has_table_privilege($1,'account_tool_trials','SELECT,INSERT,UPDATE,DELETE') writes,has_function_privilege($1,'start_tool_trial(bigint,uuid,text,text)','EXECUTE') execute",[role])).rows[0];assert.equal(rights.writes,false);assert.equal(rights.execute,role==='service_role');
+  }
+  for(const role of ['anon','authenticated','service_role']){
+   const rights=(await db.query("SELECT has_table_privilege($1,'houdini_connections','SELECT,INSERT,UPDATE,DELETE') writes,has_function_privilege($1,'houdini_connection(text,uuid,text,text,text,text,uuid)','EXECUTE') execute",[role])).rows[0];assert.equal(rights.writes,false);assert.equal(rights.execute,role==='service_role');
+  }
   for(const role of ['anon','authenticated']){
    const privilege=(await db.query("SELECT has_function_privilege($1,'activate_trial_machine(text,text)','EXECUTE') a,has_function_privilege($1,'read_account_trial(uuid)','EXECUTE') b,has_table_privilege($1,'account_trials','UPDATE') c",[role])).rows[0];assert.deepEqual(privilege,{a:false,b:false,c:false});
   }

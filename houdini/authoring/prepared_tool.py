@@ -8,6 +8,24 @@ from pathlib import Path
 import re
 import tempfile
 import zipfile
+import os
+from contextlib import contextmanager
+
+
+@contextmanager
+def atomic_export(target):
+    """Publish a completed ZIP atomically; a failed export retains the old file."""
+    target = Path(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary = tempfile.mkstemp(prefix="." + target.stem + "-", suffix=".tmp", dir=target.parent)
+    try:
+        with os.fdopen(descriptor, "wb") as output:
+            yield output
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, target)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
 
 
 def release_names(source_internal):
@@ -41,10 +59,10 @@ def identity(label, internal_name, filename, content):
             "slug": slug, "file": filename, "sha256": hashlib.sha256(content).hexdigest()}
 
 
-def export_definition(definition, destination, template_node=None):
+def export_definition(definition, destination, template_node=None, staging_parent=None):
     """Copy one saved definition to a new ZIP, without changing its source HDA.
 
-    Never overwrites an existing export. Call after the licensing preparation
+    Replaces an existing ZIP only after successful completion. Call after the licensing preparation
     and validation step; exporting identity alone does not license an asset.
     """
     label, internal_name = definition.description(), definition.nodeTypeName()
@@ -59,7 +77,7 @@ def export_definition(definition, destination, template_node=None):
     target = Path(destination).parent / (internal_name + ".zip")
     if target.suffix.lower() != ".zip":
         raise ValueError("Choose a ZIP export path.")
-    with tempfile.TemporaryDirectory(prefix="qatools-export-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="qatools-export-", dir=staging_parent) as temporary:
         copied = Path(temporary) / filename
         if template_node is None:
             definition.copyToHDAFile(str(copied))
@@ -69,14 +87,8 @@ def export_definition(definition, destination, template_node=None):
                             black_box=True, create_backup=False)
         content = copied.read_bytes()
         metadata = identity(label, internal_name, filename, content)
-        # Exclusive creation also prevents accidental replacement during races.
-        with target.open("xb") as output:
-            try:
-                with zipfile.ZipFile(output, "w", zipfile.ZIP_STORED) as archive:
-                    archive.writestr("qatools-tool.json", json.dumps(metadata, ensure_ascii=True))
-                    archive.writestr(filename, content)
-            except Exception:
-                output.close()
-                target.unlink(missing_ok=True)
-                raise
+        with atomic_export(target) as output:
+            with zipfile.ZipFile(output, "w", zipfile.ZIP_STORED) as archive:
+                archive.writestr("qatools-tool.json", json.dumps(metadata, ensure_ascii=True))
+                archive.writestr(filename, content)
     return metadata

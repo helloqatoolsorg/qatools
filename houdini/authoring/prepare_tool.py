@@ -5,13 +5,29 @@ from pathlib import Path
 import tempfile
 import uuid
 
+
 from .prepared_tool import identity, export_definition, release_names
 
 MARKER = "qatools-preparation.json"
 GUARD = "qatools_license_guard"
 PARAMETERS = ("license_state", "license_email", "license_machine", "license_date",
-              "license_trial", "activate_online", "clear_local_license", "qatools_license", "qatools_license_gap", "qatools_purchase", "qatools_purchase_disabled")
+              "license_trial", "activate_online", "clear_local_license", "qatools_license", "qatools_license_gap", "qatools_purchase", "qatools_purchase_disabled",
+              "qatools_active", "qatools_connected", "license_active_heading", "license_inactive_heading", "license_trial_heading", "start_free_trial", "qatools_purchase_box", "get_license_key", "license_trial_notice", "qatools_state_gap", "qatools_trial_gap", "qatools_trial_notice", "qatools_purchase_gap")
 GUARD_CODE = 'hou.pwd().parent().evalParm("qatools_license_revision")\nhou.pwd().parent().hdaModule()._qatools_require()'
+
+
+def qt_bindings():
+    try:
+        from PySide6 import QtCore, QtWidgets
+    except ImportError:
+        raise ValueError("The authoring utility needs a Qt6/PySide6 build of Houdini 21 or 22.") from None
+    return QtCore, QtWidgets
+
+
+def expand_string(value):
+    import hou
+    expand = getattr(getattr(hou, "text", None), "expandString", None)
+    return expand(value) if callable(expand) else hou.expandString(value)
 
 
 def bridge(slug):
@@ -26,17 +42,29 @@ def _qatools_require():
         from qatools_licensing import houdini_ui
     except ImportError:
         raise hou.NodeError("Install the complete qatools package before using this tool.") from None
+    if getattr(houdini_ui, "RUNTIME_VERSION", 0) < 5:
+        raise hou.NodeError("Update the installed qatools licensing files and restart Houdini. This tool requires runtime 5 or later.")
     return houdini_ui.require_license_or_fail(_qatools_slug)
 
 def _qatools_field(field):
     try:
         from qatools_licensing import houdini_ui
+        if field in ("active_flag", "connected"):
+            status = houdini_ui.default_client().status()
+            return int(bool(status.get("valid") and (field == "connected" or _qatools_slug in status.get("products", []))))
         return houdini_ui.license_field(field, _qatools_slug)
     except ImportError:
-        return "\\u274c inactive" if field == "state" else "\\u2014"
+        if field in ("active_flag", "connected"):
+            return 0
+        if field in ("trial", "trial_notice"):
+            return ""
+        return "\\u274c inactive license" if field == "state" else "\\u2014"
 
 def _qatools_purchase_state():
-    from qatools_licensing import houdini_ui
+    try:
+        from qatools_licensing import houdini_ui
+    except ImportError:
+        return "Purchase tool"
     helper = getattr(houdini_ui, "purchase_state", None)
     if callable(helper):
         return helper(_qatools_slug)
@@ -51,20 +79,33 @@ def _qatools_purchase_state():
 
 def _qatools_setup(node):
     import hou
-    for field in ("state", "email", "machine", "date", "trial"):
+    for field in ("state", "email", "machine", "date", "trial", "trial_notice"):
         parm = node.parm("license_" + field)
         if parm is not None:
             parm.setExpression('hou.pwd().hdaModule()._qatools_field("' + field + '")', hou.exprLanguage.Python)
     state = _qatools_purchase_state()
+    try:
+        from qatools_licensing import houdini_ui
+    except ImportError:
+        houdini_ui = None
+    expired = bool(houdini_ui and houdini_ui.license_field("trial_notice", _qatools_slug))
+    for name, field in (("qatools_active", "active_flag"), ("qatools_connected", "connected")):
+        flag = node.parm(name)
+        if flag is not None:
+            flag.setExpression('int(hou.pwd().hdaModule()._qatools_field("' + field + '"))', hou.exprLanguage.Python)
     disabled = node.parm("qatools_purchase_disabled")
     if disabled is not None:
         disabled.set(int(state != "Purchase tool"))
     group = node.parmTemplateGroup()
     button = group.find("qatools_purchase")
-    if button is not None and button.label() != state:
-        button.setLabel(state)
+    label = ("\\U0001f7e2 " + state) if expired and state == "Purchase tool" else state
+    if button is not None and button.label() != label:
+        button.setLabel(label)
         group.replace("qatools_purchase", button)
         node.setParmTemplateGroup(group)
+    register = getattr(houdini_ui, "register_tool", None)
+    if callable(register):
+        register(_qatools_slug)
 
 def _qatools_purchase(node):
     from qatools_licensing import houdini_ui
@@ -77,20 +118,8 @@ def _qatools_purchase(node):
         webbrowser.open("https://www.qatools.org/purchase?tool=" + quote(_qatools_slug, safe=""))
 
 def _qatools_recook_all():
-    import hou
-    # The shared cache covers every owned tool; refresh existing instances too.
-    for node in hou.node("/").allSubChildren(recurse_in_locked_nodes=False):
-        definition = node.type().definition()
-        if definition is None or "qatools-preparation.json" not in definition.sections():
-            continue
-        node.hdaModule()._qatools_setup(node)
-        revision = node.parm("qatools_license_revision")
-        if revision is not None:
-            revision.set((revision.evalAsInt() + 1) %% 1000000)
-        try:
-            node.cook(force=True)
-        except hou.OperationFailed:
-            pass
+    from qatools_licensing import houdini_ui
+    houdini_ui.refresh_tool_nodes()
 
 def _qatools_activate(node):
     from qatools_licensing import houdini_ui
@@ -101,6 +130,19 @@ def _qatools_clear(node):
     from qatools_licensing import houdini_ui
     houdini_ui.clear_local_license()
     _qatools_recook_all()
+
+def _qatools_trial(node):
+    from qatools_licensing import houdini_ui
+    helper = getattr(houdini_ui, "show_trial_dialog", None)
+    if not callable(helper):
+        import hou
+        hou.ui.displayMessage("Install the latest qatools package to start the free trial without a key.", title="qatools")
+        return
+    helper(_qatools_recook_all)
+
+def _qatools_get_key(node):
+    import webbrowser
+    webbrowser.open("https://www.qatools.org/user?section=license")
 ''' % slug
 
 
@@ -141,18 +183,42 @@ def add_license_tab(definition):
     revision = hou.IntParmTemplate("qatools_license_revision", "License revision", 1, default_value=(0,))
     revision.hide(True)
     folder.addParmTemplate(revision)
+    for name in ("qatools_active", "qatools_connected"):
+        flag = hou.IntParmTemplate(name, name, 1, default_value=(0,))
+        flag.hide(True)
+        folder.addParmTemplate(flag)
+    for field, label in (("email", "E-mail"), ("machine", "Machine"), ("date", "Date")):
+        parm = hou.StringParmTemplate("license_" + field, label, 1)
+        parm.setConditional(hou.parmCondType.DisableWhen, "{ 1 }")
+        folder.addParmTemplate(parm)
+    folder.addParmTemplate(hou.SeparatorParmTemplate("qatools_state_gap"))
+    state = hou.StringParmTemplate("license_state", "State", 1)
+    state.setConditional(hou.parmCondType.DisableWhen, "{ 1 }")
+    folder.addParmTemplate(state)
+    folder.addParmTemplate(hou.LabelParmTemplate("qatools_license_gap", " ", column_labels=(" ",), is_label_hidden=True))
+    get_key = hou.ButtonParmTemplate("get_license_key", "Get license key")
+    get_key.setScriptCallback('kwargs["node"].hdaModule()._qatools_get_key(kwargs["node"])')
+    get_key.setScriptCallbackLanguage(hou.scriptLanguage.Python)
+    folder.addParmTemplate(get_key)
+    activate = hou.ButtonParmTemplate("activate_online", "Activate")
+    activate.setHelp("Opens a masked key-entry dialog. The key is never saved in this HDA or Houdini project.")
+    activate.setScriptCallback('kwargs["node"].hdaModule()._qatools_activate(kwargs["node"])')
+    activate.setScriptCallbackLanguage(hou.scriptLanguage.Python)
+    folder.addParmTemplate(activate)
+    folder.addParmTemplate(hou.SeparatorParmTemplate("qatools_trial_gap"))
     trial = hou.StringParmTemplate("license_trial", "Trial", 1)
     trial.setConditional(hou.parmCondType.DisableWhen, "{ 1 }")
     trial.setConditional(hou.parmCondType.HideWhen, '{ license_trial == "" }')
     folder.addParmTemplate(trial)
-    for field, label in (("state", "State"), ("email", "E-mail"), ("machine", "Machine"), ("date", "Date")):
-        parm = hou.StringParmTemplate("license_" + field, label, 1)
-        parm.setConditional(hou.parmCondType.DisableWhen, "{ 1 }")
-        folder.addParmTemplate(parm)
-    activate = hou.ButtonParmTemplate("activate_online", "License key activation")
-    activate.setScriptCallback('kwargs["node"].hdaModule()._qatools_activate(kwargs["node"])')
-    activate.setScriptCallbackLanguage(hou.scriptLanguage.Python)
-    folder.addParmTemplate(activate)
+    folder.addParmTemplate(hou.LabelParmTemplate("qatools_purchase_gap", " ", column_labels=(" ",), is_label_hidden=True))
+    notice = hou.StringParmTemplate("license_trial_notice", "Trial message", 1)
+    notice.hide(True)
+    folder.addParmTemplate(notice)
+    message = hou.LabelParmTemplate("qatools_trial_notice", "Your 7-day trial has ended.\nPurchase this tool to continue.")
+    if hasattr(message, "setLabelParmType") and hasattr(hou, "labelParmType"):
+        message.setLabelParmType(hou.labelParmType.Message)
+    message.setConditional(hou.parmCondType.HideWhen, '{ license_trial_notice == "" }')
+    folder.addParmTemplate(message)
     disabled = hou.IntParmTemplate("qatools_purchase_disabled", "Purchase unavailable", 1, default_value=(0,))
     disabled.hide(True)
     folder.addParmTemplate(disabled)
@@ -161,11 +227,6 @@ def add_license_tab(definition):
     purchase.setScriptCallback('kwargs["node"].hdaModule()._qatools_purchase(kwargs["node"])')
     purchase.setScriptCallbackLanguage(hou.scriptLanguage.Python)
     folder.addParmTemplate(purchase)
-    folder.addParmTemplate(hou.SeparatorParmTemplate("qatools_license_gap"))
-    clear = hou.ButtonParmTemplate("clear_local_license", "Clear local license")
-    clear.setScriptCallback('kwargs["node"].hdaModule()._qatools_clear(kwargs["node"])')
-    clear.setScriptCallbackLanguage(hou.scriptLanguage.Python)
-    folder.addParmTemplate(clear)
     tabs = hou.ParmTemplateGroup()
     tabs.append(controls)
     tabs.append(folder)
@@ -175,6 +236,9 @@ def add_license_tab(definition):
 def prepare(node, destination, icon_path=None):
     """Return export metadata; never change the selected asset or its library."""
     import hou
+    if hou.isUIAvailable():
+        from .export_worker import prepare_isolated
+        return prepare_isolated(node, destination, icon_path)
     definition = node.type().definition()
     if definition is None or not node.matchesCurrentDefinition():
         raise ValueError("Save and lock the asset definition in Houdini before preparing it.")
@@ -214,8 +278,8 @@ def prepare(node, destination, icon_path=None):
             if options.get(event + "/IsPython") is not True:
                 raise ValueError("Convert the existing " + event + " script to Python before preparation.")
     target = Path(destination).parent / (internal + ".zip")
-    if target.exists() or target.suffix.lower() != ".zip":
-        raise ValueError("Export already exists: " + str(target) + ". Choose another folder or move the previous export; its name is automatic.")
+    if target.suffix.lower() != ".zip":
+        raise ValueError("Choose an export folder for the automatically named ZIP.")
     # A uniquely named staging definition prevents replacing loaded user tools.
     staging_name = "qatools_staging_" + uuid.uuid4().hex
     geometry = None
@@ -274,7 +338,7 @@ def prepare(node, destination, icon_path=None):
             final.setIsPreferred(True)
             release_node = geometry.createNode(internal)
             release_node.allowEditingOfContents()
-            return export_definition(final, target, template_node=release_node)
+            return export_definition(final, target, template_node=release_node, staging_parent=temporary)
         finally:
             if geometry is not None:
                 geometry.destroy()
@@ -286,7 +350,7 @@ def prepare(node, destination, icon_path=None):
 
 def export_dialog(definition):
     import hou
-    from PySide6 import QtCore, QtWidgets
+    QtCore, QtWidgets = qt_bindings()
     settings = QtCore.QSettings("qatools", "dev-export")
     label, internal = release_names(definition.nodeTypeName())
     source = Path(definition.libraryFilePath()).resolve()
@@ -331,7 +395,7 @@ def export_dialog(definition):
     full_path.setReadOnly(True)
     form.addRow("Full export path", full_path)
     def update_path():
-        full_path.setText(str(Path(hou.expandString(folder.text().strip())).expanduser().resolve() / (internal + ".zip")))
+        full_path.setText(str(Path(expand_string(folder.text().strip())).expanduser().resolve() / (internal + ".zip")))
     folder.textChanged.connect(update_path)
     update_path()
     def choose_folder():
@@ -351,10 +415,8 @@ def export_dialog(definition):
     if not folder.text().strip():
         raise ValueError("Choose an export folder.")
     target = Path(full_path.text())
-    if target.exists():
-        raise ValueError("Export already exists: " + str(target) + ". Move it or choose another folder.")
     target.parent.mkdir(parents=True, exist_ok=True)
-    icon_text = hou.expandString(icon.text().strip())
+    icon_text = expand_string(icon.text().strip())
     selected_icon = str(Path(icon_text).expanduser().resolve()) if icon_text else None
     if selected_icon and not Path(selected_icon).is_file():
         raise ValueError("The selected node icon does not exist.")

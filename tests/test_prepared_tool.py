@@ -4,6 +4,7 @@ import tempfile
 import unittest
 import zipfile
 import json
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location("prepared_tool", Path(__file__).resolve().parents[1] / "houdini/authoring/prepared_tool.py")
 module = importlib.util.module_from_spec(spec)
@@ -38,7 +39,7 @@ class PreparedTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Asset Label is invalid: 'Beautiful  Noise'"):
             module.identity("Beautiful  Noise", "Beautiful__Noise", "tool.hda", CONTENT)
 
-    def test_export_reads_definition_and_never_overwrites(self):
+    def test_export_replaces_same_named_zip_only_after_success(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "Beautiful_Noise.zip"
             exported = module.export_definition(Definition(), path)
@@ -46,9 +47,29 @@ class PreparedTests(unittest.TestCase):
                 self.assertEqual(archive.namelist(), ["qatools-tool.json", "Beautiful_Noise.hdalc"])
                 self.assertEqual(json.loads(archive.read("qatools-tool.json")), exported)
                 self.assertEqual(archive.read("Beautiful_Noise.hdalc"), CONTENT)
+            class Updated(Definition):
+                def copyToHDAFile(self, path): Path(path).write_bytes(CONTENT + b"updated")
+            module.export_definition(Updated(), path)
+            with zipfile.ZipFile(path) as archive:
+                self.assertEqual(archive.read("Beautiful_Noise.hdalc"), CONTENT + b"updated")
+
+    def test_failed_replacement_retains_previous_complete_zip(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "Beautiful_Noise.zip"
+            module.export_definition(Definition(), path)
             before = path.read_bytes()
-            with self.assertRaises(FileExistsError): module.export_definition(Definition(), path)
+            original_write = module.zipfile.ZipFile.writestr
+            writes = [0]
+            def fail_second_write(archive, *args, **kwargs):
+                writes[0] += 1
+                if writes[0] == 2:
+                    raise OSError("disk full")
+                return original_write(archive, *args, **kwargs)
+            with patch.object(module.zipfile.ZipFile, "writestr", new=fail_second_write):
+                with self.assertRaisesRegex(OSError, "disk full"):
+                    module.export_definition(Definition(), path)
             self.assertEqual(path.read_bytes(), before)
+            self.assertEqual(list(Path(directory).glob(".*.tmp")), [])
 
     def test_real_houdini_definition(self):
         import hou
@@ -74,8 +95,8 @@ class PreparedTests(unittest.TestCase):
             canonical = Path(directory) / "Beautiful_Noise.zip"
             self.assertTrue(canonical.exists())
             self.assertFalse(requested.exists())
-            with self.assertRaises(FileExistsError):
-                module.export_definition(Definition(), Path(directory) / "another-name.zip")
+            module.export_definition(Definition(), Path(directory) / "another-name.zip")
+            self.assertFalse((Path(directory) / "another-name.zip").exists())
 
     def test_blackbox_save_is_the_last_hda_write_before_packaging(self):
         calls = []

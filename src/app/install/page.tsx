@@ -266,7 +266,7 @@ export default function InstallPage() {
                     "400 20px monospace",
                 }}
               >
-                Activate your license
+                Start your trial or activate your license
               </h2>
 
               <p
@@ -277,11 +277,10 @@ export default function InstallPage() {
                   lineHeight: 1.75,
                 }}
               >
-                Restart Houdini and place a downloaded tool. In your website
-                account, open <a href="/user?section=license">License</a>, reveal your
-                activation key (or create one) and copy it. In the tool&apos;s License tab, click
-                License key activation, paste the key and click Activate.
-                Your first activation starts your single seven-day account trial. Downloading does not start it. Keep your key private.
+                Restart Houdini and place a downloaded tool. In its License tab, click Get license key and log in to your website account.
+                Copy your account key, click Activate in the tool, then paste the key in the masked dialog.
+                You only need to connect your account once on this computer. Each unpurchased paid tool starts its own seven-day trial when first placed while connected to the internet.
+                Future tools reuse this account connection. Keep your key private.
               </p>
             </div>
           </article>
@@ -336,7 +335,7 @@ export default function InstallPage() {
               >
                 Check that State is active in the tool&apos;s License tab.
                 One account activation covers your tools, including tools in
-                bundles. Paid trial access ends at the original seven-day deadline, including offline; free and purchased tools remain available. Projects are excluded from the trial. Newly placed tools use the same shared license.
+                bundles. After each tool&apos;s trial ends, the next daily license check blocks unpurchased access, including offline; free and purchased tools remain available. Projects are excluded from the trial. Newly placed tools use the same shared license.
                 After acquiring another tool, connect to the internet and click
                 Refresh to update your access.
               </p>

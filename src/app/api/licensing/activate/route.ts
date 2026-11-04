@@ -25,6 +25,7 @@ export async function POST(request: Request) {
     if (keyLimit) return keyLimit;
     // Check signing configuration before any machine-assignment mutation.
     signingConfiguration();
+    if (body.licenseVersion === 4) return await trialActivation(hashActivationKey(key), body.machineId,true);
     if (body.licenseVersion === 3) return await trialActivation(hashActivationKey(key), body.machineId);
     const { data, error } = await supabaseAdmin.rpc("activate_account_machine", {
       p_secret_hash: hashActivationKey(key), p_machine_id: body.machineId,

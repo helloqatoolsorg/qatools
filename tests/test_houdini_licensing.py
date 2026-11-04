@@ -25,7 +25,7 @@ class LicensingTests(unittest.TestCase):
         self.now = 1791000000
         self.calls = []
         self.handler = lambda endpoint, body, key: (200, {"license": self.license()})
-        self.client = Client(self.temp.name, self.keys, "http://127.0.0.1:3000", MACHINE, lambda: self.now, self.transport)
+        self.client = Client(self.temp.name, self.keys, "http://127.0.0.1:3000", MACHINE, lambda: self.now, self.transport, monotonic=lambda: self.now)
 
     def tearDown(self):
         self.temp.cleanup()
@@ -74,6 +74,146 @@ class LicensingTests(unittest.TestCase):
         self.assertEqual(len(self.calls), 1)  # no network while cooking
         with self.assertRaises(LicenseError):
             self.client.require_product("unowned")
+
+    def test_repeated_cooks_reuse_signature_but_detect_expiry_and_external_file_changes(self):
+        import time
+        self.client._save({"license": self.license()})
+        with patch("qatools_licensing.client.verify_license", wraps=verify_license) as verify, patch.object(self.client, "_load", wraps=self.client._load) as read:
+            started = time.perf_counter()
+            for _ in range(10000):
+                self.client.require_product("qafit01")
+            elapsed = time.perf_counter() - started
+            self.assertEqual(verify.call_count, 1)
+            self.assertEqual(read.call_count, 1)
+            self.assertEqual(self.calls, [])
+            print("\nWarm license guard: %.2f microseconds/check over 10000 checks (client check only)." % (elapsed * 1000000 / 10000))
+            self.now += OFFLINE_SECONDS
+            with self.assertRaises(LicenseError):
+                self.client.require_product("qafit01")
+            self.assertEqual(verify.call_count, 1)
+            self.client.path.write_text('{}')
+            self.client._next_cache_poll = 0
+            with self.assertRaises(LicenseError):
+                self.client.require_product("qafit01")
+
+    def test_individual_tool_deadlines_and_start_are_signed_and_do_not_restart(self):
+        start = self.now - 6 * 86400
+        proof = self.license(version=4, purchased=["owned"], free=["free"], toolTrials={
+            "first": {"startedAt": start, "endsAt": start + OFFLINE_SECONDS},
+            "second": {"startedAt": self.now, "endsAt": self.now + OFFLINE_SECONDS}})
+        self.client._save({"license": proof})
+        self.client.require_product("first")
+        self.now += 86400
+        with self.assertRaisesRegex(LicenseError, "Your 7-day trial has ended"):
+            self.client.require_product("first")
+        self.client.require_product("second")
+        self.client.require_product("owned")
+        self.client.require_product("free")
+        with self.assertRaisesRegex(LicenseError, "Preparing this tool"):
+            self.client.require_product("new")
+        self.handler = lambda endpoint, body, key: (200, {"license": self.license(version=4, purchased=["owned"], free=["free"], toolTrials={"new": {"startedAt": self.now, "endsAt": self.now + OFFLINE_SECONDS}})})
+        self.assertTrue(self.client.start_tool_trial("new"))
+        self.assertEqual(self.calls[0][0], "/api/licensing/tool-trial")
+        self.assertIsNone(self.calls[0][2])
+        self.assertFalse(self.client.start_tool_trial("new"))
+        self.assertEqual(len(self.calls), 1)
+        self.client.require_product("new")
+
+    def test_daily_decision_allows_expiry_grace_but_never_starts_a_fresh_window_after_expiry(self):
+        from qatools_licensing.client import product_access
+        end = self.now + 10
+        self.client._save({"license": self.license(version=4, purchased=[], free=[], toolTrials={
+            "demo": {"startedAt": end - OFFLINE_SECONDS, "endsAt": end}})})
+        with patch("qatools_licensing.client.product_access", wraps=product_access) as access:
+            self.client.require_product("demo")
+            self.now += 11
+            self.client.require_product("demo")
+            self.assertEqual(access.call_count, 1)
+            from qatools_licensing import houdini_ui
+            with patch.object(houdini_ui, "default_client", return_value=self.client):
+                self.assertEqual(houdini_ui.license_field("trial", "demo"), "Trial active until next daily check")
+                self.assertEqual(houdini_ui.license_field("trial_notice", "demo"), "")
+            fresh = Client(self.temp.name, self.keys, machine_id=MACHINE, clock=lambda: self.now, monotonic=lambda: self.now)
+            with self.assertRaisesRegex(LicenseError, "Your 7-day trial has ended"):
+                fresh.require_product("demo")
+            self.now += 86400 - 11
+            with self.assertRaisesRegex(LicenseError, "Your 7-day trial has ended"):
+                self.client.require_product("demo")
+        self.assertEqual(self.calls, [])
+
+    def test_daily_decision_is_invalidated_by_local_and_other_session_cache_updates(self):
+        self.client._save({"license": self.license()})
+        self.client.require_product("qafit01")
+        other = Client(self.temp.name, self.keys, machine_id=MACHINE, clock=lambda: self.now)
+        other._save({})
+        self.now += 1
+        with self.assertRaises(LicenseError):
+            self.client.require_product("qafit01")
+        self.client._save({"license": self.license()})
+        self.client.require_product("qafit01")
+        self.client.clear_local_license()
+        with self.assertRaises(LicenseError):
+            self.client.require_product("qafit01")
+
+    def test_daily_trial_cache_never_extends_the_signed_offline_lease(self):
+        end = self.now + 10
+        proof = self.license(version=4, purchased=[], free=[], toolTrials={
+            "demo": {"startedAt": end - OFFLINE_SECONDS, "endsAt": end}},
+            issuedAt=self.now - OFFLINE_SECONDS + 20, expiresAt=self.now + 20)
+        self.client._save({"license": proof})
+        self.client.require_product("demo")
+        self.now += 11
+        self.client.require_product("demo")
+        self.now += 9
+        with self.assertRaises(LicenseError):
+            self.client.require_product("demo")
+
+    def test_daily_cache_is_bounded_by_wall_time_after_suspend(self):
+        monotonic = [0]
+        self.client.monotonic = lambda: monotonic[0]
+        end = self.now + 10
+        self.client._save({"license": self.license(version=4, purchased=[], free=[], toolTrials={
+            "demo": {"startedAt": end - OFFLINE_SECONDS, "endsAt": end}})})
+        self.client.require_product("demo")
+        self.now += 86400
+        monotonic[0] += 2  # Simulate a platform whose monotonic clock paused in sleep.
+        with self.assertRaisesRegex(LicenseError, "Your 7-day trial has ended"):
+            self.client.require_product("demo")
+
+    def test_browser_connection_requires_signed_matching_proof_and_never_caches_pairing_secret(self):
+        connection = {"id": GENERATION, "token": "b" * 64, "displayCode": "123456", "expiresIn": 300}
+        self.handler = lambda endpoint, body, key: (200, connection)
+        self.assertEqual(self.client.begin_connection("Computer"), connection)
+        self.assertFalse(self.client.path.exists())
+        self.handler = lambda endpoint, body, key: (202, {"pending": True})
+        self.assertFalse(self.client.finish_connection(connection))
+        self.assertFalse(self.client.path.exists())
+        self.handler = lambda endpoint, body, key: (200, {"license": self.license(machineId="FEDCBA9876543210")})
+        with self.assertRaises(LicenseError):
+            self.client.finish_connection(connection)
+        self.assertFalse(self.client.path.exists())
+        self.handler = lambda endpoint, body, key: (200, {"license": self.license()})
+        self.assertTrue(self.client.finish_connection(connection))
+        self.assertNotIn(connection["token"], self.client.path.read_text())
+        self.client.require_product("qafit01")
+
+    def test_expired_trial_has_actionable_error_without_blocking_owned_or_free_tools(self):
+        start = self.now - OFFLINE_SECONDS
+        proof = self.license(version=3, purchased=["owned"], free=["free"], trial=["demo"],
+                             trialStartedAt=start, trialEndsAt=self.now)
+        self.client._save({"license": proof})
+        with self.assertRaisesRegex(LicenseError, "Your 7-day trial has ended"):
+            self.client.require_product("demo")
+        self.client.require_product("owned")
+        self.client.require_product("free")
+        self.assertEqual(self.calls, [])
+        from qatools_licensing import houdini_ui
+        self.now += OFFLINE_SECONDS
+        with patch.object(houdini_ui, "default_client", return_value=self.client):
+            self.assertEqual(houdini_ui.license_field("trial", "demo"), "Trial ended")
+            self.assertIn("Purchase this tool", houdini_ui.license_field("trial_notice", "demo"))
+        with self.assertRaises(LicenseError):
+            self.client.require_product("owned")  # UI metadata never extends the offline lease.
 
     def test_trial_countdown_uses_signed_deadline_and_hides_when_owned(self):
         from qatools_licensing import houdini_ui

@@ -4,6 +4,7 @@ import { privateJson, readActivationBody } from "@/lib/activationHttp";
 import { issueDenial, issueLicense, signingConfiguration, LEGACY_OFFLINE_SECONDS, OFFLINE_SECONDS, verifyLicense, type SignedEnvelope } from "@/lib/signedLicense";
 import { licenseIdentity } from "@/lib/licenseIdentity";
 import { verifyTrialLicense } from "@/lib/signedTrialLicense";
+import {verifyToolTrialLicense} from "@/lib/signedToolTrialLicense";
 import { trialRenewal } from "@/lib/trialActivation";
 
 export const runtime = "nodejs";
@@ -23,11 +24,12 @@ export async function POST(request: Request) {
     try { payload = verifyLicense(body.license, true); }
     catch {
       try { payload = verifyTrialLicense(body.license as SignedEnvelope, Math.floor(Date.now()/1000), true); }
-      catch { return privateJson({ error: "A valid signed license is required." }, 401); }
+      catch {try{payload=verifyToolTrialLicense(body.license as SignedEnvelope,Math.floor(Date.now()/1000),true);}catch{return privateJson({ error: "A valid signed license is required." }, 401);}}
     }
     if (payload.machineId !== body.machineId) return privateJson({ error: "License machine does not match." }, 401);
     const assignmentLimit = await licensingRequestLimit("renew-assignment", `${payload.activationId}:${payload.credentialId}`);
     if (assignmentLimit) return assignmentLimit;
+    if(payload.version===4 || (payload.version===3 && body.licenseVersion===4))return await trialRenewal(Number(payload.activationId),payload.credentialId,payload.machineId,body.license as SignedEnvelope,body.nonce,true);
     if (payload.version === 3) return await trialRenewal(Number(payload.activationId), payload.credentialId, payload.machineId, body.license as SignedEnvelope, body.nonce);
     const { data, error } = await supabaseAdmin.rpc("renew_account_license", {
       p_activation_id: Number(payload.activationId), p_credential_id: payload.credentialId, p_machine_id: payload.machineId,

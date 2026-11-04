@@ -2360,4 +2360,8 @@ body:not(.products-page) .cart-overlay{
 .product-download-control .free-download-button:hover { background:#153a28; color:#9be3b5; border-color:#397654; }
 .product-download-control .free-download-button.downloaded { background:#10271b; color:#80d5a0; border-color:#2e6344; }
 .product-download-control .free-download-button.downloaded:hover { background:#153a28; color:#9be3b5; border-color:#397654; }
+.houdini-connect-page {max-width:600px;margin:60px auto;padding:24px;font:14px/1.7 monospace;}
+.houdini-connect-page h1 {font-size:26px;}
+.houdini-connect-page button {padding:12px 18px;border:1px solid #397654;background:#153a28;color:#9be3b5;font:inherit;cursor:pointer;}
+.houdini-connect-page [role="alert"] {color:#e87373;}
 .card-purchase-actions > .card-add-cart:not(.purchased):not(.in-cart):hover { background:#112b45; color:#98caff; border-color:#356f9c; }

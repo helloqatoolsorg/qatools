@@ -10,7 +10,6 @@ export default function AccountActivationKey({ embedded = false }: { embedded?: 
   const [secret, setSecret] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
@@ -25,7 +24,7 @@ export default function AccountActivationKey({ embedded = false }: { embedded?: 
   useEffect(() => {
     const controller = new AbortController();
     async function load() {
-      setLoading(true); setError(null); setSecret(null); setConfirming(false); setMessage(null);
+      setLoading(true); setError(null); setSecret(null); setMessage(null);
       try {
         const token = await sessionToken();
         const response = await fetch("/api/account/activation-key", {
@@ -44,18 +43,18 @@ export default function AccountActivationKey({ embedded = false }: { embedded?: 
   }, [refresh]);
 
   async function create() {
-    if (inFlight.current || loading || (credential && !confirming)) return;
+    if (inFlight.current || loading || credential) return;
     inFlight.current = true; setBusy(true); setError(null); setMessage(null); setSecret(null);
     try {
       const token = await sessionToken();
       const response = await fetch("/api/account/activation-key", {
         method: "POST", cache: "no-store",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ expectedCredentialId: credential?.id ?? null }),
+        body: JSON.stringify({ expectedCredentialId: null }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Unable to create an activation key.");
-      setCredential(result.credential); setConfirming(false);
+      setCredential(result.credential);
       setMessage("License key ready.");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The response was interrupted. Refresh to check the key status before trying again.");
@@ -96,18 +95,7 @@ export default function AccountActivationKey({ embedded = false }: { embedded?: 
         <button type="button" disabled={busy || Boolean(error)} onClick={() => accessKey("copy")}>Copy key</button>
       </div>}
       {!credential && !error && <button type="button" disabled={busy} onClick={create}>{busy ? "Please wait…" : "Create license key"}</button>}
-      {credential && <details className="license-key-manage">
-        <summary>Manage key</summary>
-        {!credential.reveal_available && <p>This older key needs replacing to enable Reveal and Copy.</p>}
-        {!error && !confirming && <button type="button" disabled={busy} onClick={() => setConfirming(true)}>Replace key</button>}
-        {confirming && <div>
-          <p>The old key will stop working for online activation. Your tools and assigned computer are retained. Existing offline licenses are not immediately disabled.</p>
-          <div className="license-key-actions">
-            <button type="button" disabled={busy} onClick={create}>{busy ? "Replacing…" : "Confirm replacement"}</button>
-            <button type="button" disabled={busy} onClick={() => setConfirming(false)}>Cancel</button>
-          </div>
-        </div>}
-      </details>}
+      {credential && !credential.reveal_available && <p>Reveal and Copy are unavailable for this older key. Contact <a href="mailto:hello@qatools.org">support</a>.</p>}
     </>}
     {error && <div role="alert"><p className="password-error">{error}</p><button type="button" disabled={busy || loading} onClick={() => setRefresh(value => value + 1)}>Retry</button></div>}
     {message && <p role="status" className="password-success">{message}</p>}

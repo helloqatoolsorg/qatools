@@ -48,6 +48,7 @@ function setup(options = {}) {
         ok:true, credential:metadata, activation:{id:1,machine_id:'0123456789ABCDEF',credential_id:credentialId,activated_at:'2026-10-01T12:00:00Z'},
         products:[{id:1,slug:'tool-a',name:'Tool A'},{id:2,slug:'tool-b',name:'Tool B'}],
         purchased:['tool-a'],free:['free-tool'],trial:['demo-tool'],trialStartedAt:Math.floor(Date.now()/1000)-86400,trialEndsAt:Math.floor(Date.now()/1000)+5*86400+86400,
+        toolTrials:{'demo-tool':{startedAt:Math.floor(Date.now()/1000)-86400,endsAt:Math.floor(Date.now()/1000)+6*86400}},
       }, error:options.databaseError ? {message:'sensitive database diagnostic'}:null };
     },
   };
@@ -370,4 +371,28 @@ test('trial-capable activation and renewal use signed scope and retain the fixed
  const renewed=await s.load(renewRoute).POST(s.request({license,machineId:payload.machineId,nonce:'a'.repeat(32)}));assert.equal(renewed.status,200);
  const after=s.load('src/lib/signedTrialLicense.ts').verifyTrialLicense((await renewed.json()).license);assert.equal(after.trialEndsAt,payload.trialEndsAt);
  const revoked=setup({code:'assignment_inactive'});const rejected=await revoked.load(renewRoute).POST(revoked.request({license,machineId:payload.machineId,nonce:'b'.repeat(32)}));assert.equal(rejected.status,403);assert.ok((await rejected.json()).denial);
+});
+
+test('individual trial activation starts no tool trial; tool start requires signed machine-bound proof',async()=>{
+ const s=setup(),r=await s.load(activateRoute).POST(s.request({machineId:'0123456789ABCDEF',licenseVersion:4},testKey));assert.equal(r.status,200);
+ const {license}=await r.json(),helper=s.load('src/lib/signedToolTrialLicense.ts'),p=helper.verifyToolTrialLicense(license);
+ assert.equal(p.version,4);assert.ok(s.calls.some(c=>c.rpc==='read_tool_trial_license'));assert.ok(!s.calls.some(c=>c.rpc==='start_tool_trial'));
+ const body={license,machineId:p.machineId,nonce:'c'.repeat(32),slug:'demo-tool'};
+ const t=await s.load('src/app/api/licensing/tool-trial/route.ts').POST(s.request(body));assert.equal(t.status,200);assert.equal(helper.verifyToolTrialLicense((await t.json()).license).toolTrials['demo-tool'].endsAt,p.toolTrials['demo-tool'].endsAt);
+ const started=s.calls.find(c=>c.rpc==='start_tool_trial');assert.equal(started.args.p_activation_id,1);assert.equal(started.args.p_slug,'demo-tool');
+ for(const patch of [{machineId:'FEDCBA9876543210'},{license:{...license,signature:'a'.repeat(86)}},{slug:'../bad'}]){
+  const bad=setup();const response=await bad.load('src/app/api/licensing/tool-trial/route.ts').POST(bad.request({...body,...patch}));assert.ok(response.status>=400);assert.ok(!bad.calls.some(c=>c.rpc==='start_tool_trial'));
+ }
+ const renewal=await s.load(renewRoute).POST(s.request({license,machineId:p.machineId,nonce:'d'.repeat(32)}));assert.equal(renewal.status,200);assert.equal(helper.verifyToolTrialLicense((await renewal.json()).license).version,4);
+});
+
+test('version-four proofs verify in the actual Python client and reject altered deadlines', {skip:!fs.existsSync(houdiniPython)},async()=>{
+ const s=setup(),response=await s.load(activateRoute).POST(s.request({machineId:'0123456789ABCDEF',licenseVersion:4},testKey));
+ const {license}=await response.json(),p=s.load('src/lib/signedToolTrialLicense.ts').verifyToolTrialLicense(license);
+ const fixture={license,keyId:'test-v2',publicKey:testSigner.publicKey.export({type:'spki',format:'pem'}),machineId:p.machineId};
+ const result=require('node:child_process').spawnSync(houdiniPython,[path.resolve('tests/verify_node_license.py')],{input:JSON.stringify(fixture),encoding:'utf8',env:{...process.env,PYTHONPATH:path.resolve('houdini/python'),PYTHONDONTWRITEBYTECODE:'1'}});
+ assert.equal(result.status,0,result.stderr);assert.ok(JSON.parse(result.stdout).products.includes('demo-tool'));
+ assert.throws(()=>s.load('src/lib/signedToolTrialLicense.ts').issueToolTrialLicense({...p,toolTrials:{'demo-tool':{startedAt:p.issuedAt,endsAt:p.issuedAt+604801}}}));
+ const altered=JSON.parse(Buffer.from(license.payload,'base64url'));altered.toolTrials['demo-tool'].endsAt+=604800;
+ assert.throws(()=>s.load('src/lib/signedToolTrialLicense.ts').verifyToolTrialLicense({...license,payload:Buffer.from(JSON.stringify(altered)).toString('base64url')}));
 });

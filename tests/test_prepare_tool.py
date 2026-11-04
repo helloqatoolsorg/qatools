@@ -134,16 +134,26 @@ class PrepareTests(unittest.TestCase):
         self.assertTrue(all(tab.folderType() == hou.folderType.Tabs for tab in tabs))
         self.assertNotIn("license_state", [parm.name() for parm in tabs[0].parmTemplates()])
         self.assertIn("license_state", [parm.name() for parm in tabs[1].parmTemplates()])
+        self.assertFalse(node.parm("license_state").parmTemplate().isHidden())
+        self.assertIsNotNone(node.parm("get_license_key"))
+        self.assertIsNone(node.parm("start_free_trial"))
+        self.assertIsNone(node.parmTemplateGroup().find("qatools_purchase_box"))
+        self.assertIsNone(node.parm("license_key"))
+        names=[p.name() for p in tabs[1].parmTemplates()]
+        self.assertLess(names.index("license_email"),names.index("license_state"))
+        self.assertLess(names.index("license_state"),names.index("get_license_key"))
+        self.assertLess(names.index("activate_online"),names.index("license_trial"))
+        self.assertLess(names.index("license_trial"),names.index("qatools_purchase"))
         self.assertEqual(metadata["slug"], "beautiful_noise")
         self.assertTrue(self.cook(node))
-        self.assertEqual(node.parm("license_state").evalAsString(), "\u274c inactive")
+        self.assertEqual(node.parm("license_state").evalAsString(), "\u274c inactive license")
         self.proof([metadata["slug"]])
         node.hdaModule()._qatools_recook_all()
         self.assertFalse(self.cook(node))
         self.assertEqual(tuple(node.geometry().points()[0].position()), (1.0,2.0,3.0))
-        self.assertEqual(node.parm("license_state").evalAsString(), "\u2705 active")
+        self.assertEqual(node.parm("license_state").evalAsString(), "\u2705 active license")
         self.assertEqual(node.parm("license_email").evalAsString(), "owner@example.com")
-        self.assertEqual(node.parm("activate_online").parmTemplate().label(), "License key activation")
+        self.assertEqual(node.parm("activate_online").parmTemplate().label(), "Activate")
         self.assertIsNone(node.parm("license_key"))
         fields = node.parm("license_state").parmTemplate().name(), node.parm("license_machine").parmTemplate().label()
         self.assertEqual(fields, ("license_state", "Machine"))
@@ -167,19 +177,19 @@ class PrepareTests(unittest.TestCase):
             houdini_ui.show_account_dialog = original_dialog
         self.assertFalse(self.cook(one))
         self.assertFalse(self.cook(two))
-        self.assertEqual(two.parm("license_state").evalAsString(), "\u2705 active")
+        self.assertEqual(two.parm("license_state").evalAsString(), "\u2705 active license")
         third = self.geo.createNode("Road_Tool")
         self.assertFalse(self.cook(third))
         self.assertEqual(third.parm("license_email").evalAsString(), "owner@example.com")
         original_clear = houdini_ui.clear_local_license
         try:
             houdini_ui.clear_local_license = lambda: self.license.clear_local_license()
-            one.parm("clear_local_license").pressButton()
+            one.hdaModule()._qatools_clear(one)
         finally:
             houdini_ui.clear_local_license = original_clear
         for node in (one, two, third):
             self.assertTrue(self.cook(node))
-            self.assertEqual(node.parm("license_state").evalAsString(), "\u274c inactive")
+            self.assertEqual(node.parm("license_state").evalAsString(), "\u274c inactive license")
 
     def test_conflicts_and_unsaved_assets_fail_without_export(self):
         asset = self.asset("Conflict_Tool", "Conflict Tool")

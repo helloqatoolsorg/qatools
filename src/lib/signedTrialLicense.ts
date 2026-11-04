@@ -8,7 +8,7 @@ export type TrialLicense = {
  accountEmail?: string; activatedAt?: number;
  trialStartedAt: number; trialEndsAt: number; issuedAt: number; expiresAt: number;
 };
-function validate(p: TrialLicense, now: number, allowExpired: boolean) {
+export function validate(p: TrialLicense, now: number, allowExpired: boolean) {
  if (!p || p.vendor !== "qatools" || p.version !== 3 || p.kind !== "license" ||
  typeof p.activationId !== "string" || !/^[1-9][0-9]*$/.test(p.activationId) || !Number.isSafeInteger(Number(p.activationId)) ||
  typeof p.credentialId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.credentialId) ||
