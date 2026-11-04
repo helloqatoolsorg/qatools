@@ -281,6 +281,19 @@ test('actual PostgreSQL bundle sources, pinned checkout, overlapping refunds and
  }
  assert.equal((await db.query("SELECT has_function_privilege('service_role','process_cart_live_payment_event(jsonb,text)','EXECUTE') allowed")).rows[0].allowed,false);
 
+ await db.exec(read('20261104110000_publication_package_gate.sql'));
+ await db.exec("INSERT INTO products(id,name,slug,price_eur,current_version,published,subtitle,description,compatibility,category_id,complexity_id) VALUES(990001,'gate','gate',0,'1',false,'Test','Test','Houdini 22',1,1)");
+ await assert.rejects(db.exec("UPDATE products SET published=true WHERE id=990001"),/stored, enabled download/);
+ const gatedPath='990001/00000000-0000-4000-8000-000000000005/package.zip';
+ await db.query("INSERT INTO product_downloads(product_id,file_path,file_name,enabled) VALUES(990001,$1,'package.zip',true)",[gatedPath]);
+ await assert.rejects(db.exec("UPDATE products SET published=true WHERE id=990001"),/stored, enabled download/);
+ await db.query("INSERT INTO storage.objects VALUES('qatools-downloads',$1)",[gatedPath]);
+ await db.exec('UPDATE products SET published=true WHERE id=990001');
+ await assert.rejects(db.exec('UPDATE product_downloads SET enabled=false WHERE product_id=990001'),/must retain/);
+ await assert.rejects(db.exec('DELETE FROM product_downloads WHERE product_id=990001'),/Unpublish/);
+ const stamp=(await db.query('SELECT updated_at FROM products WHERE id=990001')).rows[0].updated_at;
+ await assert.rejects(db.query('SELECT save_product_artwork($1,990001,$2,$3)',[admin,stamp,Array.from({length:10},()=>({id:null,role:'gallery',path:'x.png'}))]),/Media limit/);
+ for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'enforce_published_package()','EXECUTE') a",[role])).rows[0].a,false);
  }finally{await db.close();}
 });
 

@@ -37,6 +37,8 @@ type QAToolsStateContextType = {
   cartReady: boolean;
   removeFromCart: (id: string) => void;
   refreshPurchases: () => void;
+  isDownloaded: (id: number) => boolean;
+  markDownloaded: (id: number) => void;
 };
 
 type EntitlementProduct = {
@@ -98,6 +100,12 @@ export function QAToolsStateProvider({
     user,
     loading: authLoading,
   } = useAuth();
+  const [downloadState,setDownloadState]=useState<{owner:string|null;ids:number[]}>({owner:null,ids:[]});
+  const markDownloaded=useCallback((id:number)=>{
+    const owner=user?.id??null;
+    setDownloadState(state=>({owner,ids:state.owner===owner?[...new Set([...state.ids,id])]:[id]}));
+  },[user?.id]);
+  const isDownloaded=useCallback((id:number)=>downloadState.owner===(user?.id??null)&&downloadState.ids.includes(id),[downloadState,user?.id]);
 
   const [
     likedItems,
@@ -557,6 +565,8 @@ export function QAToolsStateProvider({
         cartReady: ready,
         removeFromCart,
         refreshPurchases,
+        isDownloaded,
+        markDownloaded,
       }),
       [
         likedItems,
@@ -566,6 +576,8 @@ export function QAToolsStateProvider({
         refreshPurchases,
         addToCart,
         ready,
+        isDownloaded,
+        markDownloaded,
       ]
     );
 

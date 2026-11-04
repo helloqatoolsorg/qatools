@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/requireAdmin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { privateJson, readActivationBody } from "@/lib/activationHttp";
 import { readUpload, validToolZip } from "@/lib/adminDownloadUpload";
+import { installerContents } from "@/lib/installerContents";
 
 async function authorize(request: Request) {
   const result = await requireAdmin(request);
@@ -23,6 +24,12 @@ export async function GET(request: Request) {
     if (!value || !/^[1-9][0-9]*$/.test(value) || !productId(id)) return privateJson({ error: "Choose a valid item." }, 400);
     const result = await supabaseAdmin.from("product_downloads").select("product_id,file_path,file_name,enabled").eq("product_id", id).maybeSingle();
     if (result.error) return privateJson({ error: "Unable to load this download." }, 503);
+    if(new URL(request.url).searchParams.get("contents")==="1" && result.data){
+      const file=await supabaseAdmin.storage.from("qatools-downloads").download(result.data.file_path);
+      if(file.error || !file.data || file.data.size>26*1024*1024)return privateJson({download:result.data,contentsError:"Unable to read ZIP contents."});
+      try{return privateJson({download:result.data,contents:installerContents(Buffer.from(await file.data.arrayBuffer()))});}
+      catch{return privateJson({download:result.data,contentsError:"The stored ZIP could not be inspected."});}
+    }
     return privateJson({ download: result.data });
   } catch { return privateJson({ error: "Download management unavailable." }, 503); }
 }

@@ -2,11 +2,11 @@
 import { validProductContent } from "@/lib/productContent";
 import { PriceEditor } from "@/components/AdminPrices";
 import ProductPublication from "@/components/ProductPublication";
-import AdminDownloads from "@/components/AdminDownloads";
+
 import AdminProductCatalog from "./AdminProductCatalog";
 import { readDraftRecovery, writeDraftRecovery, clearDraftRecovery, type DraftRecovery } from "@/lib/adminDraftRecovery";
 import AdminGallery, {saveArtwork, type PendingMedia} from "@/components/AdminGallery";
-import AdminToolPackage from "@/components/AdminToolPackage";
+import AdminToolPackage, {savePendingInstaller} from "@/components/AdminToolPackage";
 import PublicationState from "@/components/PublicationState";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -70,6 +70,8 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   }
   const [revision, setRevision] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const recoveredUrls=useRef<string[]>([]);
+  useEffect(()=>()=>{recoveredUrls.current.forEach(url=>URL.revokeObjectURL(url));},[]);
   const artworkInput = useRef<HTMLInputElement>(null);
   const [pendingArtwork, setPendingArtwork] = useState<{file:File;url:string} | null>(null);
   useEffect(() => () => { if (pendingArtwork) URL.revokeObjectURL(pendingArtwork.url); }, [pendingArtwork]);
@@ -94,6 +96,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
           setRecovery(snapshot);setRecoveryWarning(snapshot?.recoveryWarning ?? null);restored.current=true;
           if(editor && params.has("resume") && snapshot) {
             requestId.current=snapshot.requestId;recoveryOwner.current=snapshot.requestId;setId(snapshot.id);setUpdatedAt(snapshot.updatedAt);setDraft(snapshot.draft);setPriceText(snapshot.priceText);setPendingTools(snapshot.draft.tool_ids);setPendingGallery(snapshot.galleryFiles);setPendingTool(snapshot.toolFile);setDirty(true);
+            if(snapshot.editedMedia)setEditedMedia(snapshot.editedMedia.map(m=>{if(!m.file)return m;const preview=URL.createObjectURL(m.file);recoveredUrls.current.push(preview);return {...m,preview};}));
             if(snapshot.mainFile)setPendingArtwork({file:snapshot.mainFile,url:URL.createObjectURL(snapshot.mainFile)});
             setRecoveryWarning(snapshot.recoveryWarning ?? null);setLoaded(true);return;
           }
@@ -118,16 +121,16 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   const readOnly = selected?.published ?? false;
   useEffect(()=>{
     if(!editor || !userId || !loaded || !draft || readOnly || !restored.current)return;
-    if(!dirty && !pendingArtwork && !pendingGallery.length && !pendingTool) {
+    if(!dirty && !pendingArtwork && !pendingGallery.length && !pendingTool && !editedMedia) {
       if(!recoveryOwner.current || recoveryOwner.current!==requestId.current)return;
       recoveryOwner.current=null;setRecovery(null);void clearDraftRecovery(userId).catch(()=>setRecoveryWarning("Unable to clear the browser recovery copy."));return;
     }
     requestId.current ??=crypto.randomUUID();
-    const snapshot:DraftRecovery={version:1,requestId:requestId.current,id,updatedAt,draft,priceText,savedAt:new Date().toISOString(),fileRevision:crypto.randomUUID(),mainFile:pendingArtwork?.file ?? null,galleryFiles:pendingGallery,toolFile:pendingTool};
+    const snapshot:DraftRecovery={version:1,requestId:requestId.current,id,updatedAt,draft,priceText,savedAt:new Date().toISOString(),fileRevision:crypto.randomUUID(),mainFile:pendingArtwork?.file ?? null,galleryFiles:pendingGallery,toolFile:pendingTool,editedMedia};
     recoveryOwner.current=requestId.current;setRecovery(snapshot);fileWrites.current++;
     try {void writeDraftRecovery(userId,snapshot).then(()=>setRecoveryWarning(null)).catch(()=>setRecoveryWarning("Browser recovery could not save your pending files. Keep this page open and save or upload them before leaving.")).finally(()=>{fileWrites.current--;});}
     catch {fileWrites.current--;setRecoveryWarning("Browser recovery is unavailable. Save before leaving this page.");}
-  },[editor,userId,loaded,draft,priceText,id,updatedAt,dirty,readOnly,pendingArtwork,pendingGallery,pendingTool]);
+  },[editor,userId,loaded,draft,priceText,id,updatedAt,dirty,readOnly,pendingArtwork,pendingGallery,pendingTool,editedMedia]);
   useEffect(()=>{
     const protect=(event:BeforeUnloadEvent)=>{if(fileWrites.current>0 || recoveryWarning){event.preventDefault();event.returnValue="";}};
     window.addEventListener("beforeunload",protect);return()=>window.removeEventListener("beforeunload",protect);
@@ -203,6 +206,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
         setCatalog(c=>c?{...c,products:c.products.map(p=>p.id===result.id?{...p,...(content ?? {}),updated_at:result.updated_at,product_media:result.media}:p)}:c);
         setMessage("Product updated.");
       }
+      if(draft && (pendingTool || draft.product_type === "tool" || draft.product_type === "bundle" && draft.tool_ids.length>0)){await savePendingInstaller(target.id,draft.product_type,pendingTool);setPendingTool(null);setMessage("Product and download updated.");}
       setRevision(v=>v+1);return target.id;
     } catch(reason){setMessage(null);setError(reason instanceof Error?reason.message:"Unable to update product.");throw reason;}
     finally {uploading.current=false;setBusy(false);}
@@ -221,11 +225,6 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
     } catch(reason) { setError(reason instanceof Error ? reason.message : "Unable to delete draft."); }
     finally {setBusy(false);}
   }
-  function chooseGallery(files:FileList|null){
-    const images=Array.from(files ?? []);if(images.some(file=>file.size>4*1024*1024 || !["image/png","image/jpeg","image/webp","image/gif"].includes(file.type))){setError("Choose PNG, JPG, WebP or GIF images up to 4 MB each.");return;}
-    if(images.length+pendingGallery.length+(editedMedia ?? selected?.product_media ?? []).length+(pendingArtwork && !selected?.product_media.some(m=>["card","main"].includes(m.role))?1:0)>20){setError("A product can have at most 20 media images.");return;}
-    setPendingGallery(previous=>[...previous,...images]);setMessage(null);
-  }
   function chooseArtwork(file: File | undefined) {
     if (!file) return;
     if (file.size > 4 * 1024 * 1024 || !["image/png","image/jpeg","image/webp","image/gif"].includes(file.type)) { setError("Choose a PNG, JPG, WebP or GIF up to 4 MB."); return; }
@@ -243,14 +242,14 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
     {!readOnly && <div style={{margin:"16px 0"}}><label><input type="checkbox" checked={useTestData} disabled={busy || packageBusy} onChange={event => { const checked=event.target.checked;setUseTestData(checked);if(checked && draft){setDraft(testDefaults(draft));setDirty(true);} }}/> Use test data</label>{useTestData && <p>Fills empty text fields and chooses random active tags. Review placeholders before publishing. Price, files and included tools stay manual.</p>}</div>}
     {recoveryWarning && <p role="alert" className="admin-product-error">{recoveryWarning}</p>}{error && <p role="alert" className="admin-product-error">{error} {id && <button type="button" disabled={busy || packageBusy} onClick={()=>setRevision(v=>v+1)}>Reload saved product</button>}</p>}{existingProductId && <p><a href={"/admin/products/edit?id="+existingProductId}>Open existing product</a></p>}{message && <p role="status">{message}</p>}
     {!draft ? <div className="admin-type-choice" role="dialog" aria-modal="false" aria-labelledby="product-type-title"><h2 id="product-type-title">Choose product type</h2>{productTypes.map(t => <button key={t} type="button" onClick={() => choose(t)}>{t.toUpperCase()}</button>)}</div> : draft.product_type==="tool" && (!id || importPending || (selected?.prepared_identity && selected.has_installer===false)) ? <section className="admin-type-choice"><h2>Upload prepared tool</h2><p>Choose the ZIP exported by Prepare qatools tool. Its Asset Label and Internal Name set the title and locked slug.</p><input type="file" accept=".zip" disabled={busy} onChange={e=>{const file=e.target.files?.[0];e.target.value="";if(file)void importTool(file);}} />{importFile && <button type="button" disabled={busy} onClick={()=>void importTool(importFile)}>Retry import</button>}</section> : <>
-      {selected?.prepared_identity && <p>Prepared tool installer · qatools.json and shared licensing files included automatically.</p>}{readOnly && <p>This product is published. Edit subtitle, description, category, complexity and images, then click Update product. Identity, price, version and included tools stay protected. <a href={"/product?slug=" + selected?.slug}>View product</a></p>}
+      {readOnly && <p>This product is published. Edit subtitle, description, category, complexity and images, then click Update product. Identity, price, version and included tools stay protected. <a href={"/product?slug=" + selected?.slug}>View product</a></p>}
       <div className="product-hero admin-product-hero"><div className="admin-product-media-column">      <section className="admin-product-media"><input ref={artworkInput} className="admin-artwork-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy || packageBusy} onChange={e => { chooseArtwork(e.target.files?.[0]); e.target.value=""; }} />
           <button type="button" className="product-media admin-main-artwork" disabled={busy || packageBusy} onClick={() => artworkInput.current?.click()} aria-label={pendingArtwork || (selected && artwork(selected)) ? "Change main image" : "Upload main image"}>
             {pendingArtwork || (selected && artwork(selected)) ? <Image src={pendingArtwork?.url ?? artwork(selected!)!} alt="Product preview" width={960} height={600} unoptimized /> : <span className="admin-hero-placeholder">＋ Add media</span>}
             <span className="admin-artwork-overlay">{busy ? "Uploading..." : pendingArtwork || (selected && artwork(selected)) ? "Click to change image" : "PNG · JPG · WebP · GIF"}</span>
           </button>
           {pendingArtwork && <p>Image selected. Click Update product to apply it.</p>}
-          {draft.product_type !== "tool" && <p>qatools.json · included automatically in the release package</p>}<h2>Gallery</h2><p>PNG, JPG, WebP or GIF up to 4 MB.</p>{id && selected && <AdminGallery media={editedMedia ?? selected.product_media} disabled={busy || packageBusy} onChange={setEditedMedia} />}<label className="admin-media-upload">Add gallery image<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple disabled={busy || packageBusy} onChange={e => { chooseGallery(e.target.files); e.target.value=""; }} /></label>{pendingGallery.length>0 && <div className="admin-pending-gallery">{pendingGallery.map((file,index)=><p key={index}>{file.name} <button type="button" disabled={busy || packageBusy} onClick={()=>setPendingGallery(files=>files.filter((_,i)=>i!==index))}>Remove</button></p>)}</div>}</section><AdminToolPackage prepared={!!selected?.prepared_identity} kind={draft.product_type} productId={id} disabled={busy} tool={pendingTool} onToolChange={setPendingTool} ensureDraft={ensureToolDraft} onBusyChange={setPackageBusy} />{id && readOnly && draft.product_type === "tool" && !selected?.prepared_identity && <details><summary>Advanced ZIP replacement and download availability</summary><AdminDownloads key={id} productId={id} products={[{id,name:draft.name,slug:selected?.slug ?? draft.name,published:readOnly}]} /></details>}</div><div className="product-info admin-product-info"><form onSubmit={save} onKeyDown={event => { if(event.key === "Enter" && !event.nativeEvent.isComposing && event.target instanceof HTMLInputElement && ["text","search","email","url","tel","password","number"].includes(event.target.type)){event.preventDefault();event.target.blur();} }}><fieldset disabled={busy || packageBusy}><div className="admin-product-fields">
+          <h2>Gallery</h2><AdminGallery media={[...(editedMedia ?? selected?.product_media ?? []),...pendingGallery.map((file,index)=>({id:-1000-index,file,file_path:null,role:"gallery",sort_order:1000+index}))]} disabled={busy || packageBusy} onChange={media=>{setEditedMedia(media);setPendingGallery([]);}} /></section><AdminToolPackage key={String(id)+":"+revision} prepared={!!selected?.prepared_identity} kind={draft.product_type} productId={id} disabled={busy} tool={pendingTool} onToolChange={setPendingTool} ensureDraft={ensureToolDraft} onBusyChange={setPackageBusy} /></div><div className="product-info admin-product-info"><form onSubmit={save} onKeyDown={event => { if(event.key === "Enter" && !event.nativeEvent.isComposing && event.target instanceof HTMLInputElement && ["text","search","email","url","tel","password","number"].includes(event.target.type)){event.preventDefault();event.target.blur();} }}><fieldset disabled={busy || packageBusy}><div className="admin-product-fields">
         <label>Title<input required readOnly={readOnly || draft.product_type==="tool"} maxLength={80} value={draft.name} onChange={e => change("name",e.target.value)} placeholder="qatool01" /><small>{draft.product_type==="tool" ? "From the Houdini Asset Label. Tool identity is locked." : "Letters, numbers, spaces, underscores or hyphens. The slug is generated automatically."}</small></label>
         <label>Slug<input value={draft.slug ?? productSlug(draft.name)} readOnly /></label><label>Type<input value={draft.product_type} readOnly /></label>
         <label className="admin-product-wide">Subtitle<input maxLength={200} value={draft.subtitle} onChange={e => change("subtitle",e.target.value)} /></label>
@@ -260,7 +259,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
           <div className="filter-label">TOOLS</div>{tools.map(t => <button key={t.id} type="button" className={"filter-option " + (pendingTools.includes(t.id) ? "selected" : "")} aria-pressed={pendingTools.includes(t.id)} onClick={() => setPendingTools(v => v.includes(t.id) ? v.filter(id => id !== t.id) : [...v,t.id])}>{t.name.toUpperCase()}</button>)}
           <button className="admin-bundle-add" type="button" onClick={event => { change("tool_ids",pendingTools); event.currentTarget.closest("details")?.removeAttribute("open"); }}>ADD</button></div>
         </details>}<div className="tags">{draft.tool_ids.map(id => <button key={id} type="button" className="filter-chip admin-included-tool" disabled={readOnly} aria-label={"Remove " + catalog.products.find(t => t.id === id)?.name} onClick={() => { change("tool_ids",draft.tool_ids.filter(v => v !== id)); setPendingTools(v => v.filter(x => x !== id)); }}>{catalog.products.find(t => t.id === id)?.name} <span aria-hidden="true">×</span></button>)}</div>
-        <p>Fixed product price; already-owned tools do not reduce it. Select published tools with enabled installers, then build the download before publishing.</p>
+        <p>Fixed product price; already-owned tools do not reduce it. Select published tools with ready installers. Update product prepares the download.</p>
       </section>}
         <label>Price · EUR including tax<input readOnly={readOnly} type="text" inputMode="decimal" maxLength={9} value={priceText} onChange={e => {setPriceText(e.target.value);setDirty(true);setMessage(null);}} placeholder="0.00" /></label>
         <label>Version<input readOnly={readOnly} maxLength={40} value={draft.current_version} onChange={e => change("current_version",e.target.value)} /></label>
@@ -271,11 +270,12 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
       </div>
       <div className="tags admin-product-selected-tags">{[catalog.categories.find(v => v.id === draft.category_id)?.name,catalog.complexities.find(v => v.id === draft.complexity_id)?.name].filter(Boolean).map((name,index) => <span key={index} className="card-tag">{name?.toUpperCase()}</span>)}</div>
 
-      </fieldset><button type="submit" disabled={busy || packageBusy || (readOnly && !dirty && !pendingArtwork && !pendingGallery.length && !editedMedia)}>{busy ? "Saving..." : id ? "Update product" : "Save unpublished draft"}</button></form></div></div>
+      </fieldset><button type="submit" disabled={busy || packageBusy || (readOnly && !dirty && !pendingArtwork && !pendingGallery.length && !editedMedia && !pendingTool)}>{busy ? "Saving..." : id ? "Update product" : "Save unpublished draft"}</button>
+{id && !readOnly && <ProductPublication productId={id} updatedAt={updatedAt} disabled={dirty || busy || packageBusy || !!pendingArtwork || pendingGallery.length>0 || !!editedMedia || !!pendingTool || !!error} onPublished={()=>setRevision(v=>v+1)} />}</form></div></div>
 
       {id && !readOnly && <button type="button" disabled={busy || packageBusy} onClick={()=>void discardDraft()}>Delete unused draft</button>}
       {id && readOnly && <section><h2>Paddle price</h2><PriceEditor key={id} productId={id}/></section>}
-      {id && !readOnly && <ProductPublication productId={id} updatedAt={updatedAt} disabled={dirty || busy || packageBusy || !!pendingArtwork || pendingGallery.length>0 || !!editedMedia} onPublished={()=>setRevision(v=>v+1)} />}
+
 
     </>}
   </section>;

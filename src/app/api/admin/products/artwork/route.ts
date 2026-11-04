@@ -30,7 +30,7 @@ export async function PUT(request:Request){
  try{
   const auth=await requireAdmin(request);if(auth.response){auth.response.headers.set("Cache-Control","no-store");return auth.response;}
   const body=await readActivationBody(request,8192);
-  if(!body || Object.keys(body).length!==3 || !id(body.productId) || !stamp(body.expectedUpdatedAt) || !Array.isArray(body.media) || body.media.length>20 || body.media.some(m=>!m || typeof m!=="object" || Object.keys(m).length!==3 || !(m.id===null || id(m.id)) || !["card","main","gallery","detail"].includes(m.role) || typeof m.path!=="string" || m.path.length>512))return privateJson({error:"Choose valid product images."},400);
+  if(!body || Object.keys(body).length!==3 || !id(body.productId) || !stamp(body.expectedUpdatedAt) || !Array.isArray(body.media) || (body.media.length>11 || body.media.filter(m=>m && ["gallery","detail"].includes(m.role)).length>9) || body.media.some(m=>!m || typeof m!=="object" || Object.keys(m).length!==3 || !(m.id===null || id(m.id)) || !["card","main","gallery","detail"].includes(m.role) || typeof m.path!=="string" || m.path.length>512))return privateJson({error:"Choose valid product images."},400);
   const result=await supabaseAdmin.rpc("save_product_artwork",{p_admin_id:auth.user.id,p_product_id:body.productId,p_expected_updated_at:body.expectedUpdatedAt,p_media:body.media});
   if(result.error || !result.data)return privateJson({error:"Product changed or images are unavailable. Reload and check before retrying."},409);
   return privateJson({gallery:result.data,message:"Product images updated."});

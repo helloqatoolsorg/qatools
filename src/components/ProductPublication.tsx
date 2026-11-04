@@ -9,7 +9,7 @@ export default function ProductPublication({productId,updatedAt,disabled,onPubli
  async function check(){setBusy(true);setError(null);try{setChecks(await request("/api/admin/products/readiness?productId="+productId));}catch(reason){setError(reason instanceof Error?reason.message:"Unable to check product.");}finally{setBusy(false);}}
  useEffect(()=>{if(new URLSearchParams(window.location.search).get("publish")==="1")dialog.current?.showModal();},[]);
  async function publish(){if(busy||disabled||!checks?.ready)return;setBusy(true);setError(null);try{await request("/api/admin/products",{productId,expectedUpdatedAt:updatedAt,expectedEnvironment:checks.environment});dialog.current?.close();onPublished();}catch(reason){setError(reason instanceof Error?reason.message:"Unable to publish product.");}finally{setBusy(false);}}
- return <section className="admin-product-publication"><h2>Publication</h2><button type="button" className="admin-card-action" disabled={disabled} onClick={()=>{dialog.current?.showModal();void check();}}>Publish</button>
+ return <section className="admin-product-publication"><button type="button" className="admin-publish-primary" disabled={disabled} onClick={()=>{dialog.current?.showModal();void check();}}>Publish product</button>
  <dialog ref={dialog} className="admin-publication-dialog"><h2>Prepare publication</h2><p>Save the draft, check its files and verify its price before publishing.</p>
  <PriceEditor key={productId} productId={productId}/><button type="button" disabled={busy||disabled} onClick={check}>Check readiness</button>
  {checks&&<>{checks.ready?<p role="status">All publication requirements are ready.</p>:<><p>Missing requirements:</p><ul>{checks.missing.map(v=><li key={v}>{v}</li>)}</ul></>}</>}

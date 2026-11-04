@@ -37,7 +37,7 @@ export async function POST(request: Request) {
    finally{reader.releaseLock();}
   }
   }
-  const current=await supabaseAdmin.from("product_downloads").select("file_path").eq("product_id",id).maybeSingle();
+  const current=await supabaseAdmin.from("product_downloads").select("file_path,file_name").eq("product_id",id).maybeSingle();
   if(current.error)return privateJson({error:"Unable to verify current installer."},503);
   if((current.data?.file_path ?? "")!==expected)return privateJson({error:"The download changed. Reload before building."},409);
   const bucket=await supabaseAdmin.storage.getBucket("qatools-downloads");
@@ -68,8 +68,8 @@ export async function POST(request: Request) {
   }
   let bytes:Buffer;
   try{bytes=isProject ? await buildProjectPackage(product.data.slug,projectBytes!,tools) : await buildHoudiniPackage(Buffer.from(JSON.stringify(packageConfig)),tools);}catch{return privateJson({error:"Unable to combine these installers. Check duplicate filenames and the 25 MB package limit."},409);}
-  const fileName=product.data.slug+"-houdini22.zip";
-  if(!/^[a-z0-9][a-z0-9_-]{0,79}-houdini22\.zip$/.test(fileName))return privateJson({error:"Check the product identifier."},400);
+  const fileName=current.data?.file_name ?? product.data.slug+"-houdini22.zip";
+  if(!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,149}\.zip$/.test(fileName))return privateJson({error:"Check the product identifier."},400);
   const path=id+"/"+randomUUID()+"/"+fileName;
   const upload=await supabaseAdmin.storage.from("qatools-downloads").upload(path,bytes,{contentType:"application/zip",upsert:false});
   if(upload.error)return privateJson({error:"Unable to save download. Existing installer retained."},503);

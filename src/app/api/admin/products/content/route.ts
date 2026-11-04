@@ -9,7 +9,7 @@ export async function PUT(request: Request) {
     const body = await readActivationBody(request, 128 * 1024);
     if (!body || Object.keys(body).length !== 4 || !Number.isSafeInteger(body.productId) || (body.productId as number) <= 0
       || typeof body.expectedUpdatedAt !== "string" || body.expectedUpdatedAt.length > 64 || !Number.isFinite(Date.parse(body.expectedUpdatedAt)) || !validProductContent(body.content)
-      || !(body.media === null || Array.isArray(body.media) && body.media.length <= 20 && body.media.every(m => m && typeof m === "object" && Object.keys(m).length === 3 && (m.id === null || Number.isSafeInteger(m.id) && m.id > 0) && ["card", "main", "gallery", "detail"].includes(m.role) && typeof m.path === "string" && m.path.length <= 512))) {
+      || !(body.media === null || Array.isArray(body.media) && body.media.length <= 11 && body.media.filter(m=>m && ["gallery","detail"].includes(m.role)).length<=9 && body.media.every(m => m && typeof m === "object" && Object.keys(m).length === 3 && (m.id === null || Number.isSafeInteger(m.id) && m.id > 0) && ["card", "main", "gallery", "detail"].includes(m.role) && typeof m.path === "string" && m.path.length <= 512))) {
       return privateJson({ error: "Enter a subtitle, description and valid category/complexity. Reload if the product changed." }, 400);
     }
     const result = await supabaseAdmin.rpc("save_published_product_content", {

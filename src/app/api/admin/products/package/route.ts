@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     if (product.error) return privateJson({ error: "Unable to verify tool." },503);
     if (!product.data || !["tool","bundle"].includes(product.data.product_type)) return privateJson({ error: "Choose an individual tool." },409);
 
-    const current = await supabaseAdmin.from("product_downloads").select("file_path").eq("product_id",id).maybeSingle();
+    const current = await supabaseAdmin.from("product_downloads").select("file_path,file_name").eq("product_id",id).maybeSingle();
     if (current.error) return privateJson({ error: "Unable to verify current package." },503);
     if ((current.data?.file_path ?? "") !== expected) return privateJson({ error: "This package changed. Reload before uploading." },409);
     const reader = request.body?.getReader(); if (!reader) return privateJson({ error: "Choose a Houdini HDA." },400);
@@ -27,14 +27,18 @@ export async function POST(request: Request) {
     const hda = form.get("tool");
     const isBundle = product.data.product_type === "bundle";
     if (!(hda instanceof File) || form.getAll("tool").length !== 1 || [...form.keys()].some(k => k !== "tool")) return privateJson({ error:"Choose a Houdini HDA." },400);
+    if(current.data?.file_name && hda.name!==current.data.file_name)return privateJson({error:"Replacement filename must be exactly "+current.data.file_name},409);
     const toolBytes = Buffer.from(await hda.arrayBuffer()), jsonBytes = Buffer.from(JSON.stringify(packageConfig));
-    if (!isBundle && !product.data.prepared_identity && !validHda(hda.name,toolBytes)) return privateJson({ error:"Choose a Houdini HDA and the standard qatools.json package configuration." },400);
+    if (!isBundle && !product.data.prepared_identity && !validHda(hda.name,toolBytes) && !/\.zip$/i.test(hda.name)) return privateJson({ error:"Choose a Houdini HDA or installer ZIP." },400);
     let tools:{name:string;bytes:Buffer}[] = [{name:hda.name,bytes:toolBytes}];
     let identity:ToolIdentity|null=null;
+    if(!isBundle && !product.data.prepared_identity && /\.zip$/i.test(hda.name)){
+      try{tools=bundleTools(toolBytes,[{id,slug:product.data.slug}]);}catch{return privateJson({error:"ZIP must contain exactly this tool and standard installer files."},400);}
+    }
     if(product.data.prepared_identity){
       try{const prepared=preparedTool(toolBytes);identity=prepared.identity;tools=[prepared.tool];}catch(reason){return privateJson({error:reason instanceof Error?reason.message:"Choose a prepared tool ZIP."},400);}
       const original=product.data.prepared_identity;
-      if(identity.label!==original.label || identity.slug!==original.slug || identity.internal_name!==original.internal_name || identity.file!==original.file)return privateJson({error:"Replacement must preserve the tool Asset Label, Internal Name and HDA filename."},409);
+      if(identity.label!==original.label || identity.slug!==original.slug || identity.internal_name!==original.internal_name || identity.file.toLowerCase()!==original.file.toLowerCase())return privateJson({error:"Replacement must preserve the tool Asset Label, Internal Name and HDA filename."},409);
     }
     let included:BundleTool[]=[];
     if(isBundle){
@@ -48,8 +52,8 @@ export async function POST(request: Request) {
     const bucket = await supabaseAdmin.storage.getBucket("qatools-downloads");
     if (bucket.error || bucket.data?.public !== false) return privateJson({ error:"Private package storage is unavailable." },503);
     const bytes = await buildHoudiniPackage(jsonBytes,tools);
-    const fileName = product.data.slug + "-houdini22.zip";
-    if (!/^[a-z0-9][a-z0-9_-]{0,79}-houdini22\.zip$/.test(fileName)) return privateJson({error:"Check the product identifier."},400);
+    const fileName = current.data?.file_name ?? (identity ? identity.internal_name+".zip" : product.data.slug + "-houdini22.zip");
+    if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,149}\.zip$/.test(fileName)) return privateJson({error:"Check the product identifier."},400);
     const path = id + "/" + randomUUID() + "/" + fileName;
     const uploaded = await supabaseAdmin.storage.from("qatools-downloads").upload(path,bytes,{contentType:"application/zip",upsert:false});
     if (uploaded.error) return privateJson({error:"Unable to save installer. Existing download retained."},503);

@@ -21,6 +21,12 @@ test('artwork commit validates payload and passes trusted admin and exact versio
  for(const invalid of [{...body,productId:0},{...body,media:Array(21).fill(body.media[0])},{...body,media:[{...body.media[0],id:-1}]},{...body,media:[{...body.media[0],role:'video'}]},{...body,media:[{...body.media[0],extra:true}]}]){const s=setup();assert.equal((await s.route.PUT(save(invalid))).status,400);assert.equal(s.calls.length,0);}
  const c=setup({conflict:true}),response=await c.route.PUT(save(body));assert.equal(response.status,409);assert.ok(!JSON.stringify(await response.json()).includes('secret'));
 });
+
+test('gallery accepts nine images and rejects a tenth before database access',async()=>{
+ const gallery=Array.from({length:9},(_,i)=>({id:i+2,role:'gallery',path:'image'+i+'.png'}));
+ const nine=setup();assert.equal((await nine.route.PUT(save({...body,media:[body.media[0],...gallery]}))).status,200);
+ const ten=setup();assert.equal((await ten.route.PUT(save({...body,media:[body.media[0],...gallery,{id:20,role:'gallery',path:'extra.png'}]}))).status,400);assert.equal(ten.calls.length,0);
+});
 test('gallery editing stages locally; only explicit save uploads then commits once',async()=>{
  const React=require('react'),calls=[],changes=[];
  const component=load('src/components/AdminGallery.tsx',{'react':{...React,useState:()=>[null,()=>{}],useRef:()=>({current:[]}),useEffect:()=>{}},'next/image':{__esModule:true,default:()=>null},'@/lib/supabase':{supabase:{auth:{getSession:async()=>({data:{session:{access_token:'token'}},error:null})},storage:{from:()=>({getPublicUrl:path=>({data:{publicUrl:path}})})}}}},{fetch:async(url,options)=>{calls.push({url,options});return Response.json(options.method==='POST'?{path:'drafts/1/new.png'}:{gallery:{id:1,updated_at:stamp,media:[]}});}});

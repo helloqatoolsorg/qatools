@@ -27,7 +27,7 @@ test('single and multi-tool archives have one root JSON, exact HDAs and shared r
 });
 function setup(options={}){
  const calls=[];
- const db={from(table){calls.push({table});const q={select(){return q;},eq(){return q;},async maybeSingle(){return {data:table==='products'?{id:1,slug:'qafit01',product_type:options.bundle?'bundle':'tool',published:!!options.published}:options.existing?{file_path:options.existing}:null,error:null};}};return q;},storage:{async getBucket(){return {data:{public:!!options.publicBucket},error:null};},from(){return {async upload(file,bytes){calls.push({upload:file,bytes});return {error:options.uploadError?{}:null};}};}},async rpc(name,args){calls.push({rpc:name,args});return {data:{ok:!options.mappingFailure},error:null};}};
+ const db={from(table){calls.push({table});const q={select(){return q;},eq(){return q;},async maybeSingle(){return {data:table==='products'?{id:1,slug:'qafit01',product_type:options.bundle?'bundle':'tool',published:!!options.published}:options.existing?{file_path:options.existing,file_name:options.filename}:null,error:null};}};return q;},storage:{async getBucket(){return {data:{public:!!options.publicBucket},error:null};},from(){return {async upload(file,bytes){calls.push({upload:file,bytes});return {error:options.uploadError?{}:null};}};}},async rpc(name,args){calls.push({rpc:name,args});return {data:{ok:!options.mappingFailure},error:null};}};
  const route=load('src/app/api/admin/products/package/route.ts',{'@/lib/requireAdmin':{async requireAdmin(){return options.denied?{response:Response.json({error:'Denied'},{status:403})}:{user:{id:'verified-admin'}};}},'@/lib/activationHttp':{privateJson:(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}})},'@/lib/supabaseAdmin':{supabaseAdmin:db},'@/lib/houdiniPackage':library,'@/lib/preparedTool':{preparedTool(){throw Error('Use prepared ZIP')}},'@/lib/bundlePackage':{bundleTools(){throw Error('test missing members')}}});
  const request=(expected='',badJson=false)=>{const form=new FormData();form.set('tool',new File([hda],'qafit01_online.hdalc'));if(badJson)form.set('config',new File([Buffer.from('{}')],'qatools.json'));return new Request('http://localhost/api/admin/products/package?productId=1&expectedPath='+encodeURIComponent(expected),{method:'POST',body:form});};
  return {calls,route,request};
@@ -45,3 +45,10 @@ test('public buckets and upload failures preserve current mapping; binding failu
 });
 
 test('published individual tools can prepare an immutable HDA replacement with shared JSON',async()=>{const s=setup({published:true,existing:'old.zip'});assert.equal((await s.route.POST(s.request('old.zip'))).status,200);const upload=s.calls.find(c=>c.upload);assert.ok(upload);assert.notEqual(upload.upload,'old.zip');assert.deepEqual(JSON.parse(entries(upload.bytes)[0].bytes.toString()),library.packageConfig);});
+
+test('replacement filename is enforced before package parsing or upload',async()=>{
+ const s=setup({existing:'old.zip',filename:'QA_Fit.zip'});
+ const response=await s.route.POST(s.request('old.zip'));
+ assert.equal(response.status,409);assert.match((await response.json()).error,/exactly QA_Fit.zip/);
+ assert.equal(s.calls.some(c=>c.upload||c.rpc),false);
+});

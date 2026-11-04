@@ -2357,3 +2357,7 @@ body:not(.products-page) .cart-overlay{
 .product-download-control .free-download-button,
 .tool-purchase-actions .free-download-button,
 .tool-purchase-actions .free-download-button:hover { color:#68c990; }
+.product-download-control .free-download-button:hover { background:#153a28; color:#9be3b5; border-color:#397654; }
+.product-download-control .free-download-button.downloaded { background:#10271b; color:#80d5a0; border-color:#2e6344; }
+.product-download-control .free-download-button.downloaded:hover { background:#153a28; color:#9be3b5; border-color:#397654; }
+.card-purchase-actions > .card-add-cart:not(.purchased):not(.in-cart):hover { background:#112b45; color:#98caff; border-color:#356f9c; }

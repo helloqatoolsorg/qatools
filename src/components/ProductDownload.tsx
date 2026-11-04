@@ -3,15 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
-import { useDownloadAvailability } from "@/context/DownloadAvailability";
+import { useQAToolsState } from "@/context/QAToolsState";
 
 export default function ProductDownload({ productId, label = "DOWNLOAD", buttonClassName }: { productId: number; label?: string; buttonClassName?: string }) {
   const { user, loading } = useAuth();
-  const available = useDownloadAvailability(productId);
   const pendingLogin = useRef(false);
   const inFlight = useRef(false);
   const button = useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = useState(false);
+  const {isDownloaded,markDownloaded}=useQAToolsState();
+  const downloaded=isDownloaded(productId);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     const cancel = () => { pendingLogin.current = false; };
@@ -19,7 +20,6 @@ export default function ProductDownload({ productId, label = "DOWNLOAD", buttonC
     return () => window.removeEventListener("qatools:login-cancelled", cancel);
   }, []);
   const download = useCallback(async () => {
-    if (available === false || available === undefined) return;
     if (inFlight.current) return;
     inFlight.current = true;
     setBusy(true); setError(null);
@@ -42,9 +42,10 @@ export default function ProductDownload({ productId, label = "DOWNLOAD", buttonC
       link.href = result.url;
       link.referrerPolicy = "no-referrer";
       document.body.appendChild(link); link.click(); link.remove();
+      markDownloaded(productId);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to prepare this download."); }
     finally { inFlight.current = false; setBusy(false); }
-  }, [productId, available]);
+  }, [productId,markDownloaded]);
   useEffect(() => {
     if (user && pendingLogin.current) {
       pendingLogin.current = false;
@@ -52,7 +53,7 @@ export default function ProductDownload({ productId, label = "DOWNLOAD", buttonC
     }
   }, [user, download]);
   return <span className="product-download-control">
-    <button ref={button} type="button" onClick={() => void download()} disabled={busy || loading || available === false || available === undefined} title={available === false ? "This item's download has not been uploaded or enabled yet." : undefined} className={[buttonClassName, label === "FREE DOWNLOAD" ? "free-download-button" : ""].filter(Boolean).join(" ")} style={buttonClassName ? undefined : { border: "1px solid #333", background: "transparent", padding: "9px 11px", color: label === "FREE DOWNLOAD" ? "#68c990" : "#999", font: "8px monospace", cursor: busy ? "wait" : "pointer" }}>{available === false ? "COMING SOON" : available === undefined ? "CHECKING..." : busy ? "PREPARING..." : label}</button>
+    <button ref={button} type="button" onClick={() => void download()} disabled={busy || loading} className={[buttonClassName, label === "FREE DOWNLOAD" ? "free-download-button" : "", downloaded ? "downloaded" : ""].filter(Boolean).join(" ")} style={buttonClassName ? undefined : { border: "1px solid #333", background: "transparent", padding: "9px 11px", color: label === "FREE DOWNLOAD" ? "#68c990" : "#999", font: "8px monospace", cursor: busy ? "wait" : "pointer" }}>{busy ? "PREPARING..." : downloaded ? "DOWNLOADED" : label}</button>
     {error && <span role="alert" style={{ display: "block", color: "#e86565", font: "10px monospace", marginTop: "8px" }}>{error}</span>}
   </span>;
 }

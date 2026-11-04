@@ -126,3 +126,19 @@
 .admin-gallery-replace input{max-width:100%;font-size:12px}
 .admin-gallery-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .admin-gallery-actions button{margin:0;min-height:30px}
+
+.admin-gallery-editor .admin-media-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.admin-gallery-item { position:relative; padding:0; background:transparent; }
+.admin-gallery-replace,.admin-gallery-add { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; aspect-ratio:1; border:1px solid #383838; background:#181818; overflow:hidden; cursor:pointer; }
+.admin-gallery-replace img { width:100%; height:100%; object-fit:cover; }
+.admin-gallery-add { gap:8px; font:12px monospace; color:#aaa; }
+.admin-gallery-add > span:first-child { font-size:28px; }
+.admin-gallery-editor .admin-gallery-file-input,.admin-zip-replace input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+.admin-gallery-add:hover,.admin-gallery-replace:focus-within,.admin-gallery-add:focus-within { border-color:#aaa; background:#252525; }
+.admin-gallery-actions { justify-content:center; }
+.admin-products .admin-product-publication { margin:12px 0 0; padding:0; border:0; }
+.admin-products button.admin-publish-primary { width:100%; min-height:52px; font-size:15px; background:#153a28; border:1px solid #397654; color:#8cdda8; }
+.admin-products button.admin-publish-primary:hover { background:#215439; color:#b9f2ca; }
+.admin-products button.admin-publish-primary:disabled { opacity:.4; }
+.admin-zip-replace { display:inline-block; position:relative; padding:10px 14px; border:1px solid #444; cursor:pointer; }
+.admin-zip-contents { max-height:240px; overflow:auto; font:11px/1.7 monospace; white-space:pre-wrap; overflow-wrap:anywhere; color:#999; }

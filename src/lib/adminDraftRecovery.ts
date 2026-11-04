@@ -1,8 +1,9 @@
 import { validDraft, type DraftInput } from "./productDraft";
-export type DraftRecovery = { version:1; requestId:string; id:number|null; updatedAt:string|null; draft:DraftInput; priceText:string; savedAt:string; fileRevision:string; mainFile:File|null; galleryFiles:File[]; toolFile:File|null; recoveryWarning?:string };
+type RecoveryMedia={id:number;file_path:string|null;role:string;sort_order:number;file?:File;preview?:string};
+export type DraftRecovery = { version:1; requestId:string; id:number|null; updatedAt:string|null; draft:DraftInput; priceText:string; savedAt:string; fileRevision:string; mainFile:File|null; galleryFiles:File[]; toolFile:File|null;editedMedia?:RecoveryMedia[]|null; recoveryWarning?:string };
 const prefix="qatools.admin-draft:";
 let writes:Promise<unknown>=Promise.resolve();
-const selectedFiles=new Map<string,{mainFile:File|null;galleryFiles:File[];toolFile:File|null;revision:string;promise:Promise<void>}>();
+const selectedFiles=new Map<string,{mainFile:File|null;galleryFiles:File[];toolFile:File|null;editedMedia?:RecoveryMedia[]|null;revision:string;promise:Promise<void>}>();
 function fileStore<T>(mode:IDBTransactionMode,run:(store:IDBObjectStore)=>IDBRequest<T>):Promise<T>{
   return new Promise((resolve,reject)=>{
     const open=indexedDB.open("qatools-admin-drafts",1);
@@ -25,21 +26,21 @@ export function recoveryMetadata(raw:string|null):DraftRecovery|null {
 }
 export async function readDraftRecovery(userId:string):Promise<DraftRecovery|null>{
   const meta=recoveryMetadata(localStorage.getItem(prefix+userId));if(!meta)return null;
-  let files; try {files=await fileStore<{revision:string;mainFile:File|null;galleryFiles:File[];toolFile:File|null}|undefined>("readonly",s=>s.get(userId));} catch {return {...meta,recoveryWarning:"Draft text recovered. Browser file storage is unavailable; reselect any pending files."};}
-  if(files?.revision===meta.fileRevision)return {...meta,mainFile:files.mainFile,galleryFiles:files.galleryFiles,toolFile:files.toolFile};
+  let files; try {files=await fileStore<{revision:string;mainFile:File|null;galleryFiles:File[];toolFile:File|null;editedMedia?:RecoveryMedia[]|null}|undefined>("readonly",s=>s.get(userId));} catch {return {...meta,recoveryWarning:"Draft text recovered. Browser file storage is unavailable; reselect any pending files."};}
+  if(files?.revision===meta.fileRevision)return {...meta,mainFile:files.mainFile,galleryFiles:files.galleryFiles,toolFile:files.toolFile,editedMedia:files.editedMedia};
   if(files || (meta as DraftRecovery & {hasFiles?:boolean}).hasFiles) return {...meta,recoveryWarning:"Draft text recovered, but the latest file selections were not saved. Reselect those files."};
   return meta;
 }
 export function writeDraftRecovery(userId:string,snapshot:DraftRecovery):Promise<void>{
-  const {mainFile,galleryFiles,toolFile,...meta}=snapshot;
+  const {mainFile,galleryFiles,toolFile,editedMedia,...meta}=snapshot;
   const previous=selectedFiles.get(userId);
-  const same=previous && previous.mainFile===mainFile && previous.toolFile===toolFile && previous.galleryFiles.length===galleryFiles.length && previous.galleryFiles.every((f,i)=>f===galleryFiles[i]);
+  const same=previous && previous.editedMedia===editedMedia && previous.mainFile===mainFile && previous.toolFile===toolFile && previous.galleryFiles.length===galleryFiles.length && previous.galleryFiles.every((f,i)=>f===galleryFiles[i]);
   const revision=same?previous.revision:snapshot.fileRevision;
   // Only file changes rewrite blobs. Every keystroke still saves text synchronously.
-  localStorage.setItem(prefix+userId,JSON.stringify({...meta,fileRevision:revision,hasFiles:!!mainFile || !!toolFile || !!galleryFiles.length}));
+  localStorage.setItem(prefix+userId,JSON.stringify({...meta,fileRevision:revision,hasFiles:!!mainFile || !!toolFile || !!galleryFiles.length || !!editedMedia?.length}));
   if(same)return previous.promise;
-  const job=writes.catch(()=>{}).then(()=>fileStore("readwrite",s=>s.put({revision,mainFile,galleryFiles,toolFile},userId)));
-  const promise=job.then(()=>{},error=>{if(selectedFiles.get(userId)?.revision===revision)selectedFiles.delete(userId);throw error;});writes=promise;selectedFiles.set(userId,{mainFile,galleryFiles,toolFile,revision,promise});return promise;
+  const job=writes.catch(()=>{}).then(()=>fileStore("readwrite",s=>s.put({revision,mainFile,galleryFiles,toolFile,editedMedia},userId)));
+  const promise=job.then(()=>{},error=>{if(selectedFiles.get(userId)?.revision===revision)selectedFiles.delete(userId);throw error;});writes=promise;selectedFiles.set(userId,{mainFile,galleryFiles,toolFile,editedMedia,revision,promise});return promise;
 }
 export async function clearDraftRecovery(userId:string){
   localStorage.removeItem(prefix+userId);selectedFiles.delete(userId);
