@@ -177,6 +177,10 @@ test('actual PostgreSQL bundle sources, pinned checkout, overlapping refunds and
  assert.ok((await db.query('SELECT product_publication_checks($1,10) r',[admin])).rows[0].r.missing.includes('Bundle price greater than zero'));
  await db.exec('UPDATE products SET price_eur=9 WHERE id=10');
  const rid='00000000-0000-4000-8000-000000000080';
+ await db.exec(read('20261104100000_prepared_export_filenames.sql'));
+ const capital={schema:1,label:'Capital Tool',internal_name:'Capital_Tool',slug:'capital_tool',file:'Capital_Tool.hdalc',sha256:'a'.repeat(64)};
+ assert.equal((await db.query('SELECT import_prepared_tool($1,gen_random_uuid(),$2) r',[admin,capital])).rows[0].r.slug,'capital_tool');
+ await assert.rejects(db.query('SELECT import_prepared_tool($1,gen_random_uuid(),$2)',[admin,{...capital,file:'../Capital_Tool.hdalc'}]),/Invalid prepared identity/);
  const identity={schema:1,label:'Beautiful Noise',internal_name:'Beautiful_Noise',slug:'beautiful_noise',file:'beautiful_noise.hda',sha256:'a'.repeat(64)};
  const imported=(await db.query('SELECT import_prepared_tool($1,$2,$3) r',[admin,rid,identity])).rows[0].r;
  assert.equal(imported.name,'Beautiful Noise');assert.equal(imported.slug,'beautiful_noise');
@@ -192,7 +196,7 @@ test('actual PostgreSQL bundle sources, pinned checkout, overlapping refunds and
  assert.equal((await db.query('SELECT name FROM products WHERE id=$1',[imported.id])).rows[0].name,identity.label);
  assert.ok(!(await db.query('SELECT product_publication_checks($1,$2) r',[admin,imported.id])).rows[0].r.missing.includes('Valid title'));
  const releasePath=path(imported.id);await db.query("INSERT INTO storage.objects VALUES('qatools-downloads',$1)",[releasePath]);
- const nextIdentity={...identity,sha256:'b'.repeat(64)};
+ const nextIdentity={...identity,file:'Beautiful_Noise.hda',sha256:'b'.repeat(64)};
  await assert.rejects(db.query("SELECT replace_prepared_tool_download($1,$2,NULL,$3,'package.zip',$4)",[admin,imported.id,releasePath,{...nextIdentity,label:'Wrong Tool'}]),/identity is locked/);
  assert.equal((await db.query("SELECT replace_prepared_tool_download($1,$2,NULL,$3,'package.zip',$4) r",[admin,imported.id,releasePath,nextIdentity])).rows[0].r.ok,true);
  await assert.rejects(db.query("SELECT replace_prepared_tool_download($1,$2,NULL,$3,'package.zip',$4)",[admin,imported.id,releasePath,nextIdentity]),/Download changed/);

@@ -24,7 +24,8 @@ export async function POST(request:Request) {
     const existing=await supabaseAdmin.from("products").select("id,name,published").eq("slug",prepared.identity.slug).maybeSingle();
     if(!existing.error && existing.data)return privateJson({error:"This tool already has a product. Open its existing draft or product.",existingProduct:existing.data},409);
    }
-   return privateJson({error:imported.error?.code==="40001"?"This import changed. Reload before trying again.":"Unable to create the tool draft. Check that the prepared-tool migration is applied."},409);
+   if(imported.error?.code==="22023")return privateJson({error:"The database rejected this prepared identity. Apply the latest prepared-export filename migration and retry the same ZIP."},409);
+   return privateJson({error:imported.error?.code==="40001"?"This import changed. Reload before trying again.":"Unable to create the tool draft. Check that all product migrations are applied."},409);
   }
   const draft=imported.data;
   const current=await supabaseAdmin.from("product_downloads").select("file_path,enabled").eq("product_id",draft.id).maybeSingle();

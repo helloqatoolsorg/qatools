@@ -1,0 +1,11 @@
+# Prepared filename validation and download readiness — 4 November 2026
+
+Root cause: the website parser had been updated to accept `QA_Tool_A.hdalc`, but `import_prepared_tool` still allowed only `qa_tool_a.hdalc`. The database rejected valid new ZIPs before creating a draft. The previous claim that this naming change required no migration was incorrect.
+
+Migration `20261104100000_prepared_export_filenames.sql` replaces only import/replacement validation. It accepts canonical Internal Name filenames and legacy lowercase slug filenames; label, slug, internal identity, extension, hashes, admin checks, idempotency and optimistic download replacement remain protected. Replacement may change filename casing without changing the tool identity. Existing products are not renamed. Browser execution grants remain revoked; only service_role executes the functions.
+
+The separate customer download message means no enabled download mapping exists. A new public readiness route returns only published product IDs and availability booleans, never file paths, credentials or URLs. One shared provider fetches readiness on navigation/focus for every button, rather than one request per card. Missing packages display disabled Coming soon; confirmed downloads continue through the existing protected endpoint. Unpublished owned products and readiness-service failures retain authoritative download-endpoint checks. Readiness is advisory; it does not replace ownership or file authorization.
+
+Validation: actual isolated PostgreSQL bundle/import/refund/replacement suite passed with capitalized filename import, invalid path rejection, legacy import and case-only replacement. Website flow tests verify Coming soon blocks requests. Public readiness tests verify published-only projection, boolean-only output and safe errors. TypeScript and scoped lint pass. Production build and hosted checks remain for the owner.
+
+Apply the new migration with supabase db push, then run npm run build, commit the scoped website/schema/tests files and deploy. Retry the same previously rejected ZIP; no tool re-export or deletion of products is necessary. Products without files still need their real package uploaded and enabled through admin.

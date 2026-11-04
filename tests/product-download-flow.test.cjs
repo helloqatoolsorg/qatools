@@ -1,13 +1,13 @@
 const {test}=require('node:test'), assert=require('node:assert/strict'), fs=require('node:fs'), vm=require('node:vm'), ts=require('typescript');
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
-function setup({loggedIn=false,denied=false}={}) {
+function setup({loggedIn=false,denied=false,available=true}={}) {
  const slots=[],effects=[],events=[],requests=[],links=[],listeners=new Map();let cursor=0,user=loggedIn?{id:'buyer'}:null,session=loggedIn?{access_token:'synthetic'}:null;
  const react={useRef(value){const i=cursor++;return slots[i]??=( {current:value} );},useState(value){const i=cursor++;if(!(i in slots))slots[i]=value;return [slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v;}];},useCallback:fn=>fn,useEffect:fn=>effects.push(fn)};
  const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/components/ProductDownload.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText,{
  exports,CustomEvent:class{constructor(type,options){this.type=type;this.detail=options.detail;}},
  window:{addEventListener:(type,fn)=>listeners.set(type,fn),removeEventListener:type=>listeners.delete(type),dispatchEvent:event=>events.push(event)},document:{body:{appendChild(){}},createElement:()=>({click(){links.push(this.href);},remove(){}})},
  fetch:async(url,options)=>{requests.push({url,options});return {ok:!denied,json:async()=>denied?{error:'Confirm your email first.'}:{url:'https://example.invalid/signed-download'}};},
- require(name){if(name==='react')return react;if(name==='react/jsx-runtime')return {jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})};if(name==='@/context/AuthContext')return {useAuth:()=>({user,loading:false})};if(name==='@/lib/supabase')return {supabase:{auth:{getSession:async()=>({data:{session},error:null})}}};throw Error(name);}
+ require(name){if(name==='react')return react;if(name==='react/jsx-runtime')return {jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})};if(name==='@/context/DownloadAvailability')return {useDownloadAvailability:()=>available};if(name==='@/context/AuthContext')return {useAuth:()=>({user,loading:false})};if(name==='@/lib/supabase')return {supabase:{auth:{getSession:async()=>({data:{session},error:null})}}};throw Error(name);}
  });
  function render(){cursor=0;effects.length=0;const tree=exports.default({productId:42});for(const effect of effects)effect();return tree;}
  return {render,events,requests,links,cancel(){listeners.get('qatools:login-cancelled')?.();},login(){user={id:'buyer'};session={access_token:'synthetic'};},click(tree){tree.props.children[0].props.onClick();}};
@@ -23,4 +23,7 @@ test('download double clicks produce one request and server denials never start 
 });
 test('cancelling login cancels the queued download',async()=>{
  const s=setup();s.click(s.render());await tick();s.cancel();s.login();s.render();await tick();assert.equal(s.requests.length,0);
+});
+test('unavailable downloads show coming soon and cannot request a file',async()=>{
+ const s=setup({loggedIn:true,available:false}),tree=s.render();assert.equal(tree.props.children[0].props.children,'COMING SOON');assert.equal(tree.props.children[0].props.disabled,true);s.click(tree);await tick();assert.equal(s.requests.length,0);
 });
