@@ -2349,3 +2349,11 @@ body:not(.products-page) .cart-overlay{
   .tool-purchase-actions > * { flex:1 1 140px; }
   .tool-purchase-actions .product-download-control .buy-button { width:100%; }
 }
+.card-purchase-actions { display:grid; grid-template-columns:minmax(0,1fr); align-items:start; }
+.card-purchase-actions.with-download { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.card-purchase-actions .product-download-control { min-width:0; display:block; }
+.card-purchase-actions .card-add-cart { width:100%; min-width:0; height:44px; padding:10px 6px; font-size:9px; }
+.card-purchase-actions.with-download > .card-add-cart { border-left:1px solid #333; }
+.product-download-control .free-download-button,
+.tool-purchase-actions .free-download-button,
+.tool-purchase-actions .free-download-button:hover { color:#68c990; }

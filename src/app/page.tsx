@@ -1,5 +1,6 @@
 "use client";
 import SiteFooter from "@/components/SiteFooter";
+import ProductDownload from "@/components/ProductDownload";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
@@ -1685,6 +1686,8 @@ const [loading, setLoading] =
 
                         </div>
 
+                        <div className={"card-purchase-actions" + (product.product_type === "tool" || product.product_type === "bundle" ? " with-download" : "")}>
+                        {(product.product_type === "tool" || product.product_type === "bundle") && <ProductDownload productId={product.id} label="FREE DOWNLOAD" buttonClassName="card-add-cart free-download-button"/>}
                         <button
                           className={`card-add-cart ${purchased ? "purchased" : ""} ${
                             inCart
@@ -1731,6 +1734,7 @@ const [loading, setLoading] =
                               ? "ADD TO CART"
                               : "IN CART"}
                         </button>
+                        </div>
                       </div>
                     </article>
                   );

@@ -49,7 +49,7 @@ export default function ProductDownload({ productId, label = "DOWNLOAD", buttonC
     }
   }, [user, download]);
   return <span className="product-download-control">
-    <button ref={button} type="button" onClick={() => void download()} disabled={busy || loading} className={buttonClassName} style={buttonClassName ? undefined : { border: "1px solid #333", background: "transparent", padding: "9px 11px", color: "#999", font: "8px monospace", cursor: busy ? "wait" : "pointer" }}>{busy ? "PREPARING..." : label}</button>
+    <button ref={button} type="button" onClick={() => void download()} disabled={busy || loading} className={[buttonClassName, label === "FREE DOWNLOAD" ? "free-download-button" : ""].filter(Boolean).join(" ")} style={buttonClassName ? undefined : { border: "1px solid #333", background: "transparent", padding: "9px 11px", color: label === "FREE DOWNLOAD" ? "#68c990" : "#999", font: "8px monospace", cursor: busy ? "wait" : "pointer" }}>{busy ? "PREPARING..." : label}</button>
     {error && <span role="alert" style={{ display: "block", color: "#e86565", font: "10px monospace", marginTop: "8px" }}>{error}</span>}
   </span>;
 }
