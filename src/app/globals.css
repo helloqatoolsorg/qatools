@@ -503,8 +503,9 @@ footer{
   margin:38px 0 30px;
   max-width:470px;
   color:#b3b3ae;
-  line-height:1.65;
-  font-size:13px
+  font:12px/1.65 monospace;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere
 }
 
 .buy-row{
