@@ -53,7 +53,7 @@ export default function ProductDownload({ productId, label = "DOWNLOAD", buttonC
     }
   }, [user, download]);
   return <span className="product-download-control">
-    <button ref={button} type="button" onClick={() => void download()} disabled={busy || loading} className={[buttonClassName, label === "FREE DOWNLOAD" ? "free-download-button" : "", downloaded ? "downloaded" : ""].filter(Boolean).join(" ")} style={buttonClassName ? undefined : { border: "1px solid #333", background: "transparent", padding: "9px 11px", color: label === "FREE DOWNLOAD" ? "#68c990" : "#999", font: "8px monospace", cursor: busy ? "wait" : "pointer" }}>{busy ? "PREPARING..." : downloaded ? "DOWNLOADED" : label}</button>
+    <button ref={button} type="button" onClick={() => void download()} disabled={busy || loading} className={[buttonClassName, (label === "FREE DOWNLOAD" || label === "TRY FOR FREE") ? "free-download-button" : "", downloaded ? "downloaded" : ""].filter(Boolean).join(" ")} style={buttonClassName ? undefined : { border: "1px solid #333", background: "transparent", padding: "9px 11px", color: (label === "FREE DOWNLOAD" || label === "TRY FOR FREE") ? "#68c990" : "#999", font: "8px monospace", cursor: busy ? "wait" : "pointer" }}>{busy ? "PREPARING..." : downloaded ? "DOWNLOADED" : label}</button>
     {error && <span role="alert" style={{ display: "block", color: "#e86565", font: "10px monospace", marginTop: "8px" }}>{error}</span>}
   </span>;
 }

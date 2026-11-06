@@ -1687,7 +1687,7 @@ const [loading, setLoading] =
                         </div>
 
                         <div className={"card-purchase-actions" + (product.product_type === "tool" || product.product_type === "bundle" ? " with-download" : "")}>
-                        {(product.product_type === "tool" || product.product_type === "bundle") && <ProductDownload productId={product.id} label="FREE DOWNLOAD" buttonClassName="card-add-cart free-download-button"/>}
+                        {(product.product_type === "tool" || product.product_type === "bundle") && <ProductDownload productId={product.id} label={Number(product.price_eur) === 0 ? "FREE DOWNLOAD" : "TRY FOR FREE"} buttonClassName="card-add-cart free-download-button"/>}
                         <button
                           className={`card-add-cart ${purchased ? "purchased" : ""} ${
                             inCart

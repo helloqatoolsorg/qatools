@@ -202,3 +202,6 @@ body .legal-operator dd {margin:0;color:#ddd;overflow-wrap:anywhere;}
 @media(max-width:499px){body .legal-operator {grid-template-columns:1fr;gap:4px;}body .legal-operator dd {margin-bottom:14px;}}
 
 body .information-content section[id] {scroll-margin-top:96px;}
+
+/* Keep touch feedback in our button styles; keyboard focus remains visible. */
+html { -webkit-tap-highlight-color: transparent; }

@@ -492,7 +492,7 @@ footer{
 .subtitle{
   margin:7px 0 0;
   color:#888;
-  font-size:13px
+  font:12px/1.65 monospace
 }
 
 .hero-heart{
