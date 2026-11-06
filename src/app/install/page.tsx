@@ -15,7 +15,7 @@ export default function InstallPage() {
   } = useQAToolsState();
 
   return (
-    <div className="content-page">
+    <div className="content-page installation-page">
       <header className="site-header">
         <Link
           className="brand"
@@ -96,8 +96,6 @@ export default function InstallPage() {
       </header>
 
       <main className="standalone-page">
-        <span className="eyebrow">HOW TO INSTALL</span>
-        <h1>A few steps. Then create.</h1>
         <InstallationGuide />
       </main>
 

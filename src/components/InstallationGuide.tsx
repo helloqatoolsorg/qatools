@@ -4,67 +4,105 @@ import { useState } from "react";
 import Link from "next/link";
 import "./InstallationGuide.css";
 
-const steps = ["Download", "Install", "Restart", "Activate", "Ready"];
-const confirmations = ["I have downloaded the tool", "I have copied the files", "I have placed the tool", "My license is active"];
+type Step = "download" | "extract" | "version" | "copy" | "restart" | "key" | "activate" | "ready";
+type Version = "21.0" | "22.0";
 
 export default function InstallationGuide() {
-  const [step, setStep] = useState(0);
-  const [copied, setCopied] = useState("");
+  const [history, setHistory] = useState<Step[]>(["download"]);
+  const [version, setVersion] = useState<Version | null>(null);
+  const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
+  const step = history[history.length - 1];
+  const path = version ? `Documents\\houdini${version}\\packages` : "";
 
-  async function copyPath(version: string) {
+  function next(value: Step) {
+    setHistory(previous => [...previous, value]);
+  }
+
+  async function copyPath() {
+    if (!path) return;
     try {
-      await navigator.clipboard.writeText(`%USERPROFILE%\\Documents\\houdini${version}\\packages`);
-      setCopied(version);
+      await navigator.clipboard.writeText(path);
+      setCopied(true);
       setCopyError(false);
     } catch {
       setCopyError(true);
     }
   }
 
-  return <section className="install-guide" aria-label="Installation walkthrough">
-    <ol className="install-guide-steps" aria-label="Installation progress">
-      {steps.map((label, index) => <li key={label} aria-current={step === index ? "step" : undefined} className={index < step ? "complete" : ""}>
-        <span>{index < step ? "✓" : String(index + 1).padStart(2, "0")}</span>{label}
-      </li>)}
-    </ol>
-    <div className="install-guide-panel" key={step}>
-      <span className="eyebrow">STEP {step + 1} OF 5</span>
-      <h2>{["Try any tool free for 7 days.", "Extract. Copy. Paste.", "Restart Houdini.", "Connect your account once.", "You’re ready."][step]}</h2>
-      {step === 0 && <>
-        <p>Download a tool or bundle using <strong>Try for free</strong>. Free tools stay free.</p>
-        <Link className="install-guide-link" href="/" target="_blank" rel="noopener noreferrer">Choose a tool ↗</Link>
-      </>}
-      {step === 1 && <>
-        <p>Close Houdini. Extract the ZIP and copy <strong>all files</strong> into your version’s packages folder.</p>
-        <div className="install-guide-paths">
-          {["21.0", "22.0"].map(version => <div className="install-guide-path" key={version}>
-            <span>Houdini {version.split(".")[0]}</span>
-            <code>%USERPROFILE%\Documents\houdini{version}\packages</code>
-            <button type="button" aria-label={`Copy Houdini ${version} packages folder path`} onClick={() => void copyPath(version)}>{copied === version ? "Copied ✓" : "Copy path"}</button>
-          </div>)}
+  return <section className="install-guide" aria-label="Installation instructions">
+    <div className="install-guide-instruction" key={step}>
+      {step === "download" && <>
+        <p>Download a tool or bundle. All tools free for 7 days.</p>
+        <div className="install-guide-buttons">
+          <Link href="/" target="_blank" rel="noopener noreferrer">Choose a tool ↗</Link>
+          <button type="button" onClick={() => next("extract")}>I have downloaded the tool →</button>
         </div>
-        <p className="install-guide-note">Paste the path into File Explorer. Create the packages folder if missing. Merge folders and replace matching files if prompted.</p>
-        <p className="install-guide-note">Use a download compatible with your Houdini version. If your preferences are stored elsewhere, use that folder’s packages subfolder.</p>
-        <span role="status" className="install-guide-feedback">{copyError ? "Copy the path above manually." : copied ? `Houdini ${copied} path copied.` : ""}</span>
       </>}
-      {step === 2 && <p>Open Houdini. In your node network, press <kbd>Tab</kbd>, find your tool by name, and place it.</p>}
-      {step === 3 && <>
-        <ol className="install-guide-actions"><li>Open the tool’s <strong>License</strong> tab.</li><li>Click <strong>Get license key</strong> and sign in.</li><li>Copy your key, click <strong>Activate</strong> in Houdini, and paste it.</li></ol>
-        <Link className="install-guide-link" href="/user?section=license" target="_blank" rel="noopener noreferrer">Open License Data ↗</Link>
-        <p className="install-guide-note">Already connected? Your tools use the same account. Start online to activate each new trial.</p>
+      {step === "extract" && <>
+        <ol className="install-guide-instructions">
+          <li>Close Houdini.</li>
+          <li>Extract the ZIP.</li>
+          <li>Copy its contents.</li>
+        </ol>
+        <button type="button" onClick={() => next("version")}>I have copied the contents →</button>
       </>}
-      {step === 4 && <>
-        <span className="install-guide-check" aria-hidden="true">✓</span>
-        <p>Your tool is active. For trial tools, check the remaining days in the License tab.</p>
-        <Link className="install-guide-link" href="/">Explore more tools ↗</Link>
+      {step === "version" && <>
+        <p>Which Houdini version are you installing for?</p>
+        <div className="install-guide-buttons">
+          {(["21.0", "22.0"] as const).map(value => <button key={value} type="button" onClick={() => {
+            setVersion(value); setCopied(false); setCopyError(false); next("copy");
+          }}>Houdini {value.split(".")[0]} →</button>)}
+        </div>
       </>}
-      {step < 4 && <button className="install-guide-confirm" type="button" onClick={() => setStep(step + 1)}>{confirmations[step]} <span aria-hidden="true">→</span></button>}
+      {step === "copy" && <>
+        <ol className="install-guide-instructions">
+          <li>Open your Houdini {version?.split(".")[0]} packages folder. Create it if you don’t see it.
+            <div className="install-guide-path"><code>{path}</code><button type="button" onClick={() => void copyPath()}>{copied ? "Copied ✓" : "Copy path"}</button></div>
+            <span className="install-guide-feedback" role="status">{copyError ? "Select and copy the path manually." : ""}</span>
+          </li>
+          <li>Paste its contents here.</li>
+          <li>Replace files if asked.</li>
+        </ol>
+        <button type="button" onClick={() => next("restart")}>The files are in the packages folder →</button>
+      </>}
+      {step === "restart" && <>
+        <ol className="install-guide-instructions">
+          <li>Restart Houdini.</li>
+          <li>Search for your node and place it.</li>
+          <li>Open the <span className="install-guide-control">License</span> tab in the parameters.</li>
+        </ol>
+        <p>Does it show an active license?</p>
+        <div className="install-guide-buttons">
+          <button className="install-guide-answer-yes" type="button" onClick={() => next("ready")}>Yes, it is active →</button>
+          <button className="install-guide-answer-no" type="button" onClick={() => next("key")}>No, connect my account →</button>
+        </div>
+      </>}
+      {step === "key" && <>
+        <ol className="install-guide-instructions">
+          <li>Click <span className="install-guide-control">Get license key</span> here or in the tool’s <span className="install-guide-control">License</span> tab.
+            <div className="install-guide-inline-link"><Link href="/user?section=license" target="_blank" rel="noopener noreferrer">Get license key ↗</Link></div>
+          </li>
+          <li>Copy your license key.</li>
+        </ol>
+        <button type="button" onClick={() => next("activate")}>I have copied my key →</button>
+      </>}
+      {step === "activate" && <>
+        <ol className="install-guide-instructions">
+          <li>Return to Houdini while connected to the internet.</li>
+          <li>In the <span className="install-guide-control">License</span> tab, click <span className="install-guide-control">Activate</span> and paste your key.</li>
+          <li>Confirm activation.</li>
+        </ol>
+        <button type="button" onClick={() => next("ready")}>My license is active →</button>
+      </>}
+      {step === "ready" && <>
+        <p className="install-guide-complete" role="status">Enjoy !</p>
+        <Link href="/">Back to tools ↗</Link>
+      </>}
     </div>
-    <div className="install-guide-navigation">
-      <button type="button" disabled={step === 0} onClick={() => setStep(step - 1)}>← Back</button>
-      <span aria-live="polite" aria-atomic="true">{step + 1} / 5 · {steps[step]}</span>
-      {step === 4 && <button type="button" onClick={() => setStep(0)}>Start again ↺</button>}
-    </div>
+    {history.length > 1 && <div className="install-guide-navigation">
+      <button type="button" onClick={() => setHistory(previous => previous.slice(0, -1))}>← Back</button>
+      {step === "ready" && <button type="button" onClick={() => {setHistory(["download"]);setVersion(null);setCopied(false);setCopyError(false);}}>Start again</button>}
+    </div>}
   </section>;
 }
