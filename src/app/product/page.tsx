@@ -4,6 +4,7 @@ import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
 import IncludedTools from "@/components/IncludedTools";
+import ProductGallery from "@/components/ProductGallery";
 import ProductDownload from "@/components/ProductDownload";
 import AccountName from "@/components/AccountName";
 import { animateToCart } from "@/lib/cartAnimation";
@@ -271,22 +272,12 @@ export default function ProductPage() {
     sortedMedia[0] ??
     null;
 
-  const detailMedia =
-    sortedMedia.filter(
-      (media) =>
-        media.role ===
-          "detail" ||
-        media.role ===
-          "gallery"
-    );
-
-  const mainMediaUrl =
-    mainMedia
-      ? getMediaUrl(
-          mainMedia.file_path
-        )
-      : null;
-
+  const galleryImages = (mainMedia
+    ? [mainMedia, ...sortedMedia.filter((media) => media.id !== mainMedia.id && (media.role === "detail" || media.role === "gallery"))]
+    : []).flatMap((media) => {
+      const src = getMediaUrl(media.file_path);
+      return src ? [{ id: media.id, src }] : [];
+    });
   const category =
     product.category?.name ?? "";
 
@@ -396,31 +387,7 @@ export default function ProductPage() {
         </a>
 
         <section className="product-hero">
-          <div className="product-media">
-            {mainMediaUrl ? (
-              <img
-                id="productImage"
-                src={mainMediaUrl}
-                alt={`${product.name} preview`}
-              />
-            ) : (
-              <div
-                style={{
-                  minHeight:
-                    "570px",
-                  display:
-                    "grid",
-                  placeItems:
-                    "center",
-                  color: "#555",
-                  fontFamily:
-                    "monospace",
-                }}
-              >
-                no media
-              </div>
-            )}
-          </div>
+          <ProductGallery key={product.id} images={galleryImages} name={product.name} />
 
           <aside className="product-info">
             <div className="product-heading">
@@ -618,47 +585,6 @@ export default function ProductPage() {
           </aside>
         </section>
 
-        {detailMedia.length >
-          0 && (
-          <section className="complex-description show">
-            <div className="complex-copy">
-              <span className="eyebrow">
-                DETAILED DESCRIPTION
-              </span>
-
-              <p>
-                {
-                  product.description
-                }
-              </p>
-            </div>
-
-            <div className="secondary-media">
-              {detailMedia.map(
-                (media) => {
-                  const url =
-                    getMediaUrl(
-                      media.file_path
-                    );
-
-                  if (!url) {
-                    return null;
-                  }
-
-                  return (
-                    <img
-                      key={
-                        media.id
-                      }
-                      src={url}
-                      alt={`${product.name} detail`}
-                    />
-                  );
-                }
-              )}
-            </div>
-          </section>
-        )}
       </main>
 
       <SiteFooter>{product.name} /{" "}
