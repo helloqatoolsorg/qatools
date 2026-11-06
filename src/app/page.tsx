@@ -192,9 +192,7 @@ export default function Home() {
     activeSort,
     setActiveSort,
   ] =
-    useState<ActiveSort | null>(
-      null
-    );
+    useState<ActiveSort | null>({ key: "date", dir: "desc" });
 
   const [
     filterMenuOpen,
@@ -770,7 +768,7 @@ const [loading, setLoading] =
         );
 
       if (!activeSort) {
-        return result;
+        return [...result].sort((a, b) => (b.release_date ? Date.parse(b.release_date) : 0) - (a.release_date ? Date.parse(a.release_date) : 0) || b.id - a.id);
       }
 
       const direction =
@@ -831,7 +829,7 @@ const [loading, setLoading] =
               : 0;
 
           comparison =
-            aDate - bDate;
+            aDate - bDate || a.id - b.id;
         }
 
         if (

@@ -754,10 +754,15 @@ footer{
 
 .product-meta .meta-filter{
   border:1px solid var(--line);
-  padding:5px 7px;
+  padding:7px 10px;
   color:#888;
-  font:9px monospace;
+  font:12px monospace;
   transition:background .15s,color .15s,border-color .15s
+}
+
+.product-page .product-included-tools .card-tag{
+  padding:7px 10px;
+  font-size:12px
 }
 
 .product-meta .meta-filter:hover{

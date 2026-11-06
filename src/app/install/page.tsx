@@ -98,7 +98,6 @@ export default function InstallPage() {
       <main className="standalone-page">
         <span className="eyebrow">HOW TO INSTALL</span>
         <h1>A few steps. Then create.</h1>
-        <p>Install your tool and connect your account. Follow along at your own pace.</p>
         <InstallationGuide />
       </main>
 
