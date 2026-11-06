@@ -1,11 +1,11 @@
-QATOOLS — HOUDINI ONLINE LICENSING SYSTEM
+QATools — HOUDINI ONLINE LICENSING SYSTEM
 ==========================================
 Project handoff / technical summary
 Updated: 2026-09-30
 
 PURPOSE
 -------
-This document summarizes the working QATOOLS Houdini licensing prototype, the code used, the problems encountered, and the next planned steps. It is intended to be uploaded into another ChatGPT conversation so development can continue with the same technical context.
+This document summarizes the working QATools Houdini licensing prototype, the code used, the problems encountered, and the next planned steps. It is intended to be uploaded into another ChatGPT conversation so development can continue with the same technical context.
 
 IMPORTANT STATUS
 ----------------
@@ -59,14 +59,14 @@ The HDA only receives/contains the public key.
 
 The license format is:
 
-qatools|<MACHINE_ID>|PERPETUAL|ALL|1|<BASE64_ED25519_SIGNATURE>
+QATools|<MACHINE_ID>|PERPETUAL|ALL|1|<BASE64_ED25519_SIGNATURE>
 
 Example structure:
 
-qatools|C8024F075D26B5C8|PERPETUAL|ALL|1|SIGNATURE_HERE
+QATools|C8024F075D26B5C8|PERPETUAL|ALL|1|SIGNATURE_HERE
 
 Fields:
-1. Vendor: qatools
+1. Vendor: QATools
 2. Machine ID
 3. License type: PERPETUAL
 4. Product scope: currently ALL
@@ -75,7 +75,7 @@ Fields:
 
 The server signs everything before the signature:
 
-qatools|MACHINE_ID|PERPETUAL|ALL|1
+QATools|MACHINE_ID|PERPETUAL|ALL|1
 
 Houdini reconstructs that payload and verifies the signature with the public key.
 
@@ -242,7 +242,7 @@ def sign_payload(payload: str) -> str:
 
 @app.get("/")
 def root():
-    return {"status": "qatools license server running"}
+    return {"status": "QATools license server running"}
 
 
 @app.post("/activate")
@@ -280,7 +280,7 @@ PRIVATE_KEY_PATH = os.path.join(BASE_DIR, "keys", "private_key.pem")
 9. HOUDINI PACKAGE / LICENSE PATH
 =================================
 
-The QATOOLS installation uses the Houdini package environment variable:
+The QATools installation uses the Houdini package environment variable:
 
 QATOOLS_SOURCE
 
@@ -295,7 +295,7 @@ QATOOLS_SOURCE = hou.expandString("$QATOOLS_SOURCE")
 if not QATOOLS_SOURCE or QATOOLS_SOURCE.startswith("$"):
     raise hou.Error(
         "QATOOLS_SOURCE is not defined.\n"
-        "Please install qatools via its Houdini package."
+        "Please install QATools via its Houdini package."
     )
 
 LICENSE_FILE = os.path.normpath(
@@ -361,7 +361,7 @@ QATOOLS_SOURCE = hou.expandString("$QATOOLS_SOURCE")
 if not QATOOLS_SOURCE or QATOOLS_SOURCE.startswith("$"):
     raise hou.Error(
         "QATOOLS_SOURCE is not defined.\n"
-        "Please install qatools via its Houdini package."
+        "Please install QATools via its Houdini package."
     )
 
 LICENSE_FILE = os.path.normpath(
@@ -461,7 +461,7 @@ def is_license_valid() -> bool:
 def require_license_or_fail():
     if not is_license_valid():
         raise hou.NodeError(
-            "qatools license not activated.\n"
+            "QATools license not activated.\n"
             "Please activate the tool."
         )
 
@@ -533,7 +533,7 @@ def activate_online(node):
     _save_license(license_key)
 
     hou.ui.displayMessage(
-        "qatools activated successfully.\n"
+        "QATools activated successfully.\n"
         "Please recook or re-place the node.",
         severity=hou.severityType.Message
     )
@@ -834,10 +834,10 @@ Houdini contacts cloud /activate
 Cloud server automatically verifies purchase
         |
         v
-Cloud server checks which QATOOLS product was purchased
+Cloud server checks which QATools product was purchased
         |
         v
-Cloud server signs machine-bound QATOOLS license
+Cloud server signs machine-bound QATools license
         |
         v
 Houdini caches signed license
@@ -851,7 +851,7 @@ There should be no developer intervention for normal customer activations.
 23. MARKETPLACE GOAL
 ====================
 
-The larger goal is a QATOOLS website/marketplace where tools can be sold separately.
+The larger goal is a QATools website/marketplace where tools can be sold separately.
 
 Example:
 
@@ -868,7 +868,7 @@ as the product field during development.
 
 For commercial use this should eventually evolve into product-aware licensing, for example:
 
-qatools|MACHINE_ID|PERPETUAL|QAFIT|1|SIGNATURE
+QATools|MACHINE_ID|PERPETUAL|QAFIT|1|SIGNATURE
 
 or another design supporting multiple purchased tools/bundles.
 
@@ -941,8 +941,8 @@ Instead:
 Customer purchases
     -> provider creates purchase record/token
     -> customer activates
-    -> QATOOLS server asks provider whether purchase is valid
-    -> if valid, QATOOLS server signs license automatically
+    -> QATools server asks provider whether purchase is valid
+    -> if valid, QATools server signs license automatically
 
 The developer does nothing for a normal activation.
 
@@ -1060,7 +1060,7 @@ STEP 3
 Test the exact existing activation system over HTTPS from Houdini, without adding payments yet.
 
 STEP 4
-Design product IDs for individual QATOOLS tools.
+Design product IDs for individual QATools tools.
 
 STEP 5
 Choose payment/store provider based on current fees, merchant-of-record/tax requirements, API/webhook support, and desired storefront control.
@@ -1083,7 +1083,7 @@ Harden error handling/security and prepare production installer/documentation.
 
 Suggested message when uploading this document to another ChatGPT conversation:
 
-"This document contains the technical context for my QATOOLS Houdini licensing project. The local FastAPI + Ed25519 activation system is already working. Please use this as the source of truth for what has been implemented. I want to continue from the cloud deployment/payment integration stage. I prefer beginner-friendly, step-by-step instructions, one thing at a time. When modifying code, give me the complete final file rather than isolated snippets. Do not regenerate or change cryptographic keys/machine-ID logic casually, and explain changes before we make them."
+"This document contains the technical context for my QATools Houdini licensing project. The local FastAPI + Ed25519 activation system is already working. Please use this as the source of truth for what has been implemented. I want to continue from the cloud deployment/payment integration stage. I prefer beginner-friendly, step-by-step instructions, one thing at a time. When modifying code, give me the complete final file rather than isolated snippets. Do not regenerate or change cryptographic keys/machine-ID logic casually, and explain changes before we make them."
 
 
 33. FINAL NOTE

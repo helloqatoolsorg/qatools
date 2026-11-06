@@ -5,9 +5,9 @@ const contents=load('src/lib/installerContents.ts',{'server-only':{},'./adminDow
 test('ZIP contents list actual packaged files and reject corrupt or unsafe directories',async()=>{
  const hda=fs.readFileSync('houdini/otls/qafit01_online.hdalc');
  const bytes=await packageLib.buildHoudiniPackage(Buffer.from(JSON.stringify(packageLib.packageConfig)),[{name:'qafit01.hdalc',bytes:hda}]);
- const names=Array.from(contents(bytes));assert.ok(names.includes('qatools.json'));assert.ok(names.includes('qatools/otls/qafit01.hdalc'));
+ const names=Array.from(contents(bytes));assert.ok(names.includes('QATools.json'));assert.ok(names.includes('QATools/otls/qafit01.hdalc'));
  assert.throws(()=>contents(Buffer.from('not a ZIP')));
- const corrupt=Buffer.from(bytes);const at=corrupt.indexOf(Buffer.from('qatools/otls/qafit01.hdalc'),corrupt.indexOf(Buffer.from([0x50,0x4b,0x01,0x02])));corrupt.write('../',at);assert.throws(()=>contents(corrupt));
+ const corrupt=Buffer.from(bytes);const at=corrupt.indexOf(Buffer.from('QATools/otls/qafit01.hdalc'),corrupt.indexOf(Buffer.from([0x50,0x4b,0x01,0x02])));corrupt.write('../',at);assert.throws(()=>contents(corrupt));
 });
 function setup(options={}){
  const calls=[],old=Buffer.from('old-package'),newBytes=options.same?old:Buffer.from('new-package');

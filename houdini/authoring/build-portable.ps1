@@ -18,14 +18,14 @@ foreach($portableVersion in @('21.0','22.0')){
   Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'toolbar\qatools-authoring.shelf') -Destination (Join-Path $portableStage 'toolbar\qatools-authoring.shelf')
   $portableMajor=$portableVersion.Split('.')[0]
   $portableCmdName='Install Houdini '+$portableMajor+'.cmd'
-  $portableCmd='@echo off'+"`r`n"+'powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install-authoring.ps1" -HoudiniVersion '+$portableVersion+"`r`n"+'if errorlevel 1 (echo Installation failed. & pause & exit /b 1)'+"`r`n"+'echo Restart Houdini and enable the qatools dev shelf tab.'+"`r`n"+'pause'+"`r`n"
+  $portableCmd='@echo off'+"`r`n"+'powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install-authoring.ps1" -HoudiniVersion '+$portableVersion+"`r`n"+'if errorlevel 1 (echo Installation failed. & pause & exit /b 1)'+"`r`n"+'echo Restart Houdini and enable the QATools dev shelf tab.'+"`r`n"+'pause'+"`r`n"
   [IO.File]::WriteAllText((Join-Path $portableStage $portableCmdName),$portableCmd,[Text.Encoding]::ASCII)
   $portableReadme=@"
-qatools authoring utility for Houdini $portableVersion (Qt6/PySide6 build)
+QATools authoring utility for Houdini $portableVersion (Qt6/PySide6 build)
 
 Extract this entire ZIP into a folder, then double-click '$portableCmdName'.
-Restart Houdini and enable the 'qatools dev' shelf tab. Select your saved,
-locked development SOP HDA and click 'Prepare qatools tool'.
+Restart Houdini and enable the 'QATools dev' shelf tab. Select your saved,
+locked development SOP HDA and click 'Prepare QATools tool'.
 
 Source: QA_Tool_Name_dev.hdalc (editable; retained unchanged).
 Export: QA_Tool_Name.zip containing the black-box QA_Tool_Name.hdalc and identity.

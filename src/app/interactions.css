@@ -1,4 +1,4 @@
-/* qatools motion and surface tokens. No dimensions or interaction state changes. */
+/* QATools motion and surface tokens. No dimensions or interaction state changes. */
 :root {
   --radius-control:3px;
   --radius-surface:4px;

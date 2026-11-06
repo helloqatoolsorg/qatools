@@ -1,4 +1,4 @@
-# qatools visual refinements — 2026-10-08
+# QATools visual refinements — 2026-10-08
 
 Owner approved replacing the shared logo with their supplied PNG. Source asset copied unchanged to public/assets/qatools_logo.png. The taller mark is contained at 54px image height so the top shelf keeps its existing layout.
 
@@ -31,7 +31,7 @@ Validation: TypeScript, CSS parsing and diff whitespace checks passed. Run the p
 
 ## Account presentation — 2026-10-08
 
-Dashboard replaces MY qatools in the sidebar and uses a prominent button, as does Log out. The overview title is the saved user name (Dashboard fallback when absent). Details are ordered: email, active machine, license key, activation date, purchased tools.
+Dashboard replaces MY QATools in the sidebar and uses a prominent button, as does Log out. The overview title is the saved user name (Dashboard fallback when absent). Details are ordered: email, active machine, license key, activation date, purchased tools.
 
 Dashboard and License Data share one key component: a clear masked/read-only field, Reveal/Hide and Copy controls. Removed machine-limit and obsolete integration/explanatory paragraphs. Replacement stays available under Manage key with its existing confirmation; authenticated key endpoints, clipboard fallback and reveal handling are preserved. Active status is green. No database changes.
 

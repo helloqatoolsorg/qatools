@@ -253,7 +253,7 @@ class LicensingTests(unittest.TestCase):
     def test_tamper_wrong_machine_unknown_key_and_legacy_format_rejected(self):
         proof = self.license()
         for invalid in [{**proof, "payload": base64.urlsafe_b64encode(b"{}").decode().rstrip("=")},
-                        {**proof, "signature": "a" * 86}, "qatools|MACHINE|PERPETUAL|ALL|1|old"]:
+                        {**proof, "signature": "a" * 86}, "QATools|MACHINE|PERPETUAL|ALL|1|old"]:
             with self.assertRaises(LicenseError):
                 verify_license(invalid, self.keys, MACHINE, self.now)
         with self.assertRaises(LicenseError):

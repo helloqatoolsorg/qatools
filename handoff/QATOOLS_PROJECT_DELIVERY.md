@@ -1,4 +1,4 @@
-# qatools Projects — 2026-10-07
+# QATools Projects — 2026-10-07
 
 ## Current scope
 
@@ -10,7 +10,7 @@ Implemented locally; migration/deployment and owner hosted verification are pend
 
 1. Admin → Products → New product → Project.
 2. Enter title, metadata and fixed price; select existing published tools with enabled installers.
-3. Save a Houdini scene and its resources as a normal project ZIP. Include a nonempty `.hip`, `.hiplc` or `.hipnc` scene. Preserve relative resource paths; use Houdini's project-relative paths where appropriate. Do not put HDAs, `qatools.json`, the qatools runtime, license caches or credentials in this ZIP. The selected tool installers supply the HDAs and licensing runtime.
+3. Save a Houdini scene and its resources as a normal project ZIP. Include a nonempty `.hip`, `.hiplc` or `.hipnc` scene. Preserve relative resource paths; use Houdini's project-relative paths where appropriate. Do not put HDAs, `QATools.json`, the QATools runtime, license caches or credentials in this ZIP. The selected tool installers supply the HDAs and licensing runtime.
 4. Choose Upload project ZIP → Build project download. This saves an unpublished draft first when needed, validates the ZIP and assembles its selected tools from private Storage.
 5. Fill remaining metadata/media, then use the existing Publish dialog to create/connect the Paddle sandbox price and check all publication requirements.
 
@@ -19,7 +19,7 @@ The uploaded project ZIP must be smaller than 4 MB (4 MiB minus an 8 KiB multipa
 ## Customer download
 
 ```text
-qatools.json
+QATools.json
 qatools/
   otls/                     selected tools
   python3.13libs/            shared licensing runtime
@@ -29,7 +29,7 @@ project/
 PROJECT-README.txt
 ```
 
-Install the shared qatools package using `/install`. Extract the ZIP inside `project/` into a separate working folder and open its scene there. Activate the account once for all owned tools. Keeping the project archive separate avoids merging arbitrary resource paths into the installer and preserves its original folder structure. The release is independently stored; later tool changes do not silently alter it. Re-upload the project ZIP and rebuild explicitly when updating its download.
+Install the shared QATools package using `/install`. Extract the ZIP inside `project/` into a separate working folder and open its scene there. Activate the account once for all owned tools. Keeping the project archive separate avoids merging arbitrary resource paths into the installer and preserves its original folder structure. The release is independently stored; later tool changes do not silently alter it. Re-upload the project ZIP and rebuild explicitly when updating its download.
 
 ## Implementation and safeguards
 

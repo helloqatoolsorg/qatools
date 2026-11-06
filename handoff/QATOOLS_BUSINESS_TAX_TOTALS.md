@@ -5,12 +5,12 @@ Owner enabled optional business details and then observed the actual Paddle tota
 ## Implementation
 
 - Catalog prices remain EUR tax-inclusive, one-time, quantity one, no discounts or credit. Immutable reservation snapshots retain these catalog amounts and exact provider product/price IDs.
-- Provider transaction validation now separately records each calculated charged amount. Reductions are accepted only with a business ID, zero aggregate VAT, matching zero-tax line/unit totals, no discounts/credits, positive charges no higher than catalog amounts and unchanged price identities/unit prices. The provider's signed completed event remains the financial source of truth; customer VAT details and business IDs are not persisted in qatools events.
+- Provider transaction validation now separately records each calculated charged amount. Reductions are accepted only with a business ID, zero aggregate VAT, matching zero-tax line/unit totals, no discounts/credits, positive charges no higher than catalog amounts and unchanged price identities/unit prices. The provider's signed completed event remains the financial source of truth; customer VAT details and business IDs are not persisted in QATools events.
 - Browser guard permits a lower displayed total only for the same transaction/items, a business tax identifier and coherent zero-tax totals. This does not authorize purchases. Missing/inconsistent totals, increased prices, changed quantities/prices and discounts still close the checkout. Customer/item update events are checked too.
 - A ready VAT-adjusted transaction can be revalidated and reopened without creating or binding another transaction.
 - Migration 20261004200000_sandbox_business_tax_totals adds charged_amount_cents alongside the unchanged catalog reservation. Existing completed cart intents are backfilled from their saved order totals. Signed fulfillment verifies both catalog snapshots and summed actual charges, atomically records the actual order and item amounts, and persists the final paid total.
 - Approved tool refunds match actual paid item amounts; whole-order refunds match the actual order total. Refunds cannot use the higher catalog amount. Original invoices, order numbers, ownership history and legacy payment behavior are retained.
-- Admin Check Paddle compares completed checkout payments with charged_amount_cents; pending records continue to show the catalog reservation. No VAT registration data is copied into qatools profiles. Existing invoice download authorization remains unchanged.
+- Admin Check Paddle compares completed checkout payments with charged_amount_cents; pending records continue to show the catalog reservation. No VAT registration data is copied into QATools profiles. Existing invoice download authorization remains unchanged.
 
 ## Verification and rollout
 

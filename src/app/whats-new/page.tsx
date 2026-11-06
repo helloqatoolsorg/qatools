@@ -210,7 +210,7 @@ export default function WhatsNewPage() {
             </span>
 
             <strong>
-              qatools
+              QATools
             </strong>
 
             <span>

@@ -1,6 +1,6 @@
 # Black-box tool export
 
-Prepare qatools tool now lives in the shelf tab labelled **qatools dev**. The internal shelf identifier is retained so reinstalling updates the existing shelf rather than adding another one.
+Prepare QATools tool now lives in the shelf tab labelled **QATools dev**. The internal shelf identifier is retained so reinstalling updates the existing shelf rather than adding another one.
 
 The utility validates licensing in a temporary editable staging definition, then saves that staging instance with `black_box=True` and an explicit template node. Only that export is black-boxed. The original HDA library is never written; retain it for all future edits and exports. ZIP metadata and website upload layout are unchanged.
 
@@ -10,7 +10,7 @@ Export sequence: rename the temporary editable definition to its release identit
 
 New authoring labels use letters and single spaces only: `QA Test A`. Source Internal Name and library filename must be `QA_Test_A_dev` and `QA_Test_A_dev.hdalc`. Keep sources manually under `packages/qatools_dev/otls`. The prepared Internal Name is `QA_Test_A`, the release HDA is `QA_Test_A.hdalc`, the product label is `QA Test A`, and the website slug stays `qa_test_a`. Existing product identities are not renamed.
 
-The shelf asks for an export folder and derives `QA_Test_A.zip` automatically. It never overwrites an existing ZIP. The admin importer accepts the capitalized release filename and uses `QA_Test_A.zip` for the customer installer too. The upload ZIP contains metadata and the HDA at its root; the website builds the customer package with `qatools.json` at root and the HDA in `qatools/otls`. No extra loose HDA is installed over a development source during export. Legacy uploads remain accepted.
+The shelf asks for an export folder and derives `QA_Test_A.zip` automatically. It never overwrites an existing ZIP. The admin importer accepts the capitalized release filename and uses `QA_Test_A.zip` for the customer installer too. The upload ZIP contains metadata and the HDA at its root; the website builds the customer package with `QATools.json` at root and the HDA in `QATools/otls`. No extra loose HDA is installed over a development source during export. Legacy uploads remain accepted.
 
 Naming validation: four pure Python identity/export tests and seven website import tests pass; TypeScript passes. All six real Houdini black-box/export tests passed in the owner terminal. Deploy the importer changes before uploading the new capitalized exports; no new database migration is needed.
 
@@ -29,11 +29,11 @@ After these tests pass, install the updated shelf using:
 powershell -NoProfile -ExecutionPolicy Bypass -File houdini\authoring\install-authoring.ps1
 ```
 
-Restart Houdini, enable qatools dev, and export from an original saved HDA. Keep original source HDAs separately from downloaded release libraries of the same type. Existing published ZIPs are unchanged until the owner uploads replacements. No database migration is needed. Deploy the website importer changes before uploading capitalized HDA exports.
+Restart Houdini, enable QATools dev, and export from an original saved HDA. Keep original source HDAs separately from downloaded release libraries of the same type. Existing published ZIPs are unchanged until the owner uploads replacements. No database migration is needed. Deploy the website importer changes before uploading capitalized HDA exports.
 
 Owner diagnostic on Houdini 22.0.459 Indie: both black_default and black_explicit_lock deny children() before and after unlocking, while isCompiled() remains false. Adding new nodes after unlocking is allowed in both clean baseline configurations. Ordinary HDAs expose original_contents after unlocking. This establishes the relevant protection criterion; the subsequent full run passed all six licensing/geometry/source-preservation tests.
 
 The hidden license guard depends on qatools_license_revision. Account activation/clear refresh increments it before recooking each asset, invalidating cached geometry without accessing the hidden network. Exported/prepared assets are rejected before checking development naming. These behaviors passed the owner run of six tests.
 
 ## Export dialog and development-name correction
-The source Internal Name is now authoritative. QA_Tool_A_dev produces QA_Tool_A.hdalc, QA_Tool_A.zip and label QA Tool A regardless of a development suffix in the source display label. Exactly one final _dev suffix is removed; doubled suffixes are rejected. The export dialog previews source type, release label, HDA and ZIP filenames, editable folder and full destination path. For sources under qatools_dev, the default destination is its sibling qatools folder; otherwise it is exports next to the source library. The utility packages the HDA inside the ZIP rather than installing a loose release over any source. Pure naming and filename tests pass; the new real-Houdini label regression and Qt dialog require owner verification.
+The source Internal Name is now authoritative. QA_Tool_A_dev produces QA_Tool_A.hdalc, QA_Tool_A.zip and label QA Tool A regardless of a development suffix in the source display label. Exactly one final _dev suffix is removed; doubled suffixes are rejected. The export dialog previews source type, release label, HDA and ZIP filenames, editable folder and full destination path. For sources under qatools_dev, the default destination is its sibling QATools folder; otherwise it is exports next to the source library. The utility packages the HDA inside the ZIP rather than installing a loose release over any source. Pure naming and filename tests pass; the new real-Houdini label regression and Qt dialog require owner verification.

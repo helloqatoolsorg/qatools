@@ -1,13 +1,23 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript');
 function load(file,mocks={}){const exports={},code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,esModuleInterop:true}}).outputText;vm.runInNewContext(code,{exports,require:n=>n in mocks?mocks[n]:require(n.startsWith('.')?path.resolve(path.dirname(file),n):n),Buffer,process,Uint8Array,URL,Request,Response,FormData,File,Set,JSON});return exports;}
-const config=fs.readFileSync('public/qatools.json'),hda=fs.readFileSync('houdini/otls/qafit01_online.hdalc');
+const config=fs.readFileSync('public/QATools.json'),hda=fs.readFileSync('houdini/otls/qafit01_online.hdalc');
 const library=load('src/lib/houdiniPackage.ts',{'server-only':{}});
 function entries(zip){const result=[];let at=0;while(zip.readUInt32LE(at)===0x04034b50){const size=zip.readUInt32LE(at+18),len=zip.readUInt16LE(at+26),extra=zip.readUInt16LE(at+28),start=at+30+len+extra;result.push({name:zip.toString('utf8',at+30,at+30+len),bytes:zip.subarray(start,start+size)});at=start+size;}return result;}
 test('portable JSON rejects extra environment settings, absolute paths and oversized inputs',()=>{
  assert.equal(library.validPackageJson(config),true);
- for(const value of [{env:[{qatools:'C:/secret'}],path:[{HOUDINI_PATH:'$qatools'}]},{...library.packageConfig,scripts:['evil.py']},{env:[{qatools:'$HOUDINI_PACKAGE_PATH/qatools',SECRET:'secret'}],path:[{HOUDINI_PATH:'$qatools'}]},null,{}])assert.equal(library.validPackageJson(Buffer.from(JSON.stringify(value))),false);
+ for(const value of [{env:[{qatools:'C:/secret'}],path:[{HOUDINI_PATH:'$qatools'}]},{...library.packageConfig,scripts:['evil.py']},{env:[{qatools:'$HOUDINI_PACKAGE_PATH/QATools',SECRET:'secret'}],path:[{HOUDINI_PATH:'$qatools'}]},null,{}])assert.equal(library.validPackageJson(Buffer.from(JSON.stringify(value))),false);
  assert.equal(library.validPackageJson(Buffer.alloc(9000)),false);
+});
+
+test('package names and configuration use exact case on every operating system',()=>{
+ const publicNames=fs.readdirSync('public');assert.ok(publicNames.includes('QATools.json'));assert.ok(!publicNames.includes('qatools.json'));
+ assert.equal(library.packageConfig.env[0].qatools,'$HOUDINI_PACKAGE_PATH/QATools');
+ assert.equal(library.packageConfig.path[0].HOUDINI_PATH,'$qatools');
+ for(const folder of ['qatools','QATOOLS','QaTools']){
+  const wrong=JSON.parse(config);wrong.env[0].qatools='$HOUDINI_PACKAGE_PATH/'+folder;
+  assert.equal(library.validPackageJson(Buffer.from(JSON.stringify(wrong))),false,folder);
+ }
 });
 test('HDA accepts the real installer tool and rejects traversal, scripts and missing content',()=>{
  assert.equal(library.validHda('qafit01_online.hdalc',hda),true);
@@ -17,11 +27,11 @@ test('HDA accepts the real installer tool and rejects traversal, scripts and mis
 test('single and multi-tool archives have one root JSON, exact HDAs and shared runtime',async()=>{
  const bytes=await library.buildHoudiniPackage(config,[{name:'qafit01_online.hdalc',bytes:hda}]);
  const zipValidator=load('src/lib/adminDownloadUpload.ts',{'server-only':{}});assert.equal(zipValidator.validToolZip(bytes),true);
- const items=entries(bytes);assert.equal(items.length,7);assert.equal(items[0].name,'qatools.json');assert.ok(items[0].bytes.equals(config));assert.ok(items.find(e=>e.name==='qatools/otls/qafit01_online.hdalc').bytes.equals(hda));
- for(const name of library.runtimeFiles)assert.ok(items.find(e=>e.name==='qatools/python3.13libs/qatools_licensing/'+name).bytes.equals(fs.readFileSync('houdini/python/qatools_licensing/'+name)));
- assert.ok(items.find(e=>e.name==='qatools/scripts/pythonrc.py'));
+ const items=entries(bytes);assert.equal(items.length,7);assert.equal(items[0].name,'QATools.json');assert.ok(items[0].bytes.equals(config));assert.ok(items.find(e=>e.name==='QATools/otls/qafit01_online.hdalc').bytes.equals(hda));
+ for(const name of library.runtimeFiles)assert.ok(items.find(e=>e.name==='QATools/python3.13libs/qatools_licensing/'+name).bytes.equals(fs.readFileSync('houdini/python/qatools_licensing/'+name)));
+ assert.ok(items.find(e=>e.name==='QATools/scripts/pythonrc.py'));
  assert.ok(items.every(e=>!e.name.includes('.env')&&!e.name.includes('account-v2.json')));
- const bundle=entries(await library.buildHoudiniPackage(config,[{name:'one.hda',bytes:hda},{name:'two.hda',bytes:hda}]));assert.equal(bundle.filter(e=>e.name==='qatools.json').length,1);assert.equal(bundle.filter(e=>e.name.startsWith('qatools/otls/')).length,2);
+ const bundle=entries(await library.buildHoudiniPackage(config,[{name:'one.hda',bytes:hda},{name:'two.hda',bytes:hda}]));assert.equal(bundle.filter(e=>e.name==='QATools.json').length,1);assert.equal(bundle.filter(e=>e.name.startsWith('QATools/otls/')).length,2);
  await assert.rejects(library.buildHoudiniPackage(config,[{name:'tool.hda',bytes:hda},{name:'TOOL.hda',bytes:hda}]),/duplicate/);
  const dest=path.join(process.env.TEMP,'qatools-package-validation.zip');fs.writeFileSync(dest,bytes);
 });
@@ -29,7 +39,7 @@ function setup(options={}){
  const calls=[];
  const db={from(table){calls.push({table});const q={select(){return q;},eq(){return q;},async maybeSingle(){return {data:table==='products'?{id:1,slug:'qafit01',product_type:options.bundle?'bundle':'tool',published:!!options.published}:options.existing?{file_path:options.existing,file_name:options.filename}:null,error:null};}};return q;},storage:{async getBucket(){return {data:{public:!!options.publicBucket},error:null};},from(){return {async upload(file,bytes){calls.push({upload:file,bytes});return {error:options.uploadError?{}:null};}};}},async rpc(name,args){calls.push({rpc:name,args});return {data:{ok:!options.mappingFailure},error:null};}};
  const route=load('src/app/api/admin/products/package/route.ts',{'@/lib/requireAdmin':{async requireAdmin(){return options.denied?{response:Response.json({error:'Denied'},{status:403})}:{user:{id:'verified-admin'}};}},'@/lib/activationHttp':{privateJson:(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}})},'@/lib/supabaseAdmin':{supabaseAdmin:db},'@/lib/houdiniPackage':library,'@/lib/preparedTool':{preparedTool(){throw Error('Use prepared ZIP')}},'@/lib/bundlePackage':{bundleTools(){throw Error('test missing members')}}});
- const request=(expected='',badJson=false)=>{const form=new FormData();form.set('tool',new File([hda],'qafit01_online.hdalc'));if(badJson)form.set('config',new File([Buffer.from('{}')],'qatools.json'));return new Request('http://localhost/api/admin/products/package?productId=1&expectedPath='+encodeURIComponent(expected),{method:'POST',body:form});};
+ const request=(expected='',badJson=false)=>{const form=new FormData();form.set('tool',new File([hda],'qafit01_online.hdalc'));if(badJson)form.set('config',new File([Buffer.from('{}')],'QATools.json'));return new Request('http://localhost/api/admin/products/package?productId=1&expectedPath='+encodeURIComponent(expected),{method:'POST',body:form});};
  return {calls,route,request};
 }
 test('package upload authorizes before reading bodies or storage',async()=>{const s=setup({denied:true});const response=await s.route.POST(s.request());assert.equal(response.status,403);assert.equal(s.calls.length,0);});

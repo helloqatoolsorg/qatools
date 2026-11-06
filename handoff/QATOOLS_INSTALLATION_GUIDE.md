@@ -4,7 +4,7 @@ The recent localhost connection failure came from old shared files in the active
 
 ## Scope and limits
 
-`src/app/install/page.tsx`: Windows/Houdini 22 scope; account purchase/download link; extract full ZIP; copy qatools.json and merge full qatools folder into Houdini preferences packages; retain other tools; close/restart Houdini; website License key Reveal and HDA Activate; one account activation for owned tools/bundles; Refresh after new ownership; one-machine/support release explanation; local clear does not release remote assignment; offline cached use and renewal troubleshooting. No user-facing expiry countdown or seven-day display. Footer domain corrected to qatools.org. Existing layout/top shelf/navigation behavior retained.
+`src/app/install/page.tsx`: Windows/Houdini 22 scope; account purchase/download link; extract full ZIP; copy QATools.json and merge full QATools folder into Houdini preferences packages; retain other tools; close/restart Houdini; website License key Reveal and HDA Activate; one account activation for owned tools/bundles; Refresh after new ownership; one-machine/support release explanation; local clear does not release remote assignment; offline cached use and renewal troubleshooting. No user-facing expiry countdown or seven-day display. Footer domain corrected to qatools.org. Existing layout/top shelf/navigation behavior retained.
 
 No licensing, payment, ownership, upload or database behavior changed. No invented tool data/support address or untested OS support. Owner product-content uploads remain owner-operated.
 

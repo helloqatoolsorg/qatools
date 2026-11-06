@@ -73,7 +73,7 @@ def _decode(value, max_length):
 
 def _signed_payload(envelope, public_keys):
     if not isinstance(envelope, dict):
-        raise LicenseError("A signed qatools license is required.")
+        raise LicenseError("A signed QATools license is required.")
     try:
         raw = _decode(envelope.get("payload"), 100000)
         signature = _decode(envelope.get("signature"), 86)
@@ -88,7 +88,7 @@ def _signed_payload(envelope, public_keys):
             raise LicenseError("Invalid verification algorithm.")
         public_key.verify(signature, raw)
         if payload.get("vendor") != "qatools" or type(payload.get("version")) is not int or payload["version"] not in (2, 3, 4):
-            raise LicenseError("Unsupported qatools license format.")
+            raise LicenseError("Unsupported QATools license format.")
         return payload
     except LicenseError:
         raise
@@ -205,7 +205,7 @@ def http_request(base_url, endpoint, body, key=None, allow_localhost=False):
     url = urllib.parse.urlsplit(base_url)
     if (url.username or url.password or url.query or url.fragment or url.path not in ("", "/")
             or (url.scheme != "https" and not (allow_localhost and url.scheme == "http" and url.hostname in {"localhost", "127.0.0.1", "::1"}))):
-        raise TemporaryError("A secure qatools server address is required.")
+        raise TemporaryError("A secure QATools server address is required.")
     headers = {"Content-Type": "application/json", "Accept": "application/json"}
     if key:
         headers["Authorization"] = "Bearer " + key
@@ -262,7 +262,7 @@ class Client:
                 raise ValueError()
             return result
         except Exception:
-            raise LicenseError("The cached license is unreadable. Refresh or activate your qatools account.") from None
+            raise LicenseError("The cached license is unreadable. Refresh or activate your QATools account.") from None
 
     def _save(self, state):
         self.cache_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -299,7 +299,7 @@ class Client:
                     import fcntl
                     fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
             except OSError:
-                raise TemporaryError("Another qatools license operation is in progress.") from None
+                raise TemporaryError("Another QATools license operation is in progress.") from None
             try:
                 yield
             finally:
@@ -376,13 +376,13 @@ class Client:
                 self._memo_payload = None
                 self._memo_fingerprint = None
                 self._access_decisions = {}
-                raise LicenseError("Activate your license in the License tab to connect your qatools account.") from None
+                raise LicenseError("Activate your license in the License tab to connect your QATools account.") from None
             except OSError:
-                raise LicenseError("Unable to read this computer's qatools license cache. Check folder permissions.") from None
+                raise LicenseError("Unable to read this computer's QATools license cache. Check folder permissions.") from None
             if fingerprint != self._memo_fingerprint or self._memo_payload is None:
                 state = self._load()
                 if not state.get("license"):
-                    raise LicenseError("Activate your license in the License tab to connect your qatools account.")
+                    raise LicenseError("Activate your license in the License tab to connect your QATools account.")
                 self._memo_payload = self._payload(state, allow_expired=True)
                 self._memo_fingerprint = fingerprint
                 self._access_decisions = {}
@@ -418,7 +418,7 @@ class Client:
 
     def activate(self, key):
         if not isinstance(key, str) or not re.fullmatch(r"QA_[A-Za-z0-9_-]{43}", key.strip()):
-            raise LicenseError("Enter your qatools account activation key.")
+            raise LicenseError("Enter your QATools account activation key.")
         with self._exclusive():
             status, result = self._request("/api/licensing/activate", {"machineId": self.machine_id, "offlineDays": 7, "licenseVersion": 4}, key.strip())
             if status != 200:
@@ -436,7 +436,7 @@ class Client:
         status, result = self._request("/api/licensing/connect", {
             "action": "start", "machineId": self.machine_id, "machineName": machine_name[:80] or "Computer", "licenseVersion": 4})
         if status != 200:
-            raise LicenseError(result.get("error", "Unable to connect your qatools account."))
+            raise LicenseError(result.get("error", "Unable to connect your QATools account."))
         if (not isinstance(result.get("id"), str)
                 or not UUID.fullmatch(result["id"])
                 or not isinstance(result.get("token"), str) or not re.fullmatch(r"[a-f0-9]{64}", result["token"])
@@ -455,7 +455,7 @@ class Client:
             state = self._load()
             payload = self._payload(state, allow_expired=True)
             if payload["version"] != 4:
-                raise LicenseError("Activate your account once with the latest qatools runtime.")
+                raise LicenseError("Activate your account once with the latest QATools runtime.")
             if product_access(payload, slug, self.clock()) in ("purchased", "free", "trial", "expired"):
                 return False
             nonce = secrets.token_hex(16)
@@ -482,7 +482,7 @@ class Client:
         if status == 202 and result.get("pending") is True:
             return False
         if status != 200:
-            raise LicenseError(result.get("error", "Unable to connect your qatools account."))
+            raise LicenseError(result.get("error", "Unable to connect your QATools account."))
         proof = result.get("license")
         verify_license(proof, self.public_keys, self.machine_id, self.clock())
         with self._exclusive():

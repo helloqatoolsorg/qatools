@@ -1,4 +1,4 @@
-# qatools customer order numbers — 2026-10-04
+# QATools customer order numbers — 2026-10-04
 
 Owner approved separate customer order numbers, retained internal IDs, separate sandbox numbering and retention of refunded/cancelled orders.
 
@@ -11,7 +11,7 @@ Owner approved separate customer order numbers, retained internal IDs, separate 
 - Historical development provider `development`: `development-000001`, …
 - Unsupported providers fail closed when confirming an order.
 
-The current development and sandbox purchases therefore each become number 1 in their own series. Database IDs #1 and #3 stay internal. Future live numbering starts independently at 000001. These are qatools order references, not Paddle invoice numbers.
+The current development and sandbox purchases therefore each become number 1 in their own series. Database IDs #1 and #3 stay internal. Future live numbering starts independently at 000001. These are QATools order references, not Paddle invoice numbers.
 
 Counters use ordinary transactional rows. An AFTER-row trigger allocates only for an actual confirmed insertion or confirmation update, avoiding sequence gaps and ignored ON CONFLICT inserts. Counter updates serialize on the corresponding scope row and roll back with the entire purchase transaction. A later fulfillment failure also rolls back the allocation. Number width expands beyond six digits.
 

@@ -1,4 +1,4 @@
-"""Prepare a copy of a saved single-output SOP asset for qatools publication."""
+"""Prepare a copy of a saved single-output SOP asset for QATools publication."""
 import ast
 import json
 from pathlib import Path
@@ -6,7 +6,7 @@ import tempfile
 import uuid
 
 
-from .prepared_tool import identity, export_definition, release_names
+from .prepared_tool import identity, export_definition, release_names, canonical_export_folder
 
 MARKER = "qatools-preparation.json"
 GUARD = "qatools_license_guard"
@@ -33,7 +33,7 @@ def expand_string(value):
 def bridge(slug):
     # Preserve the author's PythonModule and add only our reserved functions.
     return '''
-# qatools preparation bridge v1
+# QATools preparation bridge v1
 _qatools_slug = %r
 
 def _qatools_require():
@@ -41,9 +41,9 @@ def _qatools_require():
     try:
         from qatools_licensing import houdini_ui
     except ImportError:
-        raise hou.NodeError("Install the complete qatools package before using this tool.") from None
+        raise hou.NodeError("Install the complete QATools package before using this tool.") from None
     if getattr(houdini_ui, "RUNTIME_VERSION", 0) < 5:
-        raise hou.NodeError("Update the installed qatools licensing files and restart Houdini. This tool requires runtime 5 or later.")
+        raise hou.NodeError("Update the installed QATools licensing files and restart Houdini. This tool requires runtime 5 or later.")
     return houdini_ui.require_license_or_fail(_qatools_slug)
 
 def _qatools_field(field):
@@ -136,7 +136,7 @@ def _qatools_trial(node):
     helper = getattr(houdini_ui, "show_trial_dialog", None)
     if not callable(helper):
         import hou
-        hou.ui.displayMessage("Install the latest qatools package to start the free trial without a key.", title="qatools")
+        hou.ui.displayMessage("Install the latest QATools package to start the free trial without a key.", title="QATools")
         return
     helper(_qatools_recook_all)
 
@@ -173,7 +173,7 @@ def add_license_tab(definition):
     group = definition.parmTemplateGroup()
     for name in PARAMETERS + ("qatools_license_revision", "qatools_controls"):
         if group.find(name) is not None:
-            raise ValueError("An existing parameter conflicts with qatools licensing: " + name)
+            raise ValueError("An existing parameter conflicts with QATools licensing: " + name)
     # Tabs keep licensing out of the normal tool controls. Preserve the author's
     # complete layout inside the first tab, including any existing subfolders.
     controls = hou.FolderParmTemplate("qatools_controls", "Tool", folder_type=hou.folderType.Tabs)
@@ -356,17 +356,17 @@ def export_dialog(definition):
     source = Path(definition.libraryFilePath()).resolve()
     default = source.parent / "exports"
     for parent in source.parents:
-        if parent.name == "qatools_dev":
-            default = parent.parent / "qatools"
+        if parent.name.casefold() == "qatools_dev":
+            default = parent.parent / "QATools"
             break
     dialog = QtWidgets.QDialog(hou.qt.mainWindow())
-    dialog.setWindowTitle("Export qatools tool")
+    dialog.setWindowTitle("Export QATools tool")
     dialog.setMinimumWidth(650)
     layout = QtWidgets.QVBoxLayout(dialog)
     layout.addWidget(QtWidgets.QLabel("Select an export folder. Filenames are generated from the selected asset."))
     form = QtWidgets.QFormLayout()
     layout.addLayout(form)
-    folder = QtWidgets.QLineEdit(str(settings.value("export_folder", str(default))))
+    folder = QtWidgets.QLineEdit(str(canonical_export_folder(settings.value("export_folder", str(default)))))
     browse = QtWidgets.QPushButton("Browse…")
     row = QtWidgets.QHBoxLayout()
     row.addWidget(folder)
@@ -440,6 +440,6 @@ def shelf_action():
             return
         path, icon_path = selection
         result = prepare(selected[0], path, icon_path=icon_path)
-        hou.ui.displayMessage("Prepared black-box export: " + result["label"] + ". Your source HDA is unchanged. Upload this ZIP through New product → Tool.", title="qatools")
+        hou.ui.displayMessage("Prepared black-box export: " + result["label"] + ". Your source HDA is unchanged. Upload this ZIP through New product → Tool.", title="QATools")
     except (ValueError, OSError, hou.Error) as error:
-        hou.ui.displayMessage(str(error), title="qatools", severity=hou.severityType.Error)
+        hou.ui.displayMessage(str(error), title="QATools", severity=hou.severityType.Error)

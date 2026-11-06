@@ -1,4 +1,4 @@
-# qatools sandbox payment operations batch — 2026-10-04
+# QATools sandbox payment operations batch — 2026-10-04
 
 ## Approved owner policy
 

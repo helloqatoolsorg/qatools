@@ -109,7 +109,7 @@ def register_tool(product_slug):
             _trial_worker_running = True
     _install_trial_pump()
     if start_worker:
-        threading.Thread(target=_trial_worker, name="qatools tool trial", daemon=True).start()
+        threading.Thread(target=_trial_worker, name="QATools tool trial", daemon=True).start()
 
 
 def _trial_worker():
@@ -151,12 +151,12 @@ def show_trial_dialog(on_connected=None):
 
     dialog = QtWidgets.QDialog(hou.qt.mainWindow())
     signals = Signals(dialog)
-    dialog.setWindowTitle("qatools - Start free trial")
+    dialog.setWindowTitle("QATools - Start free trial")
     layout = QtWidgets.QVBoxLayout(dialog)
     message = QtWidgets.QLabel("Preparing your account connection…")
     message.setWordWrap(True)
     layout.addWidget(message)
-    browser = QtWidgets.QPushButton("Open qatools account")
+    browser = QtWidgets.QPushButton("Open QATools account")
     browser.setEnabled(False)
     layout.addWidget(browser)
     close = QtWidgets.QPushButton("Cancel")
@@ -220,7 +220,7 @@ def show_trial_dialog(on_connected=None):
 
     _connection_dialog = dialog
     dialog.show()
-    threading.Thread(target=worker, name="qatools account connection", daemon=True).start()
+    threading.Thread(target=worker, name="QATools account connection", daemon=True).start()
 
 def require_license_or_fail(product_slug="qafit01"):
     import hou
@@ -303,13 +303,13 @@ def get_license_key():
 
 def clear_local_license():
     import hou
-    if hou.ui.displayMessage("Clear the local qatools license for all tools on this computer?\nYour account ownership and server machine assignment are retained.",
-            buttons=("Clear", "Cancel"), default_choice=1, close_choice=1, title="qatools") != 0:
+    if hou.ui.displayMessage("Clear the local QATools license for all tools on this computer?\nYour account ownership and server machine assignment are retained.",
+            buttons=("Clear", "Cancel"), default_choice=1, close_choice=1, title="QATools") != 0:
         return
     try:
         default_client().clear_local_license()
     except (LicenseError, OSError) as error:
-        hou.ui.displayMessage(str(error), severity=hou.severityType.Error, title="qatools")
+        hou.ui.displayMessage(str(error), severity=hou.severityType.Error, title="QATools")
 
 def show_account_dialog():
     import hou
@@ -323,17 +323,17 @@ def show_account_dialog():
             with _trial_lock:
                 _trial_attempts.clear()
                 _trial_errors.clear()
-            hou.ui.displayMessage("qatools account connected. Unpurchased paid tools start their own seven-day trial when first placed.", title="qatools")
+            hou.ui.displayMessage("QATools account connected. Unpurchased paid tools start their own seven-day trial when first placed.", title="QATools")
         elif action == 1:
             result = client.refresh(force=True)
             with _trial_lock:
                 _trial_attempts.clear()
                 _trial_errors.clear()
-            hou.ui.displayMessage("qatools license refreshed." if result.get("renewed") else result.get("message", "License status unchanged."), title="qatools")
+            hou.ui.displayMessage("QATools license refreshed." if result.get("renewed") else result.get("message", "License status unchanged."), title="QATools")
     except OSError:
-        hou.ui.displayMessage("qatools cannot write its local license cache. Check your account folder permissions.", severity=hou.severityType.Error, title="qatools")
+        hou.ui.displayMessage("QATools cannot write its local license cache. Check your account folder permissions.", severity=hou.severityType.Error, title="QATools")
     except LicenseError as error:
-        hou.ui.displayMessage(str(error), severity=hou.severityType.Error, title="qatools")
+        hou.ui.displayMessage(str(error), severity=hou.severityType.Error, title="QATools")
     finally:
         values = ()
 
@@ -345,4 +345,4 @@ def start_background_renewal():
                 _trial_updates.put("*")
         except (LicenseError, OSError):
             pass
-    threading.Thread(target=worker, name="qatools license renewal", daemon=True).start()
+    threading.Thread(target=worker, name="QATools license renewal", daemon=True).start()

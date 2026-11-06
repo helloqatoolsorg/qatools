@@ -7,7 +7,7 @@ export default function ResetPasswordPage() {
   const { user, loading } = useAuth();
   return (
     <main className="password-reset-page">
-      <a href="/" className="eyebrow">qatools</a>
+      <a href="/" className="eyebrow">QATools</a>
       {loading ? <p role="status" className="user-muted">Checking your password reset link...</p>
         : user ? <PasswordForm key={user.id} recovery />
         : <section>

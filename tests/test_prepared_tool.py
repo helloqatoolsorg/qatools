@@ -18,6 +18,12 @@ class Definition:
     def copyToHDAFile(self, path): Path(path).write_bytes(CONTENT)
 
 class PreparedTests(unittest.TestCase):
+    def test_export_folder_casing_preserves_custom_paths(self):
+        for name in ("qatools", "QATools", "QATOOLS"):
+            self.assertEqual(module.canonical_export_folder(Path("exports") / name), Path("exports") / "QATools")
+        self.assertEqual(module.canonical_export_folder(Path("exports") / "custom"), Path("exports") / "custom")
+        self.assertEqual(module.canonical_export_folder(Path("qatools_dev")), Path("qatools_dev"))
+
     def test_release_names_come_from_development_internal_name(self):
         self.assertEqual(module.release_names("QA_Tool_A_dev"), ("QA Tool A", "QA_Tool_A"))
         self.assertEqual(module.release_names("QA_Rand_Cd_dev"), ("QA Rand Cd", "QA_Rand_Cd"))

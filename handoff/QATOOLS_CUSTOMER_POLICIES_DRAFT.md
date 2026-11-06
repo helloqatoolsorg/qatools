@@ -1,4 +1,4 @@
-# qatools customer policy working draft
+# QATools customer policy working draft
 
 Prepared: 2026-10-08. INTERNAL DRAFT — not published, not accepted by customers and not a professional legal opinion. Do not deploy this file's unresolved placeholders as customer terms. Policy decisions and actual source take precedence over older handoff text.
 
@@ -16,9 +16,9 @@ Prepared: 2026-10-08. INTERNAL DRAFT — not published, not accepted by customer
 
 ### Products and purchases
 
-qatools provides digital tools, bundles and project files for SideFX Houdini. Product pages describe the contents and supported software requirements. A customer account is required to acquire products and access their downloads.
+QATools provides digital tools, bundles and project files for SideFX Houdini. Product pages describe the contents and supported software requirements. A customer account is required to acquire products and access their downloads.
 
-Paid products are one-time purchases rather than recurring subscriptions. Purchases through Paddle are processed by Paddle as the reseller; Paddle's buyer terms and applicable mandatory rights govern its order/payment role. A successful payment is confirmed by the provider before access is granted. qatools does not handle raw card details in its application.
+Paid products are one-time purchases rather than recurring subscriptions. Purchases through Paddle are processed by Paddle as the reseller; Paddle's buyer terms and applicable mandatory rights govern its order/payment role. A successful payment is confirmed by the provider before access is granted. QATools does not handle raw card details in its application.
 
 A bundle or project is a separate fixed-price product. It includes the tools identified for that purchase. Buying a bundle does not reduce its price because you already own an included tool. Access to an independently purchased tool remains separate from access supplied by a bundle or project.
 
@@ -50,7 +50,7 @@ If a refund is approved, payment handling is performed through Paddle and the ac
 
 ## Privacy notice — factual outline awaiting final details
 
-Controller: [legal operator and contact]. This notice covers the qatools website, account and licensing functions. Paddle publishes its own notice for its reseller/payment operations.
+Controller: [legal operator and contact]. This notice covers the QATools website, account and licensing functions. Paddle publishes its own notice for its reseller/payment operations.
 
 Data and purposes established from current implementation:
 
@@ -73,14 +73,14 @@ Browser storage: login sessions, cart and likes use browser storage. Admin draft
 
 Contact: [confirmed receiving address]. Include your account email, order reference if relevant, tool name, Houdini version, operating system and steps to reproduce the issue. Do not send your password, activation key or private license files.
 
-For installation, link /install. For machine changes, request release of the previous assignment. For billing/refunds, link Paddle buyer support as well as the qatools support address. Do not promise support response times until approved.
+For installation, link /install. For machine changes, request release of the previous assignment. For billing/refunds, link Paddle buyer support as well as the QATools support address. Do not promise support response times until approved.
 
 ## Website implementation plan
 
 Once required facts/policy are supplied:
 
 1. Add /terms, /privacy, /refunds and /support using the existing visual language and accessible headings.
-2. Reuse a consistent footer with qatools branding and policy/support links across public/account pages; replace old qatools.studio text.
+2. Reuse a consistent footer with QATools branding and policy/support links across public/account pages; replace old qatools.studio text.
 3. Add clear checkout disclosures without duplicating Paddle's invoice/payment logic.
 4. Decide and implement durable versioned agreement/consent evidence where needed in a focused batch. Never infer consent just from account existence or an order row.
 5. Verify mobile layout, links, contact details, accurate licensing/refund wording and real checkout consent behavior before publication/live approval.

@@ -4,7 +4,7 @@
 
 Implementation complete locally. This supersedes earlier preparation-only checkpoints. The migration can now be applied before deploying this batch, while keeping PADDLE_ENVIRONMENT=sandbox and PADDLE_LIVE_CHECKOUT_ENABLED=false. No remote migration, commit, push, live provider request or deployment was performed by the agent.
 
-Owner reports live API key, live client token and disabled live checkout flag saved in Vercel Production, linked only to qatools. Live website approval remains in review; default payment URL https://www.qatools.org/cart is pending approval. No Paddle AI plugin or account connector was installed.
+Owner reports live API key, live client token and disabled live checkout flag saved in Vercel Production, linked only to QATools. Live website approval remains in review; default payment URL https://www.qatools.org/cart is pending approval. No Paddle AI plugin or account connector was installed.
 
 ## Changes
 

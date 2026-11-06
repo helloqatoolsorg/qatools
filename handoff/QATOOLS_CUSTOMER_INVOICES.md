@@ -8,7 +8,7 @@ Owner approved adding Download invoice to customer order history using Paddle's 
 - Current scope is paddle_sandbox orders with positive totals and paid/refunded/partially_refunded status. Free, pending, cancelled, malformed and unsupported-provider orders fail closed. Original invoice access survives entitlement refund/revocation.
 - Server retrieves a fresh attachment URL from Paddle GET /transactions/{transaction_id}/invoice on demand, using the existing server-only sandbox key (transaction.read required). Temporary URLs are not stored in profiles or localStorage. Responses are no-store. HTTPS URLs with embedded credentials are rejected. Provider/database errors expose no private details.
 - Orders & Receipts shows a matching DOWNLOAD INVOICE action underneath the product name, preserving the existing four-column layout. Loading and retry errors are per order. No Supabase migration or new environment variable is required.
-- This returns the original invoice; it does not create a refund credit note or a custom invoice numbering system. Billing details are collected by Paddle checkout; qatools profile invoice_details is not automatically forwarded by this change.
+- This returns the original invoice; it does not create a refund credit note or a custom invoice numbering system. Billing details are collected by Paddle checkout; QATools profile invoice_details is not automatically forwarded by this change.
 
 ## Verification and rollout
 

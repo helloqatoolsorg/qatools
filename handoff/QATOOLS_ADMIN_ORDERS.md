@@ -1,4 +1,4 @@
-# qatools admin orders — 2026-10-03
+# QATools admin orders — 2026-10-03
 
 ## Implemented locally
 

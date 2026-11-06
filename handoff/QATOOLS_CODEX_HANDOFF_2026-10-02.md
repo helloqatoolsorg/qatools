@@ -1,16 +1,16 @@
-# QA Tools — Codex Handoff
+# QATools — Codex Handoff
 
 > Current approved licensing policy and future agreement source: [QATOOLS_POLICY_DECISIONS.md](QATOOLS_POLICY_DECISIONS.md). The owner accepted one account credential, one account-level machine slot and a 30-day renewable offline allowance on 2026-10-02. Account-machine foundation is applied and owner-verified. Account credentials/activation are prepared locally with a new migration pending; signed licensing and 30-day renewal remain outstanding; older descriptions below preserve historical implementation context.
 
 Updated: 2026-10-02
 
-Purpose: give Codex enough context to continue the existing QA Tools repository from the exact current development point without redesigning or rebuilding working systems.
+Purpose: give Codex enough context to continue the existing QATools repository from the exact current development point without redesigning or rebuilding working systems.
 
 ---
 
 ## 1. Current Status
 
-QA Tools is approximately midway through implementation.
+QATools is approximately midway through implementation.
 
 The customer-facing frontend and account foundation are substantially implemented. The database foundation is in place. Real entitlement, order, activation, and admin data are now flowing through Supabase.
 
@@ -540,7 +540,7 @@ Again, this is database activation status, not production Ed25519 issuance yet.
 ### Payment Method
 
 Provider-oriented placeholder.
-QA Tools should not store card details itself.
+QATools should not store card details itself.
 
 ---
 

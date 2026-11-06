@@ -59,6 +59,6 @@ export async function POST(request: Request) {
     if (uploaded.error) return privateJson({error:"Unable to save installer. Existing download retained."},503);
     const saved = identity ? await supabaseAdmin.rpc("replace_prepared_tool_download",{p_admin_id:auth.user.id,p_product_id:id,p_expected_path:expected || null,p_file_path:path,p_file_name:fileName,p_identity:identity}) : await supabaseAdmin.rpc(isBundle ? "set_bundle_download" : "set_product_download",{p_admin_id:auth.user.id,p_product_id:id,p_expected_path:expected || null,p_file_path:path,p_file_name:fileName,...(isBundle ? {p_tool_ids:included.map(t=>t.id)} : {p_enabled:true})});
     if (saved.error || !saved.data?.ok) return privateJson({error:"Installer uploaded but could not be selected. Reload before retrying."},409);
-    return privateJson({message:product.data.published ? "Installer replaced. Existing owners can download this release." : "Installer saved. It contains qatools.json, the tool and shared licensing files. Publishing is a separate action.",download:{file_name:fileName,file_path:path,enabled:true}});
+    return privateJson({message:product.data.published ? "Installer replaced. Existing owners can download this release." : "Installer saved. It contains QATools.json, the tool and shared licensing files. Publishing is a separate action.",download:{file_name:fileName,file_path:path,enabled:true}});
   } catch { return privateJson({error:"Unable to prepare installer."},503); }
 }

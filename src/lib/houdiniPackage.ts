@@ -1,7 +1,7 @@
 import "server-only";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import config from "../../public/qatools.json";
+import config from "../../public/QATools.json";
 export const packageConfig = config;
 export const runtimeFiles = ["__init__.py", "client.py", "config.py", "houdini_ui.py"] as const;
 export type PackageEntry = { name: string; bytes: Buffer };
@@ -39,9 +39,9 @@ export function makePackageZip(entries: PackageEntry[]): Buffer {
 }
 export async function houdiniPackageEntries(json: Buffer, tools: { name: string; bytes: Buffer }[]): Promise<PackageEntry[]> {
   if (!validPackageJson(json) || !tools.length || tools.length > 100 || tools.some(t => !validHda(t.name,t.bytes))) throw new Error("Invalid installer inputs.");
-  const runtime = await Promise.all(runtimeFiles.map(async name => ({ name: "qatools/python3.13libs/qatools_licensing/" + name, bytes: await readFile(join(process.cwd(),"houdini/python/qatools_licensing",name)) })));
+  const runtime = await Promise.all(runtimeFiles.map(async name => ({ name: "QATools/python3.13libs/qatools_licensing/" + name, bytes: await readFile(join(process.cwd(),"houdini/python/qatools_licensing",name)) })));
   const startup = await readFile(join(process.cwd(),"houdini/scripts/pythonrc.py"));
-  return [{ name: "qatools.json", bytes: json }, ...tools.map(t => ({ name: "qatools/otls/" + t.name, bytes: t.bytes })), ...runtime, { name: "qatools/scripts/pythonrc.py", bytes: startup }];
+  return [{ name: "QATools.json", bytes: json }, ...tools.map(t => ({ name: "QATools/otls/" + t.name, bytes: t.bytes })), ...runtime, { name: "QATools/scripts/pythonrc.py", bytes: startup }];
 }
 
 export async function buildHoudiniPackage(json: Buffer, tools: PackageEntry[]): Promise<Buffer> {

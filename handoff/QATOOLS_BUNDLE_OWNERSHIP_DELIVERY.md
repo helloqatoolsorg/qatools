@@ -1,4 +1,4 @@
-# qatools bundle ownership and delivery
+# QATools bundle ownership and delivery
 
 2026-10-05. Implemented locally; remote migration, deployment and hosted owner verification remain pending. Owner handles uploads, publishing and sandbox transactions.
 
@@ -16,7 +16,7 @@
 
 Supersedes the manual bundle ZIP upload workflow. Select published individual tools with enabled uploaded installers, then click Build bundle installer in the bundle editor. The editor saves the selection first. No bundle upload or new Houdini shelf action is required.
 
-The server fetches each selected tool's private installer, verifies its ZIP/HDA content against its slug and prepared identity when present, and keeps only the HDA. It inserts the current shared qatools.json and licensing/runtime once. The saved archive contains qatools.json at the root, HDAs under qatools/otls/, and shared runtime under qatools/. Individual downloads remain unchanged.
+The server fetches each selected tool's private installer, verifies its ZIP/HDA content against its slug and prepared identity when present, and keeps only the HDA. It inserts the current shared QATools.json and licensing/runtime once. The saved archive contains QATools.json at the root, HDAs under QATools/otls/, and shared runtime under qatools/. Individual downloads remain unchanged.
 
 This is a separately saved bundle release. Later changes to an individual installer do not silently change an existing bundle. Click Rebuild bundle installer to explicitly update it. Released included-tool membership remains immutable; rebuilding preserves that composition. Publication and sandbox pricing still use the existing checks.
 

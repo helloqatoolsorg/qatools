@@ -7,9 +7,16 @@ test('brand never renders the default image before the saved logo resolves',()=>
  for(const url of [null,'https://storage.test/current-logo.png']){
   const Brand=load('src/components/BrandLogo.tsx',{'@/context/SiteBranding':{defaultLogo:'/assets/qatools_logo.png',useSiteBranding:()=>({url})},'next/image':function Image({unoptimized,...props}){return React.createElement('img',props);}}).default;
   const html=renderToStaticMarkup(React.createElement(Brand));
-  if(!url){assert.match(html,/brand-logo-placeholder/);assert.ok(!html.includes('<img'));}
-  else{assert.match(html,/src="https:\/\/storage.test\/current-logo.png"/);assert.ok(!html.includes('/assets/qatools_logo.png'));}
+  if(!url){assert.match(html,/brand-logo-placeholder/);assert.match(html,/aria-label="QATools"/);assert.ok(!html.includes('<img'));}
+  else{assert.match(html,/src="https:\/\/storage.test\/current-logo.png"/);assert.match(html,/alt="QATools"/);assert.ok(!html.includes('/assets/qatools_logo.png'));}
  }
+});
+
+test('footer displays QATools while keeping its navigation targets unchanged',()=>{
+ const Footer=load('src/components/SiteFooter.tsx',{'next/link':({children,...props})=>React.createElement('a',props,children)}).default;
+ const html=renderToStaticMarkup(React.createElement(Footer));
+ assert.match(html,/<a href="\/">QATools<\/a>/);
+ for(const section of ['terms','refunds','privacy','support'])assert.ok(html.includes('/information#'+section));
 });
 test('all heart states use the shared vector outline; logged-in account alone is green',()=>{
  for(const signedIn of [false,true]){

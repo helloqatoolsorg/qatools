@@ -1,6 +1,6 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
 function load(file,mocks={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,{exports,Buffer,process,Set,Map,require:n=>n in mocks?mocks[n]:require(n)});return exports;}
-const pack=load('src/lib/houdiniPackage.ts',{'server-only':{},'../../public/qatools.json':JSON.parse(fs.readFileSync('public/qatools.json'))});
+const pack=load('src/lib/houdiniPackage.ts',{'server-only':{},'../../public/QATools.json':JSON.parse(fs.readFileSync('public/QATools.json'))});
 const upload=load('src/lib/adminDownloadUpload.ts',{'server-only':{}});
 const project=load('src/lib/projectArchive.ts',{'server-only':{},'./houdiniPackage':pack,'./adminDownloadUpload':upload});
 const scene={name:'scenes/example.hipnc',bytes:Buffer.from('project scene')};
@@ -21,11 +21,11 @@ test('project release preserves original archive and builds one current shared i
  const original=zip([scene,{name:'geo/test.bgeo',bytes:Buffer.from('geometry')}]);project.validateProjectArchive(original);
  const release=await project.buildProjectPackage('example_project',original,[{name:'one.hda',bytes:Buffer.concat([Buffer.from('INDX'),Buffer.alloc(40)])}]);
  let cursor=central(release);const contents=new Map();for(let i=0;i<release.readUInt16LE(release.length-12);i++){const n=release.readUInt16LE(cursor+28),name=release.subarray(cursor+46,cursor+46+n).toString(),at=release.readUInt32LE(cursor+42),start=at+30+release.readUInt16LE(at+26),len=release.readUInt32LE(cursor+24);contents.set(name,release.subarray(start,start+len));cursor+=46+n;}
- assert.deepEqual(contents.get('project/example_project.zip'),original);assert.ok(contents.has('qatools/otls/one.hda'));assert.equal(contents.get('qatools.json').toString(),JSON.stringify(pack.packageConfig));assert.match(contents.get('PROJECT-README.txt').toString(),/separate working folder/);
+ assert.deepEqual(contents.get('project/example_project.zip'),original);assert.ok(contents.has('QATools/otls/one.hda'));assert.equal(contents.get('QATools.json').toString(),JSON.stringify(pack.packageConfig));assert.match(contents.get('PROJECT-README.txt').toString(),/separate working folder/);
  assert.equal([...contents.keys()].filter(n=>n.endsWith('client.py')).length,1);
 });
 test('project ZIP rejects absent scenes, corrupt contents, hidden credentials and installer files',()=>{
- for(const entries of [[{name:'readme.txt',bytes:Buffer.from('x')}],[{...scene,bytes:Buffer.alloc(0)}],[scene,{name:'.env.local',bytes:Buffer.from('secret')}],[scene,{name:'account-v2.json',bytes:Buffer.from('secret')}],[scene,{name:'qatools.json',bytes:Buffer.from('{}')}],[scene,{name:'tools/one.hda',bytes:Buffer.from('HDA')}],[scene,{name:'qatools_licensing/client.py',bytes:Buffer.from('code')}]])assert.throws(()=>project.validateProjectArchive(zip(entries)));
+ for(const entries of [[{name:'readme.txt',bytes:Buffer.from('x')}],[{...scene,bytes:Buffer.alloc(0)}],[scene,{name:'.env.local',bytes:Buffer.from('secret')}],[scene,{name:'account-v2.json',bytes:Buffer.from('secret')}],[scene,{name:'QATools.json',bytes:Buffer.from('{}')}],[scene,{name:'tools/one.hda',bytes:Buffer.from('HDA')}],[scene,{name:'qatools_licensing/client.py',bytes:Buffer.from('code')}]])assert.throws(()=>project.validateProjectArchive(zip(entries)));
  const corrupt=zip();corrupt[50]^=1;assert.throws(()=>project.validateProjectArchive(corrupt));
  const privateKey=zip([scene,{name:'signer-private.pem',bytes:Buffer.from('secret')}]);assert.throws(()=>project.validateProjectArchive(privateKey));
  assert.throws(()=>project.validateProjectArchive(Buffer.from('not ZIP')));

@@ -9,7 +9,7 @@ export async function buildProjectPackage(slug: string, archive: Buffer, tools: 
   validateProjectArchive(archive);
   const installer = await houdiniPackageEntries(Buffer.from(JSON.stringify(packageConfig)), tools);
   return makePackageZip([...installer, {name:"project/" + slug + ".zip",bytes:archive},
-    {name:"PROJECT-README.txt",bytes:Buffer.from("Install qatools.json and the qatools folder following https://www.qatools.org/install.\nExtract project/" + slug + ".zip into a separate working folder, keeping its directory structure. Open the Houdini scene from there.\nActivate your account once to enable the included tools.\n")}]);
+    {name:"PROJECT-README.txt",bytes:Buffer.from("Install QATools.json and the QATools folder following https://www.qatools.org/install.\nExtract project/" + slug + ".zip into a separate working folder, keeping its directory structure. Open the Houdini scene from there.\nActivate your account once to enable the included tools.\n")}]);
 }
 // Keep the original ZIP intact inside the release. Inspect and verify its contents
 // without extracting to disk or allowing it to replace the shared tool runtime.

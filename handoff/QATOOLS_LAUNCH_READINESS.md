@@ -1,4 +1,4 @@
-# qatools current launch checkpoint — 2026-10-04
+# QATools current launch checkpoint — 2026-10-04
 
 This checkpoint summarizes current observations; dated historical handoffs remain historical. Do not repeat completed owner uploads, purchases, refunds or password changes merely because an older document calls them pending.
 
@@ -30,7 +30,7 @@ This is a source/document review, not an external security audit or claim that p
 
 ## Latest owner checkpoint — 2026-10-04
 
-Owner ran the licensing-domain update script: 21 tests and package verification passed; rebuilt ZIP points to https://www.qatools.org. Owner uploaded/redownloaded/installed and confirmed license Refresh succeeds. Owner then applied, built and deployed customer invoice downloads and confirmed the sandbox buyer's original invoice downloads successfully. Owner reports checkout styling now matches qatools. Receipt email and live invoice checks remain separate.
+Owner ran the licensing-domain update script: 21 tests and package verification passed; rebuilt ZIP points to https://www.qatools.org. Owner uploaded/redownloaded/installed and confirmed license Refresh succeeds. Owner then applied, built and deployed customer invoice downloads and confirmed the sandbox buyer's original invoice downloads successfully. Owner reports checkout styling now matches QATools. Receipt email and live invoice checks remain separate.
 
 Owner authorized general sandbox cart support and chose qarand01 as the second paid tool. The coordinated source/migration/test batch is prepared in the chat workspace, pending mandatory isolated SQL checks, application, migrations, deployment, owner price setup and real multi-item payment/refund tests. See QATOOLS_SANDBOX_CART.md. The qafit01-only restriction is not claimed removed from the deployed site yet.
 

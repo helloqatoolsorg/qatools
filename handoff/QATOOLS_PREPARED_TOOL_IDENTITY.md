@@ -13,7 +13,7 @@ New product → Tool now opens a prepared ZIP upload first. After successful imp
 - Server checks paths, ZIP bounds, CRC, decompression size, exact entries, metadata convention, HDA header and SHA-256. It treats this as trusted admin authoring metadata, not a cryptographic licensing certification or malware scan.
 - Import requires a confirmed, unbanned admin through requireAdmin and the SQL RPC. ZIP parsing/storage checks precede creating a product.
 - A request UUID makes creation retries idempotent. Failed storage binding leaves a real visible unpublished draft. The same file/request retries that draft; reopening an incomplete draft also returns to the upload gate using its stored request UUID.
-- The downloadable customer installer is rebuilt with one shared qatools.json, the HDA under qatools/otls, and the shared runtime/startup files. The authoring metadata JSON is not included in customer downloads.
+- The downloadable customer installer is rebuilt with one shared QATools.json, the HDA under QATools/otls, and the shared runtime/startup files. The authoring metadata JSON is not included in customer downloads.
 - Replacements require the same prepared identity/filename and atomically update its checksum with the download mapping. Raw advanced ZIP replacement is blocked for prepared tools. Existing legacy tools retain their upload flow.
 - Draft deletion removes the product's identity along with its unused draft; linked commercial/history records retain existing protections.
 - Paddle continues using the stable slug for its provider product identity and verification. This change does not rename existing provider products or change licensing payloads.
@@ -22,7 +22,7 @@ New product → Tool now opens a prepared ZIP upload first. After successful imp
 
 houdini/authoring/prepared_tool.py reads the saved HDADefinition description and nodeTypeName, copies that one definition to a temporary HDA, and exports its ZIP. It never overwrites an existing export or modifies the source definition. Save asset edits in Houdini before export.
 
-This is the reusable identity exporter for the planned Prepare qatools tool shelf action. The licensing injection, standard License tab, guard insertion/validation, backups and shelf installation are STILL TO IMPLEMENT. Exporting an ordinary HDA does not make it licensed. Do not publish newly authored unguarded assets. Keep qabundle01 (qanoise01/qaroad01) unpublished until real prepared/licensed assets are available and the end-to-end owner test is complete. The existing qafit01 keeps its existing slug and bridge.
+This is the reusable identity exporter for the planned Prepare QATools tool shelf action. The licensing injection, standard License tab, guard insertion/validation, backups and shelf installation are STILL TO IMPLEMENT. Exporting an ordinary HDA does not make it licensed. Do not publish newly authored unguarded assets. Keep qabundle01 (qanoise01/qaroad01) unpublished until real prepared/licensed assets are available and the end-to-end owner test is complete. The existing qafit01 keeps its existing slug and bridge.
 
 ## Validation
 
@@ -49,4 +49,4 @@ Verify the matching Vercel deployment is Ready. Hosted authoring/upload tests fo
 
 ## Authoring helper checkpoint — 2026-10-05
 
-The owner confirmed applying 20261005150000_prepared_tool_identity.sql. The next authoring milestone is now implemented locally: the Prepare qatools tool shelf action, standard License tab, output-guard insertion/verification and automatic ZIP/identity export on a separate copy of saved single-output SOP assets. Source libraries are preserved, with unique temporary definitions cleaned up. Six real Houdini functional tests pass. Installation and real owner GUI/product checks remain to do. See QATOOLS_TOOL_AUTHORING.md; the earlier “still to implement” note is historical.
+The owner confirmed applying 20261005150000_prepared_tool_identity.sql. The next authoring milestone is now implemented locally: the Prepare QATools tool shelf action, standard License tab, output-guard insertion/verification and automatic ZIP/identity export on a separate copy of saved single-output SOP assets. Source libraries are preserved, with unique temporary definitions cleaned up. Six real Houdini functional tests pass. Installation and real owner GUI/product checks remain to do. See QATOOLS_TOOL_AUTHORING.md; the earlier “still to implement” note is historical.

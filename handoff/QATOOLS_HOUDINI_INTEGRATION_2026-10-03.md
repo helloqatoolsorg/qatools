@@ -12,7 +12,7 @@ Package: `C:\Users\quima\Documents\houdini22.0\packages\qatools`.
 
 The existing package JSON already adds this package to HOUDINI_PATH. A fresh hython process imported the installed shared client through Houdini's package path without an extra PYTHONPATH override. Python 3.13 matches this Houdini 22.0 installation. Other releases may use a different python3.Xlibs directory; the account key and shared cached proof are independent of that directory or Houdini version.
 
-Original HDA backup: `C:\Users\quima\Documents\houdini22.0\packages\qatools\backups\20261003-153631\qafit01_online.hdalc`.
+Original HDA backup: `C:\Users\quima\Documents\houdini22.0\packages\QATools\backups\20261003-153631\qafit01_online.hdalc`.
 
 Original SHA256: `19e7051771f1866b2623837169a345e53ed69a701644e312d36e7390fece0f58`.
 
@@ -69,16 +69,16 @@ Real account activation, interactive dialog display, live offline recooking, bac
 
 ## Latest verification/UI update
 
-Owner confirmed successful live use. Both the website License Data section and HDA tab now state the one-active-computer limit. Dialogs no longer display the expiry date; internal 30-day checks and manual refresh remain. New pre-UI backup: packages/qatools/backups/20261003-155233-ui/qafit01_online.hdalc.
+Owner confirmed successful live use. Both the website License Data section and HDA tab now state the one-active-computer limit. Dialogs no longer display the expiry date; internal 30-day checks and manual refresh remain. New pre-UI backup: packages/QATools/backups/20261003-155233-ui/qafit01_online.hdalc.
 
 The installed-HDA tests additionally passed primitive-attribute remapping and signed-release denial blocking, using temporary synthetic proofs only. Website production build passed. Read-only live renewal could not access the local cache under this chat's filesystem restrictions; it did not change cache or account state. Live offline/network renewal and the second-computer test remain pending.
 
 
 ## Direct license-key dialog
 
-The activation button now immediately opens the masked key field with activate account, refresh license and close; there is no preceding status window. Status and the one-computer limit appear in that dialog. All visible brand text uses qatools. Refresh needs no key entry. Installed shared Python files are updated; restart Houdini to reload them. No account key replacement or SQL migration is needed.
+The activation button now immediately opens the masked key field with activate account, refresh license and close; there is no preceding status window. Status and the one-computer limit appear in that dialog. All visible brand text uses QATools. Refresh needs no key entry. Installed shared Python files are updated; restart Houdini to reload them. No account key replacement or SQL migration is needed.
 
 
 ## Latest minimal dialog
 
-The owner superseded the previous status/message layout. The window now has only title qatools license key activation, masked License key field and Activate / Refresh / Close. Machine limit remains visible on the HDA tab and website. Five interaction checks passed. Restart Houdini to reload the installed shared module. Next-step package and backend/transfer prerequisites are recorded in QATOOLS_SECOND_COMPUTER_TEST.md.
+The owner superseded the previous status/message layout. The window now has only title QATools license key activation, masked License key field and Activate / Refresh / Close. Machine limit remains visible on the HDA tab and website. Five interaction checks passed. Restart Houdini to reload the installed shared module. Next-step package and backend/transfer prerequisites are recorded in QATOOLS_SECOND_COMPUTER_TEST.md.

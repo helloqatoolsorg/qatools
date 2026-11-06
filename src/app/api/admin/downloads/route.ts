@@ -59,6 +59,10 @@ export async function POST(request: Request) {
     const bytes = await readUpload(request);
     if (bytes === null) return privateJson({ error: "ZIP packages must be no larger than 25 MB." }, 413);
     if (!validToolZip(bytes)) return privateJson({ error: "Choose a valid ZIP package without private configuration files, encrypted entries or unsafe paths." }, 400);
+    const files = installerContents(bytes);
+    if (!files.includes("QATools.json") || !files.some(file => file.startsWith("QATools/otls/") && /\.hda(?:lc|nc)?$/i.test(file)) || files.some(file => file !== "QATools.json" && !file.startsWith("QATools/"))) {
+      return privateJson({ error: "Use a current installer with QATools.json at its root and tool files inside QATools/otls. Rebuild older test packages in the product editor." }, 400);
+    }
     const bucket = await supabaseAdmin.storage.getBucket("qatools-downloads");
     if (bucket.error || bucket.data?.public !== false) return privateJson({ error: "The private download bucket is unavailable." }, 503);
     const path = `${id}/${randomUUID()}/${name}`;

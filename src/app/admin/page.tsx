@@ -729,7 +729,7 @@ export default function AdminPage() {
           </h1>
 
           <p>
-            Log in with your qatools
+            Log in with your QATools
             administrator account to
             continue.
           </p>
@@ -772,7 +772,7 @@ export default function AdminPage() {
 
           <p>
             This account does not have
-            qatools administrator
+            QATools administrator
             access.
           </p>
 
@@ -848,7 +848,7 @@ export default function AdminPage() {
           >
             <div>
               <span className="eyebrow">
-                qatools
+                QATools
               </span>
 
               <h1
@@ -885,7 +885,7 @@ export default function AdminPage() {
                 }}
               >
                 Internal management
-                area for qatools.
+                area for QATools.
               </p>
             </div>
 

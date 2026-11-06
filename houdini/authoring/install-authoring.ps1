@@ -46,7 +46,7 @@ if (Test-Path -LiteralPath $taskConfigPath) {
 }
 $taskConfig = '{"env":[{"qatools_authoring":"$HOUDINI_PACKAGE_PATH/qatools-authoring"}],"path":[{"HOUDINI_PATH":"$qatools_authoring"}]}'
 [System.IO.File]::WriteAllText($taskConfigPath,$taskConfig)
-Write-Output ('qatools authoring installed for Houdini '+$HoudiniVersion+'. Restart Houdini and enable the qatools dev shelf tab.')
+Write-Output ('QATools authoring installed for Houdini '+$HoudiniVersion+'. Restart Houdini and enable the QATools dev shelf tab.')
 Write-Output ('Package: ' + $taskDestination)
 if (!(Test-Path -LiteralPath (Join-Path $taskPython 'export_worker.py'))) {
  throw 'The headless export worker was not installed.'

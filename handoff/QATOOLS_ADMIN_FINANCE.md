@@ -1,4 +1,4 @@
-# qatools Admin Finance — 2026-10-07
+# QATools Admin Finance — 2026-10-07
 
 Owner selected Finance from the feature backlog and paused further recovery testing. This batch adds a read-only report to the existing Admin sidebar and preserves Orders, checkout, refunds, ownership and licensing behavior.
 

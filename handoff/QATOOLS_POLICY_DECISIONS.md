@@ -1,4 +1,4 @@
-# QA Tools — Commercial and licensing policy decisions
+# QATools — Commercial and licensing policy decisions
 
 Updated: 2026-10-07
 
@@ -38,7 +38,7 @@ Source: project conversation following the successful development-machine releas
 | ID | Decision | Implementation status |
 | --- | --- | --- |
 | LIC-016 | The logged-in account owner can reveal/copy the same activation key whenever needed; mask it by default. | Approved 2026-10-03. Encrypted storage and Reveal implemented locally; migration/live verification pending. Older hash-only keys need one explicit replacement. No extra password prompt required in this milestone. |
-| LIC-001 | One account activation credential per customer account, usable to activate owned QA Tools products. | Website key creation/replacement and shared activation API implemented locally; credential migration/live verification pending. Houdini integration pending. |
+| LIC-001 | One account activation credential per customer account, usable to activate owned QATools products. | Website key creation/replacement and shared activation API implemented locally; credential migration/live verification pending. Houdini integration pending. |
 | LIC-002 | One active computer per account covering all owned tools. Release/reassign the account machine once, rather than separately for each tool. | Account foundation applied and website verified by owner. Shared activation API prepared locally; new migration and Houdini client integration pending. |
 | LIC-003 | Keep product ownership separate: an account credential must not unlock unowned tools. | Website entitlements exist; licensing integration pending. |
 | LIC-004 | Bind cached signed licenses to the machine ID. Use machine name as a readable label, not the sole security boundary. | Existing prototype has a machine-ID algorithm; no algorithm change approved or made. |
@@ -79,12 +79,12 @@ Sources: QATOOLS_PROJECT_OVERVIEW.md; QATOOLS_CODEX_HANDOFF_2026-10-02.md; QATOO
 
 | Topic | Recorded direction | Remaining qualification |
 | --- | --- | --- |
-| Product | QA Tools sells digital SideFX Houdini tools at qatools.studio. First defined product: qafit01, HDA for Houdini 21, remapping attributes to 0–1; €5, one-time purchase. | Do not invent details for other products. Reconfirm price/compatibility before publication. |
+| Product | QATools sells digital SideFX Houdini tools at qatools.studio. First defined product: qafit01, HDA for Houdini 21, remapping attributes to 0–1; €5, one-time purchase. | Do not invent details for other products. Reconfirm price/compatibility before publication. |
 | Accounts | Account required for paid and free acquisition. | Complete email recovery and production email setup. |
 | Ownership | Entitlements are authoritative; prevent duplicate ownership/purchases. Free acquisition skips payment but grants an entitlement. | Checkout, free acquisition backend and licensing integration pending. |
 | Bundles | Owning a bundle grants its included products. Fixed bundle price; no complete-the-bundle discount in v1. | Bundle implementation and release scope pending. |
 | Versions | Product ownership covers releases/older versions; maintenance under the same product is included. A genuinely new product generation may be sold separately. | Release/download implementation and exact support commitments pending. |
-| Payments | Paddle is preferred as merchant of record; EUR-only is acceptable initially. QA Tools should not store payment-card details. | Provider integration, responsibilities and actual checkout disclosures unconfirmed. |
+| Payments | Paddle is preferred as merchant of record; EUR-only is acceptable initially. QATools should not store payment-card details. | Provider integration, responsibilities and actual checkout disclosures unconfirmed. |
 | Displayed price | Prefer the advertised price to be the final total where commerce/tax setup permits. | Tax-inclusive presentation and legal wording not settled. |
 | Refunds | System must support refunded/revoked ownership. | No final refund policy, statutory-rights wording or offline revocation procedure approved. |
 | Seller/markets | Blueprint envisages a Spain-based seller with worldwide sales. | Confirm actual legal entity, business details and supported markets before drafting terms. |
@@ -186,7 +186,7 @@ Technical record and next-step checklist: QATOOLS_SIGNED_LICENSE_V2.md. This rec
 ## Installed Houdini integration — 2026-10-03
 
 - Owner reported the previous renewal step working; no independent remote migration-history query performed.
-- Shared client/startup hook and updated qafit01 HDA are now installed in the local Houdini 22.0 QA Tools package, with a verified original HDA backup.
+- Shared client/startup hook and updated qafit01 HDA are now installed in the local Houdini 22.0 QATools package, with a verified original HDA backup.
 - Actual network inspection discovered the original Python licensing SOP was bypassed. It is now enabled; internal node wiring and parameters remain unchanged. Actual missing/expired/wrong-product proofs block SOP cooking; a valid synthetic proof allows remapping offline.
 - One account activation/status button replaces the old credential inputs. Callback recooks the selected guard/tool after activation or manual refresh. Account key is not stored in HDA parameters.
 - Synthetic headless tests passed on the installed asset. Real account activation, interactive UI, live renewal/release and second-machine transfer still need verification. No production activation or terms promise is implied.
@@ -194,20 +194,20 @@ Technical record and next-step checklist: QATOOLS_SIGNED_LICENSE_V2.md. This rec
 ## License UI clarification and further checks — 2026-10-03
 
 - Owner confirmed the installed HDA works successfully. This records owner verification of activation/UI/tool use; offline transfer and live release tests were not separately reported.
-- Owner requested no displayed offline-expiry date, visible machine limit of 1 on website License Data and the HDA tab, and exact button text: qatools license key activation. Implemented on website and installed/repository HDA, with a new pre-UI-change backup.
+- Owner requested no displayed offline-expiry date, visible machine limit of 1 on website License Data and the HDA tab, and exact button text: QATools license key activation. Implemented on website and installed/repository HDA, with a new pre-UI-change backup.
 - The exact 30-day proof duration, product/machine checks and background/manual renewal behavior remain unchanged. Hiding the date does not create unlimited offline validity or prevent the approved overlap until expiry after a machine release. After an extended offline period, reconnect/refresh is still required. Customer terms/help must not promise indefinite offline use.
 - Continued verification passed actual installed-HDA primitive attribute remapping (0/1/2 to 5/7.5/10) and blocking after a genuine signed release denial in an isolated synthetic process. No real machine assignment was released or replaced.
 - Website production build passed after the wording change. HDA geometry contents stayed byte-identical for this UI change.
 - An attempted read-only live renewal check could not access the user's local cached proof due to filesystem PermissionError, including after an exact-file read grant. No proof/key was printed and no cache changed. Live renewal and second-computer transfer remain pending.
 ## Brand spelling and direct activation dialog — 2026-10-03
 
-- Owner requires exactly qatools everywhere in user-visible branding, with no spaced/capitalized variants. Website pages, metadata, server error text and installed Houdini client messages updated; AGENTS.md now records the rule. Internal identifiers/cache directories and historical reference documents retain their technical/historical names.
-- One password-style input dialog now opens directly from qatools license key activation, with activate account, refresh license and close. Current status and the one-computer limit are included in that same window. Refresh does not require entering the key; Close performs no activation or renewal. The key remains transient and is not stored on the node.
+- Historical lowercase-only branding rule, superseded by the owner-approved QATools spelling on 2026-11-06. Technical identifiers and historical issued records retain their established values.
+- One password-style input dialog now opens directly from QATools license key activation, with activate account, refresh license and close. Current status and the one-computer limit are included in that same window. Refresh does not require entering the key; Close performs no activation or renewal. The key remains transient and is not stored on the node.
 - Next root HTML declares data-scroll-behavior="smooth" to match its existing CSS and the Next.js warning guidance. Licensing policy, cached proofs, signing configuration and HDA network are unchanged.
 - 19 Python checks passed (14 licensing, 5 direct-dialog behavior). Build and actual localhost HTML checks recorded in turn verification. Interactive rendering still needs a Houdini restart/reopen by the owner; headless tests mock the UI.
 ## Minimal activation window and next-step preparation
 
-- Owner requested the activation window contain only title qatools license key activation, masked License key field and Activate / Refresh / Close buttons. Implemented in repository and installed Houdini client; removed the status/message text above the field. Machine-limit disclosure remains on the website License Data section and HDA tab.
+- Owner requested the activation window contain only title QATools license key activation, masked License key field and Activate / Refresh / Close buttons. Implemented in repository and installed Houdini client; removed the status/message text above the field. Machine-limit disclosure remains on the website License Data section and HDA tab.
 - Five dialog interaction tests passed. Refresh works without entering a key, Close performs no licensing operation, and activation/errors use the same single entry window.
 - Continued with a verified portable Houdini 22.0 development package and a second-computer transfer checklist (QATOOLS_SECOND_COMPUTER_TEST.md). No actual machine release/replacement/transfer performed.
 - Live read-only renewal remained blocked by local cache filesystem permissions after a folder read grant and a PowerShell read attempt; cache/account state unchanged. The backend connection on the second computer is still a prerequisite for the live transfer test.
@@ -249,13 +249,13 @@ Free acquisition follow-up: owner reported the migration push complete and a zer
 
 ## Optional business billing — 2026-10-04
 
-- Owner approved optional business/VAT details at Paddle checkout. Individual buyers are not required to provide them. Paddle collects those details and includes them on its invoice; qatools retrieves the account's invoice without duplicating VAT registration data in its own profiles.
+- Owner approved optional business/VAT details at Paddle checkout. Individual buyers are not required to provide them. Paddle collects those details and includes them on its invoice; QATools retrieves the account's invoice without duplicating VAT registration data in its own profiles.
 - Owner observed VAT becoming zero and the payable amount decreasing after adding a VAT number in sandbox. The implementation must retain the website catalog price while recording the provider-confirmed amount actually paid. Refund matching must use actual paid amounts.
 - Tax eligibility and calculation remain Paddle's responsibility; no promise is made that every VAT number removes VAT or that sandbox validation proves live eligibility. The coordinated VAT-total fix is local and requires migration/deployment and a real hosted sandbox invoice check. See QATOOLS_BUSINESS_TAX_TOTALS.md.
 
 ## Admin publication and composed-product policy — 2026-10-05
 
-Approved: incomplete drafts may be saved; publication requires server-checked metadata, media, delivery and a matching verified price for paid products. Free products skip Paddle. First release date is set by the server and retained thereafter. Shared qatools.json and licensing runtime are maintained centrally, with a fixed copy included once in each prepared release.
+Approved: incomplete drafts may be saved; publication requires server-checked metadata, media, delivery and a matching verified price for paid products. Free products skip Paddle. First release date is set by the server and retained thereafter. Shared QATools.json and licensing runtime are maintained centrally, with a fixed copy included once in each prepared release.
 
 Approved bundle/project model: a separate catalog product, price, purchase and uploaded release ZIP, with backend links to its included tools. These links are not decorative-only. Already-owned tools do not reduce the fixed bundle price. Published membership/release contents must be recorded consistently for licensing/refunds. A full bundle refund removes only access supplied by that purchase; independent purchases, another active bundle or another valid source must continue to provide access. Projects use validated ZIP uploads initially, preserving folder structure.
 
@@ -265,14 +265,14 @@ Implementation boundary: this admin-publication batch implements draft/editor im
 
 The approved separate-product bundle model is now implemented locally. Each purchase keeps a pinned included-tool snapshot; a private origin ledger records the access supplied by each root entitlement. The existing entitlements table remains the effective ownership projection used by downloads and account-wide signed licensing. Approved bundle refunds remove only that root's contribution. Active independent purchases, another bundle, free acquisitions or admin grants continue to supply access. Explicit revoked tool rows stay blocked. Existing entitlements are backfilled without rewriting their original fields.
 
-Bundles use one separately uploaded ZIP containing their selected HDAs. The trusted server validates the exact tool filenames/content bounds and rebuilds the installer with the current shared qatools.json and licensing runtime once. It does not pull individual tool release files from storage. Publication requires a matching release attestation, published individual tools, a positive fixed price below the sum of the tools, and the existing metadata/media/verified-price checks. Released membership cannot be edited; create a new product for a different composition.
+Bundles use one separately uploaded ZIP containing their selected HDAs. The trusted server validates the exact tool filenames/content bounds and rebuilds the installer with the current shared QATools.json and licensing runtime once. It does not pull individual tool release files from storage. Publication requires a matching release attestation, published individual tools, a positive fixed price below the sum of the tools, and the existing metadata/media/verified-price checks. Released membership cannot be edited; create a new product for a different composition.
 
 Projects remain blocked pending their dedicated ZIP and project-folder delivery work. Partial monetary refunds, dispute handling, repurchases and live Paddle rollout retain their previous deferred status. Development does not constitute a deployed feature or a new legal promise. Migration/deployment and owner-hosted bundle purchase/refund/install verification are still required. See QATOOLS_BUNDLE_OWNERSHIP_DELIVERY.md.
 
 
 ## New-tool identity decision — 2026-10-05
 
-Owner approved prepared ZIP authoring/import. Asset Label supplies the website display name; Internal Name replaces its spaces with underscores; lowercase Internal Name supplies the immutable website/licensing slug. New Tool creation imports the ZIP before metadata editing, with title/slug read-only and server-enforced. Existing slugs, ownership and activation keys remain unchanged. The source JSON generated during preparation is identity metadata; customer installers retain the single shared qatools.json. The local importer/exporter are implemented; the complete Houdini Prepare shelf action and licensing injection/guard validation are the next milestone. See QATOOLS_PREPARED_TOOL_IDENTITY.md for limits and rollout.
+Owner approved prepared ZIP authoring/import. Asset Label supplies the website display name; Internal Name replaces its spaces with underscores; lowercase Internal Name supplies the immutable website/licensing slug. New Tool creation imports the ZIP before metadata editing, with title/slug read-only and server-enforced. Existing slugs, ownership and activation keys remain unchanged. The source JSON generated during preparation is identity metadata; customer installers retain the single shared QATools.json. The local importer/exporter are implemented; the complete Houdini Prepare shelf action and licensing injection/guard validation are the next milestone. See QATOOLS_PREPARED_TOOL_IDENTITY.md for limits and rollout.
 
 
 ## 2026-10-05: repurchase after an approved full refund
@@ -322,3 +322,13 @@ Supersedes the account-wide seven-day trial/new-export browser button workflow a
 ## Daily trial access decision — owner approval, 2026-11-04
 
 Owner explicitly accepts up to almost 24 additional hours of trial use to minimize repeated-cook licensing cost. A successful per-tool access decision may be reused for up to 24 hours within the current Houdini process, while the original signed offline-license expiry remains an upper bound. Restarting rechecks immediately. Activation/refresh/trial registration/local clearing invalidate decisions immediately; external cache updates remain detected within the existing one-second metadata poll. No signed dates, server trial records, ownership rules or machine assignment rules are extended. The UI identifies the active daily-check window and switches to the expiry/purchase notice when access is actually blocked. Implementation and benchmarks are included in QATOOLS_INDIVIDUAL_TOOL_TRIALS.md and the existing verify-tool-trials.ps1 batch; no additional migration is needed for this optimization.
+## Brand spelling — 2026-11-06
+
+- Owner approved QATools as the exact display spelling everywhere in current website, Houdini, installer and documentation branding.
+- Compatibility identifiers remain stable: domains, email addresses, URLs, files/folders, imports, storage/database names, environment variables, browser events, cache/settings paths and signed licensing values.
+- Previously issued invoices, uploaded binary assets and archived source snapshots are not rewritten. Existing HDAs need a fresh export to update embedded messages; installed shared runtime and authoring kits need updating too.
+
+## Customer package casing — 2026-11-06
+
+- Owner approved QATools/ and QATools.json for new customer installers before final tools are created. Builders, validators, authoring defaults, runtime updater and instructions change together; existing test downloads require rebuilding.
+- The internal package variable, Python imports, licensing protocol, keys/cache, product identities and authoring installation paths stay unchanged. No hosted records or installed customer files are automatically deleted or migrated. Use a clean test installation with one finished tool.

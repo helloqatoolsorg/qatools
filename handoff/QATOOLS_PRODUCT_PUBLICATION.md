@@ -14,7 +14,7 @@ Bundles/projects remain blocked by both readiness and the existing database cons
 
 ## Files and limits
 
-Standalone HDA uploads include canonical qatools.json and the current allowlisted runtime automatically. No repeated JSON upload is accepted. Both draft and published standalone HDA releases use the existing private storage/CAS writer, retaining old objects. Current HDA request limit remains 4 MB. Existing advanced ZIP replacement/toggle controls remain available for published products. A future dedicated bundle/project ZIP upload must account for hosting request limits, validate paths/entries, maintain a release manifest and use versioned private storage before composed sales are enabled.
+Standalone HDA uploads include canonical QATools.json and the current allowlisted runtime automatically. No repeated JSON upload is accepted. Both draft and published standalone HDA releases use the existing private storage/CAS writer, retaining old objects. Current HDA request limit remains 4 MB. Existing advanced ZIP replacement/toggle controls remain available for published products. A future dedicated bundle/project ZIP upload must account for hosting request limits, validate paths/entries, maintain a release manifest and use versioned private storage before composed sales are enabled.
 
 ## Owner rollout
 

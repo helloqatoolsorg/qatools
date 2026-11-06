@@ -1,4 +1,4 @@
-# qatools product gallery — 2026-10-07
+# QATools product gallery — 2026-10-07
 
 Implemented locally; migration/deployment and hosted owner review are pending.
 

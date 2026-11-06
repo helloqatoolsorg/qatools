@@ -1,4 +1,4 @@
-"""Fresh-interpreter checks for qatools' narrowly scoped crypto import warning."""
+"""Fresh-interpreter checks for QATools' narrowly scoped crypto import warning."""
 import pathlib
 import subprocess
 import sys
@@ -24,7 +24,7 @@ assert not any("legacy provider failed to load" in str(w.message) for w in captu
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 private = Ed25519PrivateKey.generate()
 public = private.public_key()
-message = b"qatools synthetic import check"
+message = b"QATools synthetic import check"
 signature = private.sign(message)
 public.verify(signature, message)
 try:

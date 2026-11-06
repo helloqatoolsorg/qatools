@@ -2,9 +2,9 @@
 
 Superseding observation: owner later tested the deployed optional fields and found that VAT became zero AND the total decreased. The same-total tests described below did not cover this legitimate provider behavior. The coordinated fix and pending hosted verification are documented in QATOOLS_BUSINESS_TAX_TOTALS.md; do not claim business payment completion from optional-field visibility alone.
 
-Owner requested optional professional VAT fields in Paddle checkout. Enabled showAddTaxId in SandboxCheckout; Paddle's Add tax number option collects business name, tax number and full billing address when the buyer chooses it. Individuals are not required to use this option. Sandbox and live Paddle support it; the qatools implementation remains sandbox-only.
+Owner requested optional professional VAT fields in Paddle checkout. Enabled showAddTaxId in SandboxCheckout; Paddle's Add tax number option collects business name, tax number and full billing address when the buyer chooses it. Individuals are not required to use this option. Sandbox and live Paddle support it; the QATools implementation remains sandbox-only.
 
-Paddle collects and validates the business details and renders them on its invoice. No new qatools billing form or duplicate tax-ID storage is introduced. Invoice downloads continue to retrieve the current provider PDF for the account's own order.
+Paddle collects and validates the business details and renders them on its invoice. No new QATools billing form or duplicate tax-ID storage is introduced. Invoice downloads continue to retrieve the current provider PDF for the account's own order.
 
 Exact tool identity, quantity, currency, unit prices and payable totals remain verified. Zero-tax business transactions whose gross total matches the tax-inclusive catalog are supported without relaxing payment validation. A provider total differing from the saved catalog total still fails closed; do not silently accept lower amounts or invent tax rules. Actual eligible tax treatment and invoice output must be verified in a hosted business checkout before claiming complete business/VAT support.
 

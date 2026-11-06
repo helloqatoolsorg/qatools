@@ -8,7 +8,7 @@ Apply migration `20261104110000_publication_package_gate.sql` before deploying t
 
 - Gallery: three columns, one Add file tile, maximum nine images, previews, reorder, replace and remove. Changes are staged until Update product. Unpublished draft recovery includes pending gallery files and ordering.
 - ZIP: shows selected filename and actual archive contents; replacement requires the exact existing filename, including capitalization. Select a replacement, then Update product. No standalone build/upload action for tools and bundles.
-- Update product rebuilds the tool/bundle package with the shared qatools.json and licensing runtime. Tools reuse identical output; replacements use new immutable paths and compare-and-swap. On failure, the previous selected ZIP remains. A missing tool package may remain an incomplete draft, but cannot publish.
+- Update product rebuilds the tool/bundle package with the shared QATools.json and licensing runtime. Tools reuse identical output; replacements use new immutable paths and compare-and-swap. On failure, the previous selected ZIP remains. A missing tool package may remain an incomplete draft, but cannot publish.
 - Publish validates the saved download rather than building a second independent artifact. The green Publish button sits below Update product. Project-specific delivery controls are retained.
 - Free download is green. After a successful signed link starts downloading, the label becomes Downloaded across the current account's open site session; it remains clickable. This is UI feedback, not ownership or proof of browser transfer completion. Cart hover uses the existing blue In cart palette.
 

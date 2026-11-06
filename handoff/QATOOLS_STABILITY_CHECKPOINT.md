@@ -1,4 +1,4 @@
-# qatools stability checkpoint — 2026-10-07
+# QATools stability checkpoint — 2026-10-07
 
 ## Current decision and verified behavior
 

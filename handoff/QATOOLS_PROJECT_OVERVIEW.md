@@ -1,12 +1,12 @@
-# QA Tools — Project Overview
+# QATools — Project Overview
 
 > Current approved licensing policy and future agreement source: [QATOOLS_POLICY_DECISIONS.md](QATOOLS_POLICY_DECISIONS.md). The owner accepted one account credential, one account-level machine slot and a 30-day renewable offline allowance on 2026-10-02. Account-machine foundation is applied and owner-verified. Account credentials/activation are prepared locally with a new migration pending; signed licensing and 30-day renewal remain outstanding; older descriptions below preserve historical implementation context.
 
 Updated: 2026-10-02
 
-## What QA Tools Is
+## What QATools Is
 
-QA Tools (`qatools.studio`) is a commercial website and marketplace for digital tools for SideFX Houdini.
+QATools (`qatools.studio`) is a commercial website and marketplace for digital tools for SideFX Houdini.
 
 The store is designed around individually sold Houdini tools, with the possibility of bundles later. Each product has its own product identity, product page, price, ownership state, download/access state, and license state.
 
@@ -25,15 +25,15 @@ Other products already exist in the website database, including `qavellum01` and
 
 ## Business Goal
 
-QA Tools should operate as a real commercial product business, not as a manually maintained prototype.
+QATools should operate as a real commercial product business, not as a manually maintained prototype.
 
 The intended customer flow is:
 
 1. Customer browses products.
-2. Customer creates/logs into a QA Tools account.
+2. Customer creates/logs into a QATools account.
 3. Customer purchases or acquires a product.
 4. The payment/provider backend confirms ownership.
-5. QA Tools creates an entitlement for that customer and product.
+5. QATools creates an entitlement for that customer and product.
 6. The product immediately appears as purchased everywhere in the website.
 7. The customer can download/access the purchased product.
 8. The customer activates the Houdini tool on an allowed computer.
@@ -45,7 +45,7 @@ Normal purchases and activations should require **no developer intervention**.
 
 ## Core Operating Requirement
 
-**Day-to-day operation of QA Tools must not require programming.**
+**Day-to-day operation of QATools must not require programming.**
 
 The owner should eventually be able to use the `/admin` area to perform normal operational tasks such as:
 
@@ -83,7 +83,7 @@ Free products should use the same account/acquisition/entitlement/licensing flow
 
 Use these terms consistently:
 
-- **item** — a tool listed in QA Tools
+- **item** — a tool listed in QATools
 - **main page** — page where all items are listed
 - **main page card** — representation of an item on the main page
 - **main page card icons** — purchased, cart, liked icons
@@ -136,7 +136,7 @@ Current account data is connected to real Supabase data for:
 - orders
 - license activation records
 
-Payment card details should not be stored by QA Tools. The payment provider should handle those.
+Payment card details should not be stored by QATools. The payment provider should handle those.
 
 ## Commercial Architecture
 
@@ -158,7 +158,7 @@ The payment system, entitlement system, activation system, and cryptographic lic
 
 ## Licensing Philosophy
 
-QA Tools uses a licensing security boundary rather than aggressive DRM.
+QATools uses a licensing security boundary rather than aggressive DRM.
 
 Current working local licensing design:
 
@@ -198,12 +198,12 @@ Changes to these can invalidate previously issued licenses.
 
 ## Launch Definition
 
-QA Tools is launch-ready only when the complete production chain works safely:
+QATools is launch-ready only when the complete production chain works safely:
 
 Customer pays
 → Paddle confirms the transaction
-→ QA Tools creates the real order/order items
-→ QA Tools grants the correct entitlement
+→ QATools creates the real order/order items
+→ QATools grants the correct entitlement
 → purchased state updates everywhere
 → secure product download/access works
 → Houdini activation reaches the production FastAPI service

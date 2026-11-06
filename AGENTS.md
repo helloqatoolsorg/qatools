@@ -9,11 +9,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 <!-- END:nextjs-agent-rules -->
 
 
-# QA Tools Project Instructions
+# QATools Project Instructions
 
 ## Project
 
-QA Tools (`qatools.studio`) is a commercial SideFX Houdini tools marketplace/store.
+QATools (`qatools.studio`) is a commercial SideFX Houdini tools marketplace/store.
 
 The repository already contains working frontend, account, Supabase ownership, and admin foundations. Preserve existing behavior and visual design unless the task explicitly calls for a change.
 
@@ -182,9 +182,13 @@ Keep `handoff/QATOOLS_POLICY_DECISIONS.md` current when the owner approves mater
 
 ## Brand spelling
 
-Use exactly `qatools` in all user-visible website and Houdini text, including titles, dialogs, metadata and errors. Do not use spaced or capitalized variants. Preserve internal identifiers, protocol strings, cache paths and historical source documents unless changes are separately required.
+Use exactly `QATools` for user-visible branding in the website, Houdini, installers, metadata, messages and documentation. Preserve established technical identifiers: domains/email addresses, URLs, filenames, package folders, imports, database/storage names, environment variables, event names, cache/settings locations and signed protocol values. This owner-approved rule of 2026-11-06 supersedes the earlier lowercase-only branding rule. Do not rename product identities or historical issued records as part of branding.
 
 
 ## Owner batching preference — 2026-10-07
 
 For a small fix, consider whether it can be combined with the next related authorized steps. Describe the cohesive batch and complete it before one migration/deployment handoff. Avoid separate rollout cycles for each minor fix. Keep security, payments and ownership verification appropriate to the batch; do not combine unrelated high-risk work just to reduce deploys. Owner still performs hosted product uploads, publishing and sandbox checks.
+
+## Customer package casing — 2026-11-06
+
+New customer downloads use exactly `QATools.json` at the ZIP root and `QATools/` as the package folder. All ZIP path comparisons must preserve this case on every operating system. The approved root rename does not rename `qatools_licensing`, `qatools_authoring`, the internal `qatools` package variable, metadata/protocol/cache identifiers, or product identities. Do not automatically delete old installations or hosted records.

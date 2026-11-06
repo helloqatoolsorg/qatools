@@ -1,4 +1,4 @@
-# qatools backup and recovery readiness — 2026-10-07
+# QATools backup and recovery readiness — 2026-10-07
 
 ## Verified now
 

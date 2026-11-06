@@ -64,7 +64,7 @@ export default function AdminPaymentReview() {
         <button type="button" disabled={loading} onClick={() => setRefresh(value => value + 1)}>REFRESH REVIEW</button>
       </div>
     </div>
-    <p>{kind === "refunds" ? "Approved full-refund events processed by qatools. Order numbers and purchase history are retained." : kind === "events"
+    <p>{kind === "refunds" ? "Approved full-refund events processed by QATools. Order numbers and purchase history are retained." : kind === "events"
       ? "Compare these events with the matching Paddle transaction in the selected environment and order before taking action."
       : "Shows creating or unknown attempts unchanged for at least five minutes. This does not confirm that payment failed. Check Paddle before retrying."}</p>
     <p>This view does not change payments, orders or ownership.</p>

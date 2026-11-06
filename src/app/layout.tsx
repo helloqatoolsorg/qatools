@@ -15,10 +15,10 @@ import { AuthProvider } from "@/context/AuthContext";
 import { QAToolsStateProvider } from "@/context/QAToolsState";
 
 export const metadata: Metadata = {
-  title: "qatools",
+  title: "QATools",
   icons: { icon: { url: "/api/site-icon", type: "image/png", sizes: "64x64" } },
   description:
-    "qatools for SideFX Houdini",
+    "QATools for SideFX Houdini",
 };
 
 export default function RootLayout({

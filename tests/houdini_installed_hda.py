@@ -4,8 +4,8 @@ from qatools_licensing import client, houdini_ui
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
-assert 'packages/qatools/python3.13libs' in client.__file__.replace('\\','/')
-source=r'C:\Users\quima\Documents\houdini22.0\packages\qatools\otls\qafit01_online.hdalc'
+assert 'packages/QATools/python3.13libs' in client.__file__.replace('\\','/')
+source=r'C:\Users\quima\Documents\houdini22.0\packages\QATools\otls\qafit01_online.hdalc'
 hou.hda.installFile(source)
 geo=hou.node('/obj').createNode('geo','qatools_test',run_init_scripts=False)
 input_node=geo.createNode('python','input_geometry')
@@ -21,7 +21,7 @@ node.setInput(0,input_node)
 node.parm('Attribute').set('qa_test')
 node.parm('Min').set(5)
 node.parm('Max').set(10)
-assert node.parm('activate_online').parmTemplate().label()=='qatools license key activation'
+assert node.parm('activate_online').parmTemplate().label()=='QATools license key activation'
 assert node.parm('machine_limit') is not None
 assert all(node.parm(p) is None for p in ('license_key','email','purchase_token','activate_license'))
 assert node.node('python1').parm('python').eval().strip()=='hou.pwd().parent().hdaModule().require_license_or_fail()'

@@ -1,5 +1,15 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
 const ZIP=fs.readFileSync('houdini/dist/qatools-houdini22-dev.zip');
+
+test('legacy direct uploads reject wrong package casing before storage changes',async()=>{
+ for(const name of ['QATools.json','QATools/otls/']){
+  const changed=Buffer.from(ZIP),original=Buffer.from(name);let offset=0;
+  while((offset=changed.indexOf(original,offset))!==-1){changed.write(name.toLowerCase(),offset,'utf8');offset+=original.length;}
+  const s=setup(),response=await s.request('POST',changed);
+  assert.equal(response.status,400);assert.match((await response.json()).error,/QATools/);
+  assert.ok(!s.calls.some(call=>call.upload||call.rpc||call.bucketCheck));
+ }
+});
 function setup(o={}){
  const calls=[],modules=new Map();
  const db={from(table){calls.push({table});const q={select(columns){calls.push({columns});return q;},eq(key,value){calls.push({key,value});return q;},async maybeSingle(){return {error:o.queryError&&table!=='admin_users'?{message:'private details'}:o.membershipError&&table==='admin_users'?{}:null,data:table==='admin_users'?(o.nonAdmin?null:{user_id:'admin'}):table==='products'?(o.missingProduct?null:{id:1,product_type:'tool'}):(o.currentPath?{file_path:o.currentPath,file_name:'old.zip',enabled:true}:null)};}};return q;},async rpc(name,args){calls.push({rpc:name,args});return {data:o.rpcCode?{ok:false,code:o.rpcCode}:{ok:true},error:o.rpcError?{message:'private details'}:null};},storage:{async getBucket(id){calls.push({bucketCheck:id});return {data:{public:!!o.publicBucket},error:o.bucketError?{}:null};},from(bucket){return {async upload(path,bytes,options){calls.push({upload:path,size:bytes.length,...options});return {error:o.uploadError?{message:'private details'}:null};}};}}};
@@ -16,7 +26,7 @@ for(const method of ['GET','PATCH','POST'])test(method+' independently rejects m
 });
 test('directory validation accepts actual package and rejects unsafe/private/broken archives',()=>{
  const valid=setup().load('src/lib/adminDownloadUpload.ts').validToolZip;assert.equal(valid(ZIP),true);assert.equal(valid(Buffer.from('not a zip')),false);assert.equal(valid(ZIP.subarray(0,ZIP.length-1)),false);
- const original=Buffer.from('qatools.json');for(const name of ['../oops.json','C:/oops.json']){const modified=Buffer.from(ZIP);let cursor=0;while((cursor=modified.indexOf(original,cursor))!==-1){modified.write(name,cursor,'utf8');cursor+=original.length;}assert.equal(valid(modified),false);}
+ const original=Buffer.from('QATools.json');for(const name of ['../oops.json','C:/oops.json']){const modified=Buffer.from(ZIP);let cursor=0;while((cursor=modified.indexOf(original,cursor))!==-1){modified.write(name,cursor,'utf8');cursor+=original.length;}assert.equal(valid(modified),false);}
  const privateZip=Buffer.from(ZIP);let i=0;while((i=privateZip.indexOf(original,i))!==-1){privateZip.write('.env.secret!',i,'utf8');i+=original.length;}assert.equal(valid(privateZip),false);
 });
 test('stream size is enforced without trusting content length',async()=>{
@@ -26,7 +36,7 @@ test('invalid request, missing product, stale mapping and public bucket never up
  for(const [o,query,body,status] of [[{},'?productId=0&fileName=a.zip&expectedPath=',ZIP,400],[{},'?productId=1&fileName=../a.zip&expectedPath=',ZIP,400],[{},'?productId=1&fileName=a.zip',ZIP,400],[{},undefined,Buffer.from('bad'),400],[{missingProduct:true},undefined,ZIP,404],[{currentPath:'new.zip'},undefined,ZIP,409],[{publicBucket:true},undefined,ZIP,503],[{bucketError:true},undefined,ZIP,503]]){const s=setup(o),r=await s.request('POST',body,query);assert.equal(r.status,status);assert.ok(!s.calls.some(c=>c.upload||c.rpc));}
 });
 test('upload uses new path/no overwrite and verified admin, ignoring user IDs',async()=>{
- const s=setup(),r=await s.request('POST',ZIP,'?productId=1&fileName=release.zip&expectedPath=&adminId=victim');assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'no-store');const upload=s.calls.find(c=>c.upload),rpc=s.calls.find(c=>c.rpc);assert.equal(upload.upsert,false);assert.equal(upload.upload,'1/00000000-0000-4000-8000-000000000001/release.zip');assert.equal(upload.size,ZIP.length);assert.equal(rpc.args.p_admin_id,'verified-admin');assert.equal(rpc.args.p_expected_path,null);assert.equal(rpc.args.p_enabled,true);
+ const s=setup(),r=await s.request('POST',ZIP,'?productId=1&fileName=release.zip&expectedPath=&adminId=victim');assert.equal(r.status,200,await r.clone().text());assert.equal(r.headers.get('cache-control'),'no-store');const upload=s.calls.find(c=>c.upload),rpc=s.calls.find(c=>c.rpc);assert.equal(upload.upsert,false);assert.equal(upload.upload,'1/00000000-0000-4000-8000-000000000001/release.zip');assert.equal(upload.size,ZIP.length);assert.equal(rpc.args.p_admin_id,'verified-admin');assert.equal(rpc.args.p_expected_path,null);assert.equal(rpc.args.p_enabled,true);
 });
 test('toggle is explicit and upload failures never change mapping or disclose diagnostics',async()=>{
  const s=setup({currentPath:'old.zip'}),r=await s.request('PATCH',{productId:1,expectedPath:'old.zip',enabled:false,adminId:'victim'});assert.equal(r.status,200);assert.equal(s.calls.find(c=>c.rpc).args.p_file_path,null);assert.equal(s.calls.find(c=>c.rpc).args.p_enabled,false);assert.ok(!s.calls.some(c=>c.upload));

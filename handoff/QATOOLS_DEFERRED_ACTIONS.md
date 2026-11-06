@@ -1,4 +1,4 @@
-# qatools deferred actions
+# QATools deferred actions
 
 Updated: 2026-10-07
 

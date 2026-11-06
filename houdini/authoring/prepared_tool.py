@@ -1,4 +1,4 @@
-"""Identity export used by the future Prepare qatools tool shelf action.
+"""Identity export used by the future Prepare QATools tool shelf action.
 
 This exports the saved definition. It does not inject or certify licensing.
 """
@@ -10,6 +10,12 @@ import tempfile
 import zipfile
 import os
 from contextlib import contextmanager
+
+
+def canonical_export_folder(value):
+    """Keep custom locations; canonicalize only the shared release folder name."""
+    folder = Path(value)
+    return folder.with_name("QATools") if folder.name.casefold() == "qatools" else folder
 
 
 @contextmanager

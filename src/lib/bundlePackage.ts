@@ -10,8 +10,8 @@ export function bundleTools(bytes:Buffer, tools:BundleTool[]):{name:string;bytes
  let end=bytes.length-22;while(end>=0 && (bytes.readUInt32LE(end)!==0x06054b50 || end+22+bytes.readUInt16LE(end+20)!==bytes.length))end--;
  if(end<0)throw new Error("Invalid bundle ZIP.");
  const count=bytes.readUInt16LE(end+10),offset=bytes.readUInt32LE(end+16),seen=new Set<string>(),found=new Map<number,{name:string;bytes:Buffer}>(),ranges:{start:number;end:number}[]=[];
- const shared=new Set(["qatools.json",...runtimeFiles.map(n=>"qatools/python3.13libs/qatools_licensing/"+n),"qatools/scripts/pythonrc.py"]);
- const directories=new Set(["qatools/","qatools/otls/","qatools/python3.13libs/","qatools/python3.13libs/qatools_licensing/","qatools/scripts/"]);
+ const shared=new Set(["QATools.json",...runtimeFiles.map(n=>"QATools/python3.13libs/qatools_licensing/"+n),"QATools/scripts/pythonrc.py"]);
+ const directories=new Set(["QATools/","QATools/otls/","QATools/python3.13libs/","QATools/python3.13libs/qatools_licensing/","QATools/scripts/"]);
  let cursor=offset,total=0;
  for(let i=0;i<count;i++){
   const flags=bytes.readUInt16LE(cursor+8),method=bytes.readUInt16LE(cursor+10),compressed=bytes.readUInt32LE(cursor+20),length=bytes.readUInt32LE(cursor+24),nameLength=bytes.readUInt16LE(cursor+28),local=bytes.readUInt32LE(cursor+42);
@@ -25,7 +25,7 @@ export function bundleTools(bytes:Buffer, tools:BundleTool[]):{name:string;bytes
   if(directories.has(name)){if(length!==0)throw new Error("Invalid bundle directory.");}
   else if(shared.has(name)){/* Replaced by the trusted release builder. */}
   else {
-   if(!name.startsWith("qatools/otls/") || !validHda(name.slice(13),data))throw new Error("Bundle ZIP must contain only selected HDAs under qatools/otls and standard installer files.");
+   if(!name.startsWith("QATools/otls/") || !validHda(name.slice(13),data))throw new Error("Bundle ZIP must contain only selected HDAs under QATools/otls and standard installer files.");
    const file=name.slice(13),stem=file.replace(/\.hda(lc|nc)?$/i,"");
    const matches=tools.filter(t=>stem.toLowerCase()===t.slug || stem.toLowerCase()===t.slug+"_online");
    if(matches.length!==1 || found.has(matches[0].id))throw new Error("Use one HDA per selected tool, named tool-slug.hda (or tool-slug_online.hdalc).");

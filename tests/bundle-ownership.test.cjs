@@ -1,11 +1,19 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
 function load(file,mocks={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,{exports,Buffer,process,Set,Map,Request,Response,FormData,File,URL,require:n=>n in mocks?mocks[n]:require(n)});return exports;}
-const pack=load('src/lib/houdiniPackage.ts',{'server-only':{},'../../public/qatools.json':JSON.parse(fs.readFileSync('public/qatools.json'))}),validate=load('src/lib/adminDownloadUpload.ts',{'server-only':{}}),bundle=load('src/lib/bundlePackage.ts',{'server-only':{},'./houdiniPackage':pack,'./adminDownloadUpload':validate});
-const hda=Buffer.concat([Buffer.from('INDX'),Buffer.alloc(40)]),tools=[{id:1,slug:'one'},{id:2,slug:'two'}],entry=(name,bytes=hda)=>({name,bytes}),good=[entry('qatools/otls/one.hda'),entry('qatools/otls/two_online.hdalc')];
-test('bundle ZIP matches exact selected tools and rebuilds shared runtime once',async()=>{const zip=pack.makePackageZip([...good,entry('qatools.json',Buffer.from('obsolete'))]);const selected=bundle.bundleTools(zip,tools);assert.deepEqual(Array.from(selected,t=>t.name),['one.hda','two_online.hdalc']);const rebuilt=await pack.buildHoudiniPackage(Buffer.from(JSON.stringify(pack.packageConfig)),selected);assert.ok(rebuilt.includes(Buffer.from('qatools.json')));});
+const pack=load('src/lib/houdiniPackage.ts',{'server-only':{},'../../public/QATools.json':JSON.parse(fs.readFileSync('public/QATools.json'))}),validate=load('src/lib/adminDownloadUpload.ts',{'server-only':{}}),bundle=load('src/lib/bundlePackage.ts',{'server-only':{},'./houdiniPackage':pack,'./adminDownloadUpload':validate});
+const hda=Buffer.concat([Buffer.from('INDX'),Buffer.alloc(40)]),tools=[{id:1,slug:'one'},{id:2,slug:'two'}],entry=(name,bytes=hda)=>({name,bytes}),good=[entry('QATools/otls/one.hda'),entry('QATools/otls/two_online.hdalc')];
+test('bundle ZIP matches exact selected tools and rebuilds shared runtime once',async()=>{const zip=pack.makePackageZip([...good,entry('QATools.json',Buffer.from('obsolete'))]);const selected=bundle.bundleTools(zip,tools);assert.deepEqual(Array.from(selected,t=>t.name),['one.hda','two_online.hdalc']);const rebuilt=await pack.buildHoudiniPackage(Buffer.from(JSON.stringify(pack.packageConfig)),selected);assert.ok(rebuilt.includes(Buffer.from('QATools.json')));});
 test('bundle ZIP rejects missing, extra, ambiguous, duplicate, script and corrupt entries',()=>{
- for(const entries of [[good[0]],[...good,entry('qatools/otls/other.hda')],[...good,entry('qatools/otls/one.hdalc')],[...good,entry('qatools/scripts/evil.py')],[entry('qatools/otls/one.hda',Buffer.from('not HDA')),good[1]]])assert.throws(()=>bundle.bundleTools(pack.makePackageZip(entries),tools));
+ for(const entries of [[good[0]],[...good,entry('QATools/otls/other.hda')],[...good,entry('QATools/otls/one.hdalc')],[...good,entry('QATools/scripts/evil.py')],[entry('QATools/otls/one.hda',Buffer.from('not HDA')),good[1]]])assert.throws(()=>bundle.bundleTools(pack.makePackageZip(entries),tools));
  const zip=pack.makePackageZip(good),broken=Buffer.from(zip);broken[50]^=1;assert.throws(()=>bundle.bundleTools(broken,tools));assert.throws(()=>bundle.bundleTools(zip,[...tools,{id:3,slug:'two_online'}]));
+});
+
+test('bundle assembly rejects legacy and mixed-case package paths instead of hiding casing mistakes',()=>{
+ for(const folder of ['qatools','QATOOLS','QaTools']){
+  const wrong=good.map(item=>({...item,name:item.name.replace('QATools/',folder+'/')}));
+  assert.throws(()=>bundle.bundleTools(pack.makePackageZip(wrong),tools),/QATools\/otls/);
+ }
+ assert.throws(()=>bundle.bundleTools(pack.makePackageZip([...good,entry('qatools.json',Buffer.from('{}'))]),tools));
 });
 test('actual PostgreSQL bundle sources, pinned checkout, overlapping refunds and publication gates',{skip:!process.env.PGLITE_TEST_MODULE},async()=>{
  const {PGlite}=require(process.env.PGLITE_TEST_MODULE),db=new PGlite();const read=n=>fs.readFileSync('supabase/migrations/'+n,'utf8'),remote=read('20261002172027_remote_schema.sql'),table=n=>{const at=remote.indexOf('CREATE TABLE "public"."'+n+'"');return remote.slice(at,remote.indexOf(';',at)+1);};

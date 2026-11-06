@@ -3,20 +3,20 @@
 ## Inspected sources
 
 - Prototype server: D:\qatools\qatools\references\licensensing-prototype\server.py (directory spelling preserved).
-- Installed test HDA: C:\Users\quima\Documents\houdini22.0\packages\qatools\otls\qafit01_online.hdalc.
-- Package configuration: C:\Users\quima\Documents\houdini22.0\packages\qatools.json.
+- Installed test HDA: C:\Users\quima\Documents\houdini22.0\packages\QATools\otls\qafit01_online.hdalc.
+- Package configuration: C:\Users\quima\Documents\houdini22.0\packages\QATools.json.
 - Houdini utilities available under C:\Program Files\Side Effects Software\Houdini 22.0.459\bin.
 - Installed HDA SHA-256 at inspection: 19e7051771f1866b2623837169a345e53ed69a701644e312d36e7390fece0f58.
 
 ## Verified findings
 
-The server is the old FastAPI prototype. It accepts machine_id, email and purchase_token, checks only a temporary token allowlist, and signs qatools|machine_id|PERPETUAL|ALL|1 using Ed25519. It does not validate email ownership, consult Supabase entitlements, enforce machine limits, expire licenses or implement renewal. Website account activation keys are not wired to this server.
+The server is the old FastAPI prototype. It accepts machine_id, email and purchase_token, checks only a temporary token allowlist, and signs QATools|machine_id|PERPETUAL|ALL|1 using Ed25519. It does not validate email ownership, consult Supabase entitlements, enforce machine limits, expire licenses or implement renewal. Website account activation keys are not wired to this server.
 
 The HDA PythonModule still points to http://127.0.0.1:8000/activate. It computes the machine ID as the first 16 uppercase SHA-256 hex characters of platform.node() + platform.system() + platform.machine(). Preserve this algorithm during integration; it is independent of the Houdini version but machine-name/OS changes can change the identifier.
 
 The module verifies vendor, format version, machine ID and Ed25519 signature. It parses scope/products but does not enforce them. New product-aware expiry semantics require a deliberately versioned payload and client verification; do not reinterpret the old perpetual/ALL format as the new license.
 
-The cache is $qatools/qatools_license.txt. The package maps $qatools to its qatools subdirectory, currently under houdini22.0/packages. No cached license exists at C:\Users\quima\Documents\houdini22.0\packages\qatools\qatools_license.txt. This explains a blocked guard if the environment resolves as configured; live hou environment resolution and node cooking were not tested.
+The cache is $qatools/qatools_license.txt. The package maps $qatools to its QATools subdirectory, currently under houdini22.0/packages. No cached license exists at C:\Users\quima\Documents\houdini22.0\packages\QATools\qatools_license.txt. This explains a blocked guard if the environment resolves as configured; live hou environment resolution and node cooking were not tested.
 
 The embedded HDA public key matches the prototype keys/public_key.pem. A development private_key.pem is present in the prototype folder and is ignored by Git's existing *.pem rule. Its contents were not printed or copied to the HDA. No signing keys were regenerated. Fresh production signing keys remain required by project instructions.
 

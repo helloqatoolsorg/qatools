@@ -32,7 +32,7 @@ export function activationFailure(code?: string) {
     case "invalid_credential": return privateJson({ error: "Invalid activation key or unavailable account." }, 401);
     case "no_entitlements": return privateJson({ error: "Acquire a tool before activating this account." }, 403);
     case "machine_in_use": return privateJson({ error: "This account already has an active computer. Ask support to release it before activating another computer." }, 409);
-    case "invalid_machine": return privateJson({ error: "A valid qatools machine ID is required." }, 400);
+    case "invalid_machine": return privateJson({ error: "A valid QATools machine ID is required." }, 400);
     default: return privateJson({ error: "Activation service unavailable. Please try again later." }, 503);
   }
 }

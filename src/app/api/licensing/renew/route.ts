@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     if (error || !data) return privateJson({ error: "Renewal temporarily unavailable." }, 503);
     if (!data.ok) {
       if (data.code && terminalReasons.has(data.code)) {
-        return privateJson({ error: "This license can no longer renew. Check your qatools account or contact support.",
+        return privateJson({ error: "This license can no longer renew. Check your QATools account or contact support.",
           denial: issueDenial(body.license as SignedEnvelope, body.nonce, data.code) }, 403);
       }
       return privateJson({ error: "Renewal temporarily unavailable." }, 503);

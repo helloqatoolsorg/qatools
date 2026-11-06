@@ -26,7 +26,7 @@ Only the client token is intended for browser use. Keep API key and webhook secr
 
 ## Next implementation requirements
 
-1. Map real sandbox one-time Paddle prices to existing qatools products. Do not invent price IDs, tax policy or product details. Confirm that catalog amount/currency agree with chosen pricing behavior.
+1. Map real sandbox one-time Paddle prices to existing QATools products. Do not invent price IDs, tax policy or product details. Confirm that catalog amount/currency agree with chosen pricing behavior.
 2. Create checkout transactions on the server for the verified account and non-owned paid products; enforce quantity one and include a server-created checkout identifier for attribution.
 3. Add a verified webhook route with event-ID deduplication, durable retries, transactional orders/items/active entitlements, amount/currency/price/cart attribution checks, and out-of-order/duplicate handling. Signature verification alone does not prevent duplicate fulfillment.
 4. Never grant ownership from browser checkout success. Review refunds/partial refunds/chargebacks and their entitlement implications separately against approved policy; do not silently adopt commercial rules.

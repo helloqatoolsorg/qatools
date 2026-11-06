@@ -1,4 +1,4 @@
-# qatools website and Houdini feature backlog
+# QATools website and Houdini feature backlog
 
 Recorded: 2026-10-04. Source: owner's full website/Houdini list in the project conversation.
 Status: requirements recorded and initially inspected; this document does not claim implementation or deployment. Preserve Prototype 18 styling and current working behavior. Owner performs routine content/media/tool uploads. Use QATOOLS_DEFERRED_ACTIONS.md for deferred launch/verification tasks; this file tracks the requested feature batches.
@@ -16,7 +16,7 @@ The first batch now excludes invoice fields and free-order creation. Font scope 
 
 ## Shared website batch implemented locally — 2026-10-04
 
-Owner authorized batching routine confirmed work. WEB-02, WEB-03, WEB-04, CART-01 and USER-01/02/03 now have local implementation: shared authenticated profile-name link beside likes on all eight page headers; card information background/insets and 11px tags; cart menu Checkout leads to the existing cart page; default account overview with profile/email/active machine/date, active purchase-source entitlement count and existing masked key Reveal; sidebar Log out; visible paid/refunded/partially-refunded order state styling. Clicking MY qatools returns to the overview while existing menu sections and section URLs remain available. Profile save refreshes the header name. No database or payment behavior changes. Hosted desktop/mobile and authenticated visual checks remain pending; no deployment performed by agent.
+Owner authorized batching routine confirmed work. WEB-02, WEB-03, WEB-04, CART-01 and USER-01/02/03 now have local implementation: shared authenticated profile-name link beside likes on all eight page headers; card information background/insets and 11px tags; cart menu Checkout leads to the existing cart page; default account overview with profile/email/active machine/date, active purchase-source entitlement count and existing masked key Reveal; sidebar Log out; visible paid/refunded/partially-refunded order state styling. Clicking MY QATools returns to the overview while existing menu sections and section URLs remain available. Profile save refreshes the header name. No database or payment behavior changes. Hosted desktop/mobile and authenticated visual checks remain pending; no deployment performed by agent.
 
 Larger admin/data-model/download/licensing/finance batches remain pending and must not be described as completed by this UI batch. Owner does not require repeated confirmation for routine authorized implementation.
 
@@ -32,7 +32,7 @@ ADMIN-01 navigation foundation and ADMIN-05 state colors implemented locally. Da
 - USER-01: Default user page becomes an overview with user name, email, active machine, activation key access, activation date, purchased-tool count and Log out. Keep existing menu sections. Retain masked key + owner-authenticated Reveal behavior; do not expose a raw credential automatically.
 - USER-02: Log out remains visible below the left menu in every account section, including the overview; account layout must work on mobile.
 - USER-03: Orders & receipts gains a visible State column, paid in green and refunded in yellow. Include necessary existing states such as partially refunded; use text as well as color. Current source has order.status but exposes it as a tooltip rather than the requested column.
-- USER-04: Replace the current invoice-details textarea with structured fields for billing details. Existing Paddle invoices already collect optional business information at checkout and are retrieved from Paddle. Design this as saved billing information/prefill if supported, not duplicate invoices issued by qatools for the same Paddle sale. Fields/privacy/migration and effect on historical invoice_details require a separate coherent design; preserve existing saved data.
+- USER-04: Replace the current invoice-details textarea with structured fields for billing details. Existing Paddle invoices already collect optional business information at checkout and are retrieved from Paddle. Design this as saved billing information/prefill if supported, not duplicate invoices issued by QATools for the same Paddle sale. Fields/privacy/migration and effect on historical invoice_details require a separate coherent design; preserve existing saved data.
 
 ## Batch 2 — admin navigation and orders
 
@@ -55,13 +55,13 @@ ADMIN-01 navigation foundation and ADMIN-05 state colors implemented locally. Da
 ## Batch 4 — bulk tool packaging and download
 
 - DOWNLOAD-01: Purchased products gets selection controls and Download selection. Selected individual tools download in one ZIP; bundles and projects download separately and are excluded from this combined archive.
-- DOWNLOAD-02: Archive contains one qatools.json and a qatools/ folder grouping all selected tools plus the shared licensing runtime required for normal installation. Check existing package layout before finalizing paths; do not accidentally omit the shared Python/startup files.
+- DOWNLOAD-02: Archive contains one QATools.json and a qatools/ folder grouping all selected tools plus the shared licensing runtime required for normal installation. Check existing package layout before finalizing paths; do not accidentally omit the shared Python/startup files.
 - DOWNLOAD-03: Explore separate admin upload of the HDA and package metadata/config so the server builds single- and multi-tool installer ZIPs consistently. One shared configuration/runtime should be generated from trusted release metadata; do not concatenate arbitrary uploaded JSON files or copy machine/account secrets into archives.
 - DOWNLOAD-04: Server verifies account and active ownership for every selected item, uses enabled private releases, and rejects missing files and unsafe/duplicate archive paths. Set archive size/count/resource limits and choose generation/storage strategy before rollout. Bulk ZIP creation is feasible but not a simple combination of the current ZIP uploads.
 
 ## Batch 5 — Houdini shared activation refresh
 
-- HOU-01: One activation on a new computer unlocks every owned qatools node in the open project. Existing shared account cache/product-aware proof already provides one account activation for all owned tools; check and fix node recooking/UI refresh where needed rather than add per-node credentials.
+- HOU-01: One activation on a new computer unlocks every owned QATools node in the open project. Existing shared account cache/product-aware proof already provides one account activation for all owned tools; check and fix node recooking/UI refresh where needed rather than add per-node credentials.
 - HOU-02: Newly placed owned tools automatically read the existing valid shared license and fill State, E-mail, Machine, Date. Activation state is saved in the account cache, not the .hip file or HDA parameters.
 - HOU-03: Inspect existing HDA callbacks and shared client integration, then test multiple nodes/tools, newly placed nodes, unowned tools and reopened projects. Network refresh can run through the existing controlled renewal/manual activation paths; ordinary node cooking must remain local for offline operation. Newly acquired ownership may require one shared refresh; define a bounded online refresh if improving this, not an API call on every cook.
 
@@ -120,12 +120,12 @@ Projects and customer Download selection remain separate pending batches. No cus
 
 ## Prepared tool identity checkpoint — 2026-10-05
 
-Owner approved uploaded prepared ZIPs as the new-tool creation entry point. Local website import, immutable pretty label/stable underscore slug, visible retryable drafts, protected replacement uploads and reusable Houdini identity exporter are implemented. Existing qafit01 and all legacy slugs remain intact. Next: the self-service Prepare qatools tool shelf action, shared licensing bridge/License tab and safe guard validation. Then create real qanoise01/qaroad01 files and resume the unpublished qabundle01 owner test. See QATOOLS_PREPARED_TOOL_IDENTITY.md; migration and hosted rollout remain owner actions.
+Owner approved uploaded prepared ZIPs as the new-tool creation entry point. Local website import, immutable pretty label/stable underscore slug, visible retryable drafts, protected replacement uploads and reusable Houdini identity exporter are implemented. Existing qafit01 and all legacy slugs remain intact. Next: the self-service Prepare QATools tool shelf action, shared licensing bridge/License tab and safe guard validation. Then create real qanoise01/qaroad01 files and resume the unpublished qabundle01 owner test. See QATOOLS_PREPARED_TOOL_IDENTITY.md; migration and hosted rollout remain owner actions.
 
 
 ## Self-service authoring checkpoint — 2026-10-05
 
-Local Prepare qatools tool helper and portable Houdini 22 authoring installer are ready for owner GUI review. Supports saved single-output SOP assets with preserved originals, standard License fields, guarded output, shared offline verification, automatic prepared ZIP/metadata and scene-wide refresh for prepared instances. Unsupported layouts/conflicting scripts are refused. Six real Houdini functional tests pass. Next owner actions: install/show shelf, create real tools, upload them as drafts, then resume qabundle01 end-to-end tests. No new SQL migration; see QATOOLS_TOOL_AUTHORING.md.
+Local Prepare QATools tool helper and portable Houdini 22 authoring installer are ready for owner GUI review. Supports saved single-output SOP assets with preserved originals, standard License fields, guarded output, shared offline verification, automatic prepared ZIP/metadata and scene-wide refresh for prepared instances. Unsupported layouts/conflicting scripts are refused. Six real Houdini functional tests pass. Next owner actions: install/show shelf, create real tools, upload them as drafts, then resume qabundle01 end-to-end tests. No new SQL migration; see QATOOLS_TOOL_AUTHORING.md.
 
 
 ## Automatic bundle assembly checkpoint — 2026-10-05

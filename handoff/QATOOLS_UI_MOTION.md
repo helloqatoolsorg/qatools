@@ -1,4 +1,4 @@
-# qatools interface motion — 2026-10-07
+# QATools interface motion — 2026-10-07
 
 Implemented locally; owner build/deployment and hosted visual review pending.
 

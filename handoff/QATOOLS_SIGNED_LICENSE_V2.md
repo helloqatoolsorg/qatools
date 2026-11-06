@@ -1,4 +1,4 @@
-# QA Tools signed offline license v2 — 2026-10-03
+# QATools signed offline license v2 — 2026-10-03
 
 ## Status
 
@@ -71,7 +71,7 @@ Run route tests: `node --test tests/admin-routes.test.cjs tests/licensing-routes
 
 1. In the owner's terminal at `D:\qatools\qatools`, run `supabase db push`. Expected new migration: `20261003030000_signed_license_renewal.sql`.
 2. Restart `npm run dev` so signing environment is loaded.
-3. Back up the installed HDA; install the shared Python client and startup hook in the QA Tools package. Integrate the bridge with the existing qafit01 guard and activation UI while preserving its network and parameters. Remove reliance on old email/purchase-token inputs; do not save account keys in the HIP.
+3. Back up the installed HDA; install the shared Python client and startup hook in the QATools package. Integrate the bridge with the existing qafit01 guard and activation UI while preserving its network and parameters. Remove reliance on old email/purchase-token inputs; do not save account keys in the HIP.
 4. Activate once using the existing account key and verify qafit01 cooking, public product scope, expiry display, offline use and manual refresh.
 5. Release through the existing admin action, verify connected old-machine denial, activate the second computer once for all owned tools, and confirm retained ownership/history. Test offline overlap separately.
 

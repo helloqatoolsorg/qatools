@@ -1,1 +1,1 @@
-"""qatools authoring helpers; kept separate from customer licensing runtime."""
+"""QATools authoring helpers; kept separate from customer licensing runtime."""

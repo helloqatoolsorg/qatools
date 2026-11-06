@@ -1893,7 +1893,7 @@ export default function UserPage() {
                 handled by the payment
                 provider rather than
                 stored directly by
-                qatools.
+                QATools.
               </p>
             </section>
 
@@ -2123,10 +2123,10 @@ export default function UserPage() {
           <h1>
             {authMode ===
             "login"
-              ? "Log in to qatools."
+              ? "Log in to QATools."
               : authMode ===
                   "signup"
-                ? "Create your qatools account."
+                ? "Create your QATools account."
                 : "Reset your password."}
           </h1>
 

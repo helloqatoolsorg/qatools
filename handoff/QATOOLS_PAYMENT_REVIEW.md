@@ -1,4 +1,4 @@
-# qatools sandbox payment review — 2026-10-04
+# QATools sandbox payment review — 2026-10-04
 
 ## Local implementation; deployment pending
 
