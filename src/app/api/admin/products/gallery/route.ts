@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { requireAdmin } from "@/lib/requireAdmin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { privateJson, readActivationBody } from "@/lib/activationHttp";
-import { imageFormat } from "@/lib/productMedia";
+import { productMediaFormat } from "@/lib/productMedia";
 export const runtime = "nodejs";
 const validId = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 const validStamp = (value: unknown): value is string => typeof value === "string" && value.length < 64 && Number.isFinite(Date.parse(value));
@@ -17,14 +17,14 @@ export async function POST(request: Request) {
   if(product.error)return privateJson({error:"Unable to verify product."},503);
   // SQL compares timestamps exactly; this early check avoids unnecessary uploads.
   if(!product.data || Date.parse(product.data.updated_at)!==Date.parse(stamp))return privateJson({error:"This product changed. Reload before editing the gallery."},409);
-  const reader=request.body?.getReader();if(!reader)return privateJson({error:"Choose an image."},400);
+  const reader=request.body?.getReader();if(!reader)return privateJson({error:"Choose a media file."},400);
   const chunks:Uint8Array[]=[];let size=0;
-  try{while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;if(size>4*1024*1024){await reader.cancel();return privateJson({error:"Choose an image up to 4 MB."},413);}chunks.push(part.value);}}finally{reader.releaseLock();}
-  const bytes=Buffer.concat(chunks),format=imageFormat(bytes);if(!format)return privateJson({error:"Choose a PNG, JPG, WebP or GIF image."},400);
+  try{while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;if(size>4*1024*1024){await reader.cancel();return privateJson({error:"Choose a media file up to 4 MB."},413);}chunks.push(part.value);}}finally{reader.releaseLock();}
+  const bytes=Buffer.concat(chunks),format=productMediaFormat(bytes);if(!format)return privateJson({error:"Choose a WebM video, PNG, JPG, WebP or GIF."},400);
   const bucket=await supabaseAdmin.storage.getBucket("product-media");if(bucket.error || bucket.data?.public!==true)return privateJson({error:"Product media storage is unavailable."},503);
-  const path="drafts/"+productId+"/"+randomUUID()+"."+format;
-  const uploaded=await supabaseAdmin.storage.from("product-media").upload(path,bytes,{contentType:"image/"+(format==="jpg"?"jpeg":format),upsert:false});
-  if(uploaded.error)return privateJson({error:"Unable to upload image."},503);
+  const path="drafts/"+productId+"/"+randomUUID()+"."+format.extension;
+  const uploaded=await supabaseAdmin.storage.from("product-media").upload(path,bytes,{contentType:format.contentType,upsert:false});
+  if(uploaded.error)return privateJson({error:"Unable to upload media."},503);
   const result=await supabaseAdmin.rpc("manage_product_gallery",{p_admin_id:auth.user.id,p_product_id:productId,p_expected_updated_at:stamp,p_action:mediaId===null?"add":"replace",p_media_id:mediaId,p_path:path});
   // Keep an unreferenced upload on ambiguous database failures. Deleting it could
   // break a successful commit whose response was interrupted. Old images remain.

@@ -10,6 +10,24 @@ function setup(options={}){
 const upload=(bytes=png)=>new Request('http://localhost/api/admin/products/artwork?productId=1&expectedUpdatedAt='+stamp,{method:'POST',body:bytes});
 const save=(body)=>new Request('http://localhost/api/admin/products/artwork',{method:'PUT',body:JSON.stringify(body)});
 const body={productId:1,expectedUpdatedAt:stamp,media:[{id:1,role:'card',path:'card.png'}]};
+test("WebM upload detects the video container and serves it with the correct MIME type", async () => {
+ // Minimal EBML header, an unknown-length segment, a VP9 video track, and a cluster.
+ const webm = Buffer.from("1a45dfa3874282847765626d18538067ff1654ae6b8cae8a8381018685565f5650391f43b67583e78100", "hex");
+ const s = setup();
+ const response = await s.route.POST(upload(webm));
+ assert.equal(response.status, 200);
+ assert.match((await response.json()).path, /^drafts\/1\/[a-f0-9-]{36}\.webm$/);
+ assert.equal(s.calls[0].opts.contentType, "video/webm");
+ for (const invalid of [
+  webm.subarray(0, webm.length - 8),
+  Buffer.from(webm).fill("x", 8, 12),
+  Buffer.from(webm).fill("A", 28, 33),
+ ]) {
+  const rejected = setup();
+  assert.equal((await rejected.route.POST(upload(invalid))).status, 400);
+  assert.equal(rejected.calls.length, 0);
+ }
+});
 test('artwork stages uploads without binding and requires authorization on both methods',async()=>{
  for(const method of ['POST','PUT']){const s=setup({denied:true});assert.equal((await s.route[method](method==='POST'?upload():save(body))).status,403);assert.equal(s.calls.length,0);}
  const s=setup(),response=await s.route.POST(upload());assert.equal(response.status,200);assert.match((await response.json()).path,/^drafts\/1\/[a-f0-9-]{36}\.png$/);assert.equal(s.calls.length,1);assert.equal(s.calls[0].opts.upsert,false);
@@ -29,7 +47,7 @@ test('gallery accepts nine images and rejects a tenth before database access',as
 });
 test('gallery editing stages locally; only explicit save uploads then commits once',async()=>{
  const React=require('react'),calls=[],changes=[];
- const component=load('src/components/AdminGallery.tsx',{'react':{...React,useState:()=>[null,()=>{}],useRef:()=>({current:[]}),useEffect:()=>{}},'next/image':{__esModule:true,default:()=>null},'@/lib/supabase':{supabase:{auth:{getSession:async()=>({data:{session:{access_token:'token'}},error:null})},storage:{from:()=>({getPublicUrl:path=>({data:{publicUrl:path}})})}}}},{fetch:async(url,options)=>{calls.push({url,options});return Response.json(options.method==='POST'?{path:'drafts/1/new.png'}:{gallery:{id:1,updated_at:stamp,media:[]}});}});
+ const component=load('src/components/AdminGallery.tsx',{'react':{...React,useState:()=>[null,()=>{}],useRef:()=>({current:[]}),useEffect:()=>{}},'@/components/ProductMediaPreview':{default:()=>null},'@/lib/productMediaInput':load('src/lib/productMediaInput.ts',{}),'@/lib/supabase':{supabase:{auth:{getSession:async()=>({data:{session:{access_token:'token'}},error:null})},storage:{from:()=>({getPublicUrl:path=>({data:{publicUrl:path}})})}}}},{fetch:async(url,options)=>{calls.push({url,options});return Response.json(options.method==='POST'?{path:'drafts/1/new.png'}:{gallery:{id:1,updated_at:stamp,media:[]}});}});
  const media=[{id:1,file_path:'card.png',role:'card',sort_order:0},{id:2,file_path:'a.png',role:'gallery',sort_order:1},{id:3,file_path:'b.png',role:'gallery',sort_order:2}];
  const tree=component.default({media,disabled:false,onChange:m=>changes.push(m)}),nodes=[];
  function walk(node){if(!node)return;if(Array.isArray(node))return node.forEach(walk);if(typeof node==='object'){nodes.push(node);walk(node.props?.children);}}walk(tree);
@@ -42,10 +60,12 @@ test('actual PostgreSQL artwork transaction preserves published commerce and rol
  const {PGlite}=require(process.env.PGLITE_TEST_MODULE),db=new PGlite();try{
  const remote=fs.readFileSync('supabase/migrations/20261002172027_remote_schema.sql','utf8'),table=n=>{const at=remote.indexOf('CREATE TABLE "public"."'+n+'"');return remote.slice(at,remote.indexOf(';',at)+1);};
  await db.exec("CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role BYPASSRLS;CREATE SCHEMA auth;CREATE SCHEMA storage;CREATE TABLE auth.users(id uuid PRIMARY KEY,email_confirmed_at timestamptz,banned_until timestamptz);CREATE TABLE admin_users(user_id uuid PRIMARY KEY);CREATE TABLE storage.buckets(id text,public boolean);CREATE TABLE storage.objects(bucket_id text,name text);INSERT INTO storage.buckets VALUES('product-media',true)");await db.exec(table('products')+table('product_media'));
- await db.exec(fs.readFileSync('supabase/migrations/20261008100000_explicit_product_artwork_update.sql','utf8'));
+ await db.exec("ALTER TABLE storage.buckets ADD COLUMN allowed_mime_types text[]; UPDATE storage.buckets SET allowed_mime_types=ARRAY['image/png','image/gif']");
+ await db.exec(fs.readFileSync('supabase/migrations/20261107130000_product_webm_media.sql','utf8'));
+ assert.deepEqual((await db.query("SELECT allowed_mime_types FROM storage.buckets")).rows[0].allowed_mime_types, ["image/png", "image/gif", "video/webm"]);
  const admin='00000000-0000-4000-8000-000000000001',buyer='00000000-0000-4000-8000-000000000002';await db.query('INSERT INTO auth.users VALUES($1,now(),null),($2,now(),null)',[admin,buyer]);await db.query('INSERT INTO admin_users VALUES($1)',[admin]);
  await db.exec("INSERT INTO products(id,name,slug,price_eur,current_version,published,category_id,complexity_id) VALUES(1,'one','one',5,'1',true,1,1),(2,'two','two',8,'2',false,1,1);INSERT INTO product_media(product_id,media_type,file_path,role,sort_order) VALUES(1,'image','card.png','card',0),(1,'image','a.png','gallery',1),(1,'image','b.png','detail',2),(2,'image','other.png','card',0)");
- const path='drafts/1/00000000-0000-4000-8000-000000000005.png';await db.query("INSERT INTO storage.objects VALUES('product-media',$1)",[path]);
+ const path='drafts/1/00000000-0000-4000-8000-000000000005.webm';await db.query("INSERT INTO storage.objects VALUES('product-media',$1)",[path]);
  const original=(await db.query('SELECT * FROM products WHERE id=1')).rows[0];let version=(await db.query('SELECT updated_at::text t FROM products WHERE id=1')).rows[0].t;
  const rows=(await db.query('SELECT id,role,file_path AS path FROM product_media WHERE product_id=1 ORDER BY sort_order')).rows;
  const apply=(media,who=admin,v=version)=>db.query('SELECT save_product_artwork($1,1,$2,$3) r',[who,v,JSON.stringify(media)]);
@@ -55,6 +75,7 @@ test('actual PostgreSQL artwork transaction preserves published commerce and rol
  }
  const saved=(await apply([{...rows[0],path},rows[2],{id:null,role:'gallery',path}])).rows[0].r;const stale=version;version=saved.updated_at;
  assert.equal(saved.media[0].file_path,path);assert.equal(saved.media[1].id,3);assert.equal(saved.media.length,3);await assert.rejects(apply(rows,admin,stale),/Product changed/);
+ assert.deepEqual((await db.query("SELECT media_type FROM product_media WHERE product_id=1 ORDER BY sort_order")).rows.map(row => row.media_type), ["video", "image", "video"]);
  const after=(await db.query('SELECT * FROM products WHERE id=1')).rows[0];after.updated_at=original.updated_at;assert.deepEqual(after,original);
  assert.equal((await db.query('SELECT count(*)::int n FROM storage.objects')).rows[0].n,1);
  for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'save_product_artwork(uuid,bigint,timestamptz,jsonb)','EXECUTE') allowed",[role])).rows[0].allowed,false);

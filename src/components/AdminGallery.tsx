@@ -1,6 +1,7 @@
 "use client";
 import type { ProductContent } from "@/lib/productContent";
-import Image from "next/image";
+import ProductMediaPreview from "@/components/ProductMediaPreview";
+import { productMediaAccept, productMediaFileHelp, validProductMediaFile } from "@/lib/productMediaInput";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 export type GalleryMedia={id:number;file_path:string|null;role:string;sort_order:number};
@@ -27,13 +28,13 @@ export default function AdminGallery({media,disabled,onChange}:{media:PendingMed
  useEffect(()=>()=>{urls.current.forEach(url=>URL.revokeObjectURL(url));},[]);
  const images=media.filter(m=>["gallery","detail"].includes(m.role)).sort((a,b)=>a.sort_order-b.sort_order || a.id-b.id);
  function replace(image:PendingMedia,file:File){
-  if(file.size>4*1024*1024 || !["image/png","image/jpeg","image/webp","image/gif"].includes(file.type)){setError("Choose a PNG, JPG, WebP or GIF up to 4 MB.");return;}
+  if(!validProductMediaFile(file)){setError(productMediaFileHelp);return;}
   const preview=URL.createObjectURL(file);urls.current.push(preview);setError(null);onChange(media.map(m=>m.id===image.id?{...m,file,preview}:m));
  }
  function move(index:number,delta:number){const order=[...images],other=index+delta;[order[index],order[other]]=[order[other],order[index]];const positions=new Map(order.map((m,i)=>[m.id,i+1]));onChange(media.map(m=>positions.has(m.id)?{...m,sort_order:positions.get(m.id)!}:m));}
  function add(file:File){
-  if(images.length>=9){setError("A gallery can contain up to 9 images.");return;}
-  if(file.size>4*1024*1024 || !["image/png","image/jpeg","image/webp","image/gif"].includes(file.type)){setError("Choose a PNG, JPG, WebP or GIF up to 4 MB.");return;}
+  if(images.length>=9){setError("A gallery can contain up to 9 files.");return;}
+  if(!validProductMediaFile(file)){setError(productMediaFileHelp);return;}
   const preview=URL.createObjectURL(file);urls.current.push(preview);setError(null);
   const id=Math.min(0,...media.map(m=>m.id))-1;
   onChange([...media,{id,file,preview,file_path:null,role:"gallery",sort_order:Math.max(0,...media.map(m=>m.sort_order))+1}]);
@@ -42,14 +43,14 @@ export default function AdminGallery({media,disabled,onChange}:{media:PendingMed
   <div className="admin-media-grid">{images.map((image,index)=>{
    const url=image.preview ?? (image.file_path?supabase.storage.from("product-media").getPublicUrl(image.file_path).data.publicUrl:null);
    return <div key={image.id} className="admin-gallery-item"><label className="admin-gallery-replace">
-    {url?<Image src={url} alt={"Gallery image "+(index+1)} width={640} height={360} unoptimized />:<span>Gallery image {index+1}</span>}
-    <input className="admin-gallery-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" aria-label={"Replace gallery image "+(index+1)} onChange={event=>{const file=event.target.files?.[0];if(file)replace(image,file);event.target.value="";}} />
+    {url?<ProductMediaPreview src={url} alt={"Gallery preview "+(index+1)} width={640} height={360} file={image.file} />:<span>Gallery item {index+1}</span>}
+    <input className="admin-gallery-file-input" type="file" accept={productMediaAccept} aria-label={"Replace gallery item "+(index+1)} onChange={event=>{const file=event.target.files?.[0];if(file)replace(image,file);event.target.value="";}} />
    </label><div className="admin-gallery-actions">
     <button type="button" disabled={index===0} aria-label={"Move gallery image "+(index+1)+" earlier"} onClick={()=>move(index,-1)}>←</button>
     <button type="button" disabled={index===images.length-1} aria-label={"Move gallery image "+(index+1)+" later"} onClick={()=>move(index,1)}>→</button>
     <button type="button" onClick={()=>onChange(media.filter(m=>m.id!==image.id))}>Remove</button>
    </div></div>;
-  })}{images.length<9 && <label className="admin-gallery-add"><span aria-hidden="true">＋</span><span>Add file</span><input className="admin-gallery-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" aria-label="Add gallery image" onChange={event=>{const file=event.target.files?.[0];if(file)add(file);event.target.value="";}}/></label>}</div>
+  })}{images.length<9 && <label className="admin-gallery-add"><span aria-hidden="true">＋</span><span>Add file</span><input className="admin-gallery-file-input" type="file" accept={productMediaAccept} aria-label="Add gallery item" onChange={event=>{const file=event.target.files?.[0];if(file)add(file);event.target.value="";}}/></label>}</div>
  </fieldset>
  {error && <p role="alert" className="admin-product-error">{error}</p>}
  </div>;

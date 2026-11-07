@@ -1,4 +1,5 @@
 "use client";
+import ProductMediaPreview from "@/components/ProductMediaPreview";
 import SiteFooter from "@/components/SiteFooter";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
@@ -206,14 +207,7 @@ export default function CartPage() {
                           href={`/product?id=${product.slug}`}
                         >
                           {image ? (
-                            <img
-                              src={
-                                image
-                              }
-                              alt={
-                                product.name
-                              }
-                            />
+                            <ProductMediaPreview src={image} alt={product.name} width={92} height={70} />
                           ) : (
                             <div
                               style={{

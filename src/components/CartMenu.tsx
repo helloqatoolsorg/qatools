@@ -1,4 +1,5 @@
 "use client";
+import ProductMediaPreview from "@/components/ProductMediaPreview";
 
 import {
   useEffect,
@@ -200,12 +201,7 @@ export default function CartMenu() {
                         }
                       >
                         {image ? (
-                          <img
-                            src={image}
-                            alt={
-                              product.name
-                            }
-                          />
+                          <ProductMediaPreview src={image} alt={product.name} width={66} height={52} />
                         ) : (
                           <div
                             style={{

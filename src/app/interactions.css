@@ -35,8 +35,8 @@ body :is(button:not(:disabled),summary,.icon-link,.user-nav,.admin-card-action,.
 body :is(button:disabled,[aria-disabled="true"]) {scale:1;}
 @media (hover:hover) and (pointer:fine) {
   body :is(.card-tag,.filter-chip,.meta-filter):hover {background-color:#242424;border-color:#484848;color:#f1f1ef;}
-  body .product-card .media-frame img {transition:transform 420ms var(--motion-ease),filter var(--motion-normal) var(--motion-ease);}
-  body .product-card:hover .media-frame img {transform:scale(1.018);filter:brightness(1.06);}
+  body .product-card .media-frame :is(img, video) {transition:transform 420ms var(--motion-ease),filter var(--motion-normal) var(--motion-ease);}
+  body .product-card:hover .media-frame :is(img, video) {transform:scale(1.018);filter:brightness(1.06);}
   body :is(.product-card,.admin-product-card):hover .card-info {background-color:#171717;}
   body :is(.heart,.hero-heart):hover {scale:1.06;transform:none;}
 }
@@ -126,7 +126,7 @@ body :is(.card-add-cart,.buy-button,#toolAddToCart).purchased:hover::after {cont
   html {scroll-behavior:auto;}
   body *,body *::before,body *::after {animation:none!important;transition:none!important;}
   body :is(button,a,summary,.filter-chip,.heart,.hero-heart) {scale:1!important;translate:0 0!important;rotate:0deg!important;}
-  body .product-card:hover .media-frame img {transform:none;}
+  body .product-card:hover .media-frame :is(img, video) {transform:none;}
   body .cart-flyer {display:none;}
 }
 

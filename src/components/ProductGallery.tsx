@@ -2,6 +2,8 @@
 
 import { useRef, useState, type PointerEvent } from "react";
 import { gallerySwipeDirection } from "@/lib/galleryGesture";
+import { isWebmSource } from "@/lib/productMediaInput";
+import LoopingProductVideo from "@/components/LoopingProductVideo";
 import "./ProductGallery.css";
 
 type GalleryImage = { id: number; src: string };
@@ -33,7 +35,7 @@ export default function ProductGallery({ images, name }: { images: GalleryImage[
   }
 
   return (
-    <div className="product-gallery" role="region" aria-label={`${name} images`} tabIndex={0}
+    <div className="product-gallery" role="region" aria-label={`${name} gallery`} tabIndex={0}
       onKeyDown={(event) => {
         if (images.length < 2) return;
         if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
@@ -43,32 +45,39 @@ export default function ProductGallery({ images, name }: { images: GalleryImage[
       }}>
       <div className="product-media product-gallery-stage" onPointerDown={startSwipe} onPointerUp={finishSwipe}
         onPointerCancel={() => { swipe.current = null; }}>
-        {/* Keep the same image elements mounted: GIF playback never depends on hover or selection. */}
-        {images.map((item, position) => <img key={item.id}
-          id={position === index ? "productImage" : undefined}
-          className={`product-gallery-image${position === index ? " current" : ""}`}
-          src={item.src} alt={position === index ? `${name} preview ${position + 1}` : ""}
-          aria-hidden={position !== index} draggable={false} />)}
+        {/* Keep GIFs mounted. Play the selected WebM in the main view. */}
+        {images.map((item, position) => {
+          const current = position === index;
+          const preview = `${name} preview ${position + 1}`;
+          if (isWebmSource(item.src)) {
+            return current ? <LoopingProductVideo key={item.id} id="productImage"
+              className="product-gallery-image current" src={item.src} aria-label={preview} /> : null;
+          }
+          return <img key={item.id} id={current ? "productImage" : undefined}
+            className={`product-gallery-image${current ? " current" : ""}`}
+            src={item.src} alt={current ? preview : ""} aria-hidden={!current} draggable={false} />;
+        })}
         {!image && <span className="product-gallery-empty">No media</span>}
         {images.length > 1 && <>
-          <button type="button" className="product-gallery-arrow previous" aria-label="Previous image" onClick={() => move(-1)}>
+          <button type="button" className="product-gallery-arrow previous" aria-label="Previous preview" onClick={() => move(-1)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7" /></svg>
           </button>
-          <button type="button" className="product-gallery-arrow next" aria-label="Next image" onClick={() => move(1)}>
+          <button type="button" className="product-gallery-arrow next" aria-label="Next preview" onClick={() => move(1)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7" /></svg>
           </button>
         </>}
       </div>
-      {images.length > 1 && <div className="product-gallery-thumbnails" aria-label="Choose an image">
+      {images.length > 1 && <div className="product-gallery-thumbnails" aria-label="Choose a preview">
         {images.map((item, position) => <button key={item.id} type="button"
           className={`product-gallery-thumbnail${position === index ? " selected" : ""}`}
-          aria-label={`Show image ${position + 1} of ${images.length}`}
+          aria-label={`Show preview ${position + 1} of ${images.length}`}
           aria-pressed={position === index} onClick={() => setSelected(position)}>
-          <img src={item.src} alt="" loading="lazy" draggable={false} />
+          {isWebmSource(item.src) ? <LoopingProductVideo src={item.src} aria-hidden="true" lazy /> :
+            <img src={item.src} alt="" loading="lazy" draggable={false} />}
         </button>)}
       </div>}
       <span className="product-gallery-status" aria-live="polite" aria-atomic="true">
-        {image ? `Image ${index + 1} of ${images.length}` : "No images"}
+        {image ? `Preview ${index + 1} of ${images.length}` : "No media"}
       </span>
     </div>
   );

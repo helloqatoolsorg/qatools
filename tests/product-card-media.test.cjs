@@ -10,7 +10,10 @@ function setup(){
   if(!keys.has(key))keys.set(key,[]);const previous=frame;frame={slots:keys.get(key),cursor:0};
   try{return type(props);}finally{frame=previous;}
  }
- const Media=load('src/components/ProductCardMedia.tsx',{'react':react,'next/image':{__esModule:true,default:props=>({type:'img',props})},'./ProductCardMedia.css':{},'react/jsx-runtime':{jsx:render,jsxs:render}}).default;
+ const jsx = {jsx:render,jsxs:render};
+ const input = load('src/lib/productMediaInput.ts',{});
+ const video = load('src/components/LoopingProductVideo.tsx',{'react/jsx-runtime':jsx});
+ const Media=load('src/components/ProductCardMedia.tsx',{'react':react,'next/image':{__esModule:true,default:props=>({type:'img',props})},'./ProductCardMedia.css':{},'@/lib/productMediaInput':input,'@/components/LoopingProductVideo':video,'react/jsx-runtime':{jsx:render,jsxs:render}}).default;
  return {render:(props={})=>render(Media,{src:'/tool.gif',name:'Test tool',...props},'root')};
 }
 test('card preview reserves its frame and shows loading until the image succeeds',()=>{
@@ -41,4 +44,18 @@ test('already cached success and failure are detected even if the load event hap
 test('unready card images never launch a broken flying-cart preview',()=>{
  const animate=load('src/lib/cartAnimation.ts',{}, {window:{matchMedia:()=>({matches:false})},document:{getElementById:()=>({})}}).animateToCart;
  for(const image of [null,{complete:false,naturalWidth:640},{complete:true,naturalWidth:0}])assert.doesNotThrow(()=>animate(image));
+});
+test("WebM cards autoplay muted and inline, loop, and report a failed video", () => {
+ const card = setup();
+ const initial = walk(card.render({src: "/tool.WEBM?revision=1", eager: true}));
+ const video = initial.find(node => node.type === "video");
+ for (const attribute of ["autoPlay", "muted", "playsInline", "loop"]) assert.equal(video.props[attribute], true);
+ assert.equal(video.props.controls, undefined);
+ assert.ok(!initial.some(node => node.type === "img"));
+ video.props.onLoadedData();
+ assert.equal(walk(card.render({src: "/tool.WEBM?revision=1"})).find(node => node.props?.["data-state"]).props["data-state"], "ready");
+ video.props.onError();
+ assert.ok(walk(card.render({src: "/tool.WEBM?revision=1"})).some(node => node.props?.role === "img"));
+ const lazy = walk(setup().render({src: "/tool.webm"})).find(node => node.type === "video");
+ assert.equal(lazy.props.loading, "lazy");
 });

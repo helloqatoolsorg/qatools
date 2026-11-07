@@ -9,11 +9,13 @@ test('swiping navigates horizontally, without treating taps or vertical scrollin
  for(const end of [{x:70,y:102},{x:60,y:220},{x:100,y:100},{x:150,y:150}])assert.equal(swipe(start,end),0);
 });
 function walk(node){if(!node)return [];if(Array.isArray(node))return node.flatMap(walk);if(typeof node!=='object')return [];return [node,...walk(node.props?.children)];}
-function gallery(){
+function gallery(images=[1,2,3].map(id=>({id,src:`/preview-${id}.gif` }))){
  const slots=[];let cursor=0;
  const react={useRef:v=>{const n=cursor++;return slots[n]??={current:v};},useState:v=>{const n=cursor++;if(!(n in slots))slots[n]=v;return [slots[n],next=>{slots[n]=typeof next==='function'?next(slots[n]):next;}];}};
- const component=load('src/components/ProductGallery.tsx',{'react':react,'./ProductGallery.css':{},'@/lib/galleryGesture':gesture,'react/jsx-runtime':{jsx:(type,props,key)=>({type,props,key}),jsxs:(type,props,key)=>({type,props,key})}}).default;
- const images=[1,2,3].map(id=>({id,src:`/preview-${id}.gif`}));
+ const element=(type,props,key)=>typeof type==='function'?{...type(props),key}:{type,props,key};
+ const jsx={jsx:element,jsxs:element};
+ const video=load('src/components/LoopingProductVideo.tsx',{'react/jsx-runtime':jsx});
+ const component=load('src/components/ProductGallery.tsx',{'react':react,'./ProductGallery.css':{},'@/lib/galleryGesture':gesture,'@/lib/productMediaInput':load('src/lib/productMediaInput.ts',{}),'@/components/LoopingProductVideo':video,'react/jsx-runtime':jsx}).default;
  return {render(){cursor=0;return component({images,name:'Test tool'});},pointer(x,y,options={}){return {pointerType:'touch',isPrimary:true,pointerId:1,clientX:x,clientY:y,target:{closest:()=>null},currentTarget:{setPointerCapture(){}},...options};}};
 }
 function selected(tree){return walk(tree).find(node=>node.props?.id==='productImage').props.src;}
@@ -33,6 +35,17 @@ test('gallery touch cancellation, multiple fingers and arrow taps never produce 
  pane.onPointerDown(s.pointer(180,100));pane.onPointerCancel();pane.onPointerUp(s.pointer(60,110));assert.equal(selected(s.render()),'/preview-2.gif');
  pane.onPointerDown(s.pointer(180,100));pane.onPointerDown(s.pointer(170,100,{pointerId:2,isPrimary:false}));pane.onPointerUp(s.pointer(60,110));assert.equal(selected(s.render()),'/preview-2.gif');
  pane.onPointerDown(s.pointer(180,100,{target:{closest:()=>({})}}));pane.onPointerUp(s.pointer(60,110));assert.equal(selected(s.render()),'/preview-2.gif');
+});
+test("a WebM opens as the active preview and its thumbnail loops inline", () => {
+ const galleryView=gallery([{id:1,src:"/preview.gif"},{id:2,src:"/clip.webm"}]);
+ const initial=galleryView.render();
+ assert.equal(selected(initial), "/preview.gif");
+ assert.equal(walk(initial).filter(node=>node.type==="video").length,1);
+ initial.props.onKeyDown({key:"ArrowRight",preventDefault(){}});
+ const active=walk(galleryView.render()).find(node=>node.props?.id==="productImage");
+ assert.equal(active.type,"video");
+ assert.equal(active.props.src,"/clip.webm");
+ for(const attribute of ["autoPlay","loop","muted","playsInline"]) assert.equal(active.props[attribute],true);
 });
 function gridHarness(reduced=false){
  const slots=[],layouts=[],effects=[],listeners=new Map(),calls=[];let cursor=0,mounted=false,cleanup;

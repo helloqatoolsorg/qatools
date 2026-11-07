@@ -8,7 +8,8 @@ import { readDraftRecovery, writeDraftRecovery, clearDraftRecovery, type DraftRe
 import AdminGallery, {saveArtwork, type PendingMedia} from "@/components/AdminGallery";
 import AdminToolPackage, {savePendingInstaller} from "@/components/AdminToolPackage";
 import PublicationState from "@/components/PublicationState";
-import Image from "next/image";
+import ProductMediaPreview from "@/components/ProductMediaPreview";
+import { productMediaAccept, productMediaFileHelp, validProductMediaFile } from "@/lib/productMediaInput";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -227,7 +228,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   }
   function chooseArtwork(file: File | undefined) {
     if (!file) return;
-    if (file.size > 4 * 1024 * 1024 || !["image/png","image/jpeg","image/webp","image/gif"].includes(file.type)) { setError("Choose a PNG, JPG, WebP or GIF up to 4 MB."); return; }
+    if (!validProductMediaFile(file)) { setError(productMediaFileHelp); return; }
     setError(null); setPendingArtwork({file,url:URL.createObjectURL(file)});
 
   }
@@ -237,18 +238,18 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   const tools = catalog.products.filter(p => p.product_type === "tool" && p.published);
   if (!editor) return <><AdminProductCatalog catalog={catalog} recovery={recovery}/>{recoveryWarning && <p role="alert">{recoveryWarning}</p>}</>;
   return <section className="admin-products admin-product-editor"><a href="/admin?section=products">← Admin products</a><div className="admin-product-title"><h1>{id ? draft?.name : "New product"}</h1><PublicationState published={readOnly} /></div>
-    {(pendingArtwork || pendingGallery.length>0 || editedMedia) && <p role="status">Pending image changes. Leaving this editor will not apply them.</p>}
+    {(pendingArtwork || pendingGallery.length>0 || editedMedia) && <p role="status">Pending media changes. Leaving this editor will not apply them.</p>}
     {dirty && readOnly && <p role="status">Pending product changes. Click Update product to apply them. Leaving this editor discards them.</p>}{dirty && !readOnly && <p>Unsaved changes are kept in this browser. Use Continue editing to return to this product.</p>}
     {!readOnly && <div style={{margin:"16px 0"}}><label><input type="checkbox" checked={useTestData} disabled={busy || packageBusy} onChange={event => { const checked=event.target.checked;setUseTestData(checked);if(checked && draft){setDraft(testDefaults(draft));setDirty(true);} }}/> Use test data</label>{useTestData && <p>Fills empty text fields and chooses random active tags. Review placeholders before publishing. Price, files and included tools stay manual.</p>}</div>}
     {recoveryWarning && <p role="alert" className="admin-product-error">{recoveryWarning}</p>}{error && <p role="alert" className="admin-product-error">{error} {id && <button type="button" disabled={busy || packageBusy} onClick={()=>setRevision(v=>v+1)}>Reload saved product</button>}</p>}{existingProductId && <p><a href={"/admin/products/edit?id="+existingProductId}>Open existing product</a></p>}{message && <p role="status">{message}</p>}
     {!draft ? <div className="admin-type-choice" role="dialog" aria-modal="false" aria-labelledby="product-type-title"><h2 id="product-type-title">Choose product type</h2>{productTypes.map(t => <button key={t} type="button" onClick={() => choose(t)}>{t.toUpperCase()}</button>)}</div> : draft.product_type==="tool" && (!id || importPending || (selected?.prepared_identity && selected.has_installer===false)) ? <section className="admin-type-choice"><h2>Upload prepared tool</h2><p>Choose the ZIP exported by Prepare QATools tool. Its Asset Label and Internal Name set the title and locked slug.</p><input type="file" accept=".zip" disabled={busy} onChange={e=>{const file=e.target.files?.[0];e.target.value="";if(file)void importTool(file);}} />{importFile && <button type="button" disabled={busy} onClick={()=>void importTool(importFile)}>Retry import</button>}</section> : <>
-      {readOnly && <p>This product is published. Edit subtitle, description, category, complexity and images, then click Update product. Identity, price, version and included tools stay protected. <a href={"/product?slug=" + selected?.slug}>View product</a></p>}
-      <div className="product-hero admin-product-hero"><div className="admin-product-media-column">      <section className="admin-product-media"><input ref={artworkInput} className="admin-artwork-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy || packageBusy} onChange={e => { chooseArtwork(e.target.files?.[0]); e.target.value=""; }} />
-          <button type="button" className="product-media admin-main-artwork" disabled={busy || packageBusy} onClick={() => artworkInput.current?.click()} aria-label={pendingArtwork || (selected && artwork(selected)) ? "Change main image" : "Upload main image"}>
-            {pendingArtwork || (selected && artwork(selected)) ? <Image src={pendingArtwork?.url ?? artwork(selected!)!} alt="Product preview" width={960} height={600} unoptimized /> : <span className="admin-hero-placeholder">＋ Add media</span>}
-            <span className="admin-artwork-overlay">{busy ? "Uploading..." : pendingArtwork || (selected && artwork(selected)) ? "Click to change image" : "PNG · JPG · WebP · GIF"}</span>
+      {readOnly && <p>This product is published. Edit subtitle, description, category, complexity and media, then click Update product. Identity, price, version and included tools stay protected. <a href={"/product?slug=" + selected?.slug}>View product</a></p>}
+      <div className="product-hero admin-product-hero"><div className="admin-product-media-column">      <section className="admin-product-media"><input ref={artworkInput} className="admin-artwork-input" type="file" accept={productMediaAccept} disabled={busy || packageBusy} onChange={e => { chooseArtwork(e.target.files?.[0]); e.target.value=""; }} />
+          <button type="button" className="product-media admin-main-artwork" disabled={busy || packageBusy} onClick={() => artworkInput.current?.click()} aria-label={pendingArtwork || (selected && artwork(selected)) ? "Change cover media" : "Upload cover media"}>
+            {pendingArtwork || (selected && artwork(selected)) ? <ProductMediaPreview src={pendingArtwork?.url ?? artwork(selected!)!} alt="Product preview" width={960} height={600} file={pendingArtwork?.file} eager /> : <span className="admin-hero-placeholder">＋ Add media</span>}
+            <span className="admin-artwork-overlay">{busy ? "Uploading..." : pendingArtwork || (selected && artwork(selected)) ? "Click to change media" : "WebM · PNG · JPG · WebP · GIF"}</span>
           </button>
-          {pendingArtwork && <p>Image selected. Click Update product to apply it.</p>}
+          {pendingArtwork && <p>Media selected. Click Update product to apply it.</p>}
           <h2>Gallery</h2><AdminGallery media={[...(editedMedia ?? selected?.product_media ?? []),...pendingGallery.map((file,index)=>({id:-1000-index,file,file_path:null,role:"gallery",sort_order:1000+index}))]} disabled={busy || packageBusy} onChange={media=>{setEditedMedia(media);setPendingGallery([]);}} /></section><AdminToolPackage key={String(id)+":"+revision} prepared={!!selected?.prepared_identity} kind={draft.product_type} productId={id} disabled={busy} tool={pendingTool} onToolChange={setPendingTool} ensureDraft={ensureToolDraft} onBusyChange={setPackageBusy} /></div><div className="product-info admin-product-info"><form onSubmit={save} onKeyDown={event => { if(event.key === "Enter" && !event.nativeEvent.isComposing && event.target instanceof HTMLInputElement && ["text","search","email","url","tel","password","number"].includes(event.target.type)){event.preventDefault();event.target.blur();} }}><fieldset disabled={busy || packageBusy}><div className="admin-product-fields">
         <label>Title<input required readOnly={readOnly || draft.product_type==="tool"} maxLength={80} value={draft.name} onChange={e => change("name",e.target.value)} placeholder="qatool01" /><small>{draft.product_type==="tool" ? "From the Houdini Asset Label. Tool identity is locked." : "Letters, numbers, spaces, underscores or hyphens. The slug is generated automatically."}</small></label>
         <label>Slug<input value={draft.slug ?? productSlug(draft.name)} readOnly /></label><label>Type<input value={draft.product_type} readOnly /></label>

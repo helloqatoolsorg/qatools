@@ -55,12 +55,11 @@ export default function InstallationGuide() {
       {step === "copy" && <>
         <ol className="install-guide-instructions">
           <li>Close Houdini.</li>
-          <li>Extract the ZIP.</li>
           <li>Open your Houdini {version?.split(".")[0]} packages folder.<br />Create it if you don’t see it.
             <div className="install-guide-path"><code>{path}</code><button type="button" onClick={() => void copyPath()}>{copied ? "Copied ✓" : "Copy path"}</button></div>
             <span className="install-guide-feedback" role="status">{copyError ? "Select and copy the path manually." : ""}</span>
           </li>
-          <li>Copy the extracted ZIP’s contents and paste them here.</li>
+          <li>Extract the ZIP, then copy its contents and paste them here.</li>
           <li>Replace files if asked.</li>
         </ol>
         <button type="button" onClick={() => next(hasInstalledBefore ? "automatic" : "restart")}>The files are in the packages folder →</button>

@@ -43,6 +43,7 @@ function cart(options={}) {
     '@/components/AccountName',
     '@/components/BrandLogo',
     '@/components/OutlineIcon',
+    '@/components/ProductMediaPreview',
     '@/components/SandboxCheckout',
     '@/components/SiteFooter',
    ];
