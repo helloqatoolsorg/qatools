@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 
 type Credential = { id: string; key_prefix: string; created_at: string; updated_at: string; reveal_available: boolean };
 
-export default function AccountActivationKey({ embedded = false }: { embedded?: boolean }) {
+export default function AccountActivationKey({ embedded = false, onReady }: { embedded?: boolean; onReady?: () => void }) {
   const [credential, setCredential] = useState<Credential | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,6 +41,10 @@ export default function AccountActivationKey({ embedded = false }: { embedded?: 
     load();
     return () => controller.abort();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!loading && !error) onReady?.();
+  }, [loading, error, onReady]);
 
   async function create() {
     if (inFlight.current || loading || credential) return;

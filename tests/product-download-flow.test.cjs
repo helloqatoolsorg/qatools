@@ -10,7 +10,7 @@ function setup({loggedIn=false,denied=false}={}) {
  require(name){if(name==='react')return react;if(name==='react/jsx-runtime')return {jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})};if(name==='@/context/QAToolsState')return {useQAToolsState:()=>({isDownloaded:()=>downloaded,markDownloaded:()=>{downloaded=true;}})};if(name==='@/context/AuthContext')return {useAuth:()=>({user,loading:false})};if(name==='@/lib/supabase')return {supabase:{auth:{getSession:async()=>({data:{session},error:null})}}};throw Error(name);}
  });
  function render(){cursor=0;effects.length=0;const tree=exports.default({productId:42});for(const effect of effects)effect();return tree;}
- return {render,events,requests,links,cancel(){listeners.get('qatools:login-cancelled')?.();},login(){user={id:'buyer'};session={access_token:'synthetic'};},click(tree){tree.props.children[0].props.onClick();}};
+ return {render,events,requests,links,deny(){denied=true;},cancel(){listeners.get('qatools:login-cancelled')?.();},login(){user={id:'buyer'};session={access_token:'synthetic'};},click(tree){tree.props.children[0].props.onClick();}};
 }
 test('logged-out download opens login and resumes exactly once after authentication',async()=>{
  const s=setup();s.click(s.render());await tick();assert.equal(s.events[0].type,'qatools:login');assert.equal(s.requests.length,0);
@@ -26,4 +26,11 @@ test('cancelling login cancels the queued download',async()=>{
 });
 test('successful download changes the shared state but permits downloading again',async()=>{
  const s=setup({loggedIn:true});s.click(s.render());await tick();const tree=s.render();assert.equal(tree.props.children[0].props.children,'DOWNLOADED');assert.equal(tree.props.children[0].props.disabled,false);s.click(tree);await tick();assert.equal(s.requests.length,2);
+});
+
+test('a failed repeat download never repeats success feedback or erases earlier download history',async()=>{
+ const s=setup({loggedIn:true});s.click(s.render());await tick();assert.match(s.render().props.children[0].props.className,/download-confirmed/);
+ s.deny();s.click(s.render());await tick();const tree=s.render(),button=tree.props.children[0];
+ assert.ok(!button.props.className.includes('download-confirmed'));assert.match(button.props.className,/downloaded/);
+ assert.equal(button.props['aria-busy'],false);assert.equal(tree.props.children[1].props.role,'alert');assert.equal(s.links.length,1);
 });

@@ -4,11 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import "./InstallationGuide.css";
 
-type Step = "download" | "extract" | "version" | "copy" | "restart" | "key" | "activate" | "ready";
+type Step = "version" | "welcome" | "download" | "copy" | "restart" | "automatic" | "key" | "activate" | "ready";
 type Version = "21.0" | "22.0";
 
 export default function InstallationGuide() {
-  const [history, setHistory] = useState<Step[]>(["download"]);
+  const [history, setHistory] = useState<Step[]>(["welcome"]);
+  const [hasInstalledBefore, setHasInstalledBefore] = useState(false);
   const [version, setVersion] = useState<Version | null>(null);
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
@@ -32,20 +33,16 @@ export default function InstallationGuide() {
 
   return <section className="install-guide" aria-label="Installation instructions">
     <div className="install-guide-instruction" key={step}>
+      {step === "welcome" && <div className="install-guide-buttons install-guide-start-options">
+        <button type="button" onClick={() => {setHasInstalledBefore(false);next("download");}}>I’m installing QATools for the first time →</button>
+        <button type="button" onClick={() => {setHasInstalledBefore(true);next("download");}}>I’ve already installed a QATools tool →</button>
+      </div>}
       {step === "download" && <>
         <p>Download a tool or bundle. All tools free for 7 days.</p>
         <div className="install-guide-buttons">
           <Link href="/" target="_blank" rel="noopener noreferrer">Choose a tool ↗</Link>
-          <button type="button" onClick={() => next("extract")}>I have downloaded the tool →</button>
+          <button type="button" onClick={() => next("version")}>I have downloaded the tool →</button>
         </div>
-      </>}
-      {step === "extract" && <>
-        <ol className="install-guide-instructions">
-          <li>Close Houdini.</li>
-          <li>Extract the ZIP.</li>
-          <li>Copy its contents.</li>
-        </ol>
-        <button type="button" onClick={() => next("version")}>I have copied the contents →</button>
       </>}
       {step === "version" && <>
         <p>Which Houdini version are you installing for?</p>
@@ -57,14 +54,25 @@ export default function InstallationGuide() {
       </>}
       {step === "copy" && <>
         <ol className="install-guide-instructions">
-          <li>Open your Houdini {version?.split(".")[0]} packages folder. Create it if you don’t see it.
+          <li>Close Houdini.</li>
+          <li>Extract the ZIP.</li>
+          <li>Open your Houdini {version?.split(".")[0]} packages folder.<br />Create it if you don’t see it.
             <div className="install-guide-path"><code>{path}</code><button type="button" onClick={() => void copyPath()}>{copied ? "Copied ✓" : "Copy path"}</button></div>
             <span className="install-guide-feedback" role="status">{copyError ? "Select and copy the path manually." : ""}</span>
           </li>
-          <li>Paste its contents here.</li>
+          <li>Copy the extracted ZIP’s contents and paste them here.</li>
           <li>Replace files if asked.</li>
         </ol>
-        <button type="button" onClick={() => next("restart")}>The files are in the packages folder →</button>
+        <button type="button" onClick={() => next(hasInstalledBefore ? "automatic" : "restart")}>The files are in the packages folder →</button>
+      </>}
+      {step === "automatic" && <>
+        <p className="install-guide-complete" role="status">You are set !</p>
+        <p>Restart Houdini and place your tool.<br />Your existing license will be detected automatically.</p>
+        <Link href="/">Back to tools ↗</Link>
+        <div className="install-guide-activation-help">
+          <p>If the tool is inactive, continue to license activation.</p>
+          <button type="button" className="install-guide-secondary" onClick={() => next("key")}>Go to license activation →</button>
+        </div>
       </>}
       {step === "restart" && <>
         <ol className="install-guide-instructions">
@@ -81,7 +89,7 @@ export default function InstallationGuide() {
       {step === "key" && <>
         <ol className="install-guide-instructions">
           <li>Click <span className="install-guide-control">Get license key</span> here or in the tool’s <span className="install-guide-control">License</span> tab.
-            <div className="install-guide-inline-link"><Link href="/user?section=license" target="_blank" rel="noopener noreferrer">Get license key ↗</Link></div>
+            <div className="install-guide-inline-link"><Link href="/user?section=license&highlight=key" target="_blank" rel="noopener noreferrer">Get license key ↗</Link></div>
           </li>
           <li>Copy your license key.</li>
         </ol>
@@ -102,7 +110,7 @@ export default function InstallationGuide() {
     </div>
     {history.length > 1 && <div className="install-guide-navigation">
       <button type="button" onClick={() => setHistory(previous => previous.slice(0, -1))}>← Back</button>
-      {step === "ready" && <button type="button" onClick={() => {setHistory(["download"]);setVersion(null);setCopied(false);setCopyError(false);}}>Start again</button>}
+      {(step === "ready" || step === "automatic") && <button type="button" onClick={() => {setHistory(["welcome"]);setHasInstalledBefore(false);setVersion(null);setCopied(false);setCopyError(false);}}>Start again</button>}
     </div>}
   </section>;
 }

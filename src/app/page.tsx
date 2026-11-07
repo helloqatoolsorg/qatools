@@ -1,10 +1,12 @@
 "use client";
 import SiteFooter from "@/components/SiteFooter";
 import ProductDownload from "@/components/ProductDownload";
+import ProductCardMedia from "@/components/ProductCardMedia";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
 import AccountName from "@/components/AccountName";
+import { useProductGridMotion } from "@/hooks/useProductGridMotion";
 
 import {
   useEffect,
@@ -449,11 +451,6 @@ const [loading, setLoading] =
         value,
       },
     ]);
-
-    window.scrollTo({
-      top: 0,
-      behavior: "auto",
-    });
   }
 
   function selectSort(
@@ -862,6 +859,8 @@ const [loading, setLoading] =
       activeSearch,
       activeSort,
     ]);
+
+  const productGridRef = useProductGridMotion(visibleProducts);
 
   return (
     <div
@@ -1489,9 +1488,10 @@ const [loading, setLoading] =
             <section
               className="product-grid"
               id="productGrid"
+              ref={productGridRef}
             >
               {visibleProducts.map(
-                (product) => {
+                (product, index) => {
                   const cardMedia =
                     getCardMedia(
                       product
@@ -1550,35 +1550,7 @@ const [loading, setLoading] =
                         className="card-open"
                         href={`/product?id=${product.slug}`}
                       >
-                        <div className="media-frame">
-                          {mediaUrl ? (
-                            <img
-                              src={
-                                mediaUrl
-                              }
-                              alt={`${product.name} preview`}
-                            />
-                          ) : (
-                            <div
-                              style={{
-                                width:
-                                  "100%",
-                                height:
-                                  "100%",
-                                display:
-                                  "grid",
-                                placeItems:
-                                  "center",
-                                color:
-                                  "#555",
-                                fontFamily:
-                                  "monospace",
-                              }}
-                            >
-                              no media
-                            </div>
-                          )}
-                        </div>
+                        <ProductCardMedia src={mediaUrl} name={product.name} eager={index < 3} />
                       </a>
 
                       <div className="card-copy">

@@ -37,7 +37,17 @@ function cart(options={}) {
  const mod={exports:{}};
  vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/app/cart/page.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,{
   exports:mod.exports,fetch:async(url,init)=>{requests.push({url,init});return Response.json(options.failure?{error:'Price changed'}:{products:[{slug:'free'}]},{status:options.failure?409:200});},
-  require(name){if(name==='@/components/AccountName'||name==='@/components/SandboxCheckout')return ()=>null;if(name==='react')return {useState(value){const i=index++;state[i]=value;return [value,v=>state[i]=v];}};
+  require(name){
+   const presentationImports = [
+    'next/link',
+    '@/components/AccountName',
+    '@/components/BrandLogo',
+    '@/components/OutlineIcon',
+    '@/components/SandboxCheckout',
+    '@/components/SiteFooter',
+   ];
+   if(presentationImports.includes(name))return ()=>null;
+   if(name==='react')return {useState(value){const i=index++;state[i]=value;return [value,v=>state[i]=v];}};
    if(name==='react/jsx-runtime')return {jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})};
    if(name==='@/lib/supabase')return {supabase:{auth:{getSession:async()=>({data:{session:options.loggedOut?null:{access_token:'synthetic'}},error:null})}}};
    if(name==='@/hooks/useCartProducts')return {useCartProducts:()=>({products,total:10,loading:false}),formatCartPrice:String,getCartProductImage:()=>null};

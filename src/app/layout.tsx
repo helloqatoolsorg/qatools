@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./compact-nav.css";
 import "./interactions.css";
+import "./customer-polish.css";
 
 import { SiteBrandingProvider } from "@/context/SiteBranding";
 

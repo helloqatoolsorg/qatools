@@ -1,10 +1,12 @@
 "use client";
 import SiteFooter from "@/components/SiteFooter";
 import ProductDownload from "@/components/ProductDownload";
+import ProductCardMedia from "@/components/ProductCardMedia";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
 import AccountName from "@/components/AccountName";
+import { useProductGridMotion } from "@/hooks/useProductGridMotion";
 
 import {
   useMemo,
@@ -261,11 +263,6 @@ const [
         value,
       },
     ]);
-
-    window.scrollTo({
-      top: 0,
-      behavior: "auto",
-    });
   }
 
   function selectSort(
@@ -450,6 +447,8 @@ const [
       activeFilters,
       activeSort,
     ]);
+
+  const productGridRef = useProductGridMotion(visibleProducts);
 
   return (
     <div
@@ -915,9 +914,9 @@ const [
         {!loading &&
           visibleProducts.length >
             0 && (
-            <section className="product-grid">
+            <section className="product-grid" ref={productGridRef}>
               {visibleProducts.map(
-                (product) => {
+                (product, index) => {
                   const image =
                     getLikedProductImage(
                       product
@@ -964,33 +963,7 @@ const [
                         className="card-open"
                         href={`/product?id=${product.slug}`}
                       >
-                        <div className="media-frame">
-                          {image ? (
-                            <img
-                              src={image}
-                              alt={`${product.name} preview`}
-                            />
-                          ) : (
-                            <div
-                              style={{
-                                width:
-                                  "100%",
-                                height:
-                                  "100%",
-                                display:
-                                  "grid",
-                                placeItems:
-                                  "center",
-                                color:
-                                  "#555",
-                                fontFamily:
-                                  "monospace",
-                              }}
-                            >
-                              no media
-                            </div>
-                          )}
-                        </div>
+                        <ProductCardMedia src={image} name={product.name} eager={index < 3} />
                       </a>
 
                       <div className="card-copy">

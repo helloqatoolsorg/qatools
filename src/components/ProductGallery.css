@@ -2,17 +2,20 @@
 .product-media.product-gallery-stage {
   position: relative;
   min-height: 0;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 9;
   display: grid;
   place-items: center;
+  touch-action: pan-y pinch-zoom;
 }
-.product-media.product-gallery-stage > img {
+.product-media.product-gallery-stage > .product-gallery-image {
+  position: absolute; inset: 0;
   width: 100%; height: 100%; min-height: 0; max-height: none;
-  object-fit: contain;
+  object-fit: contain; opacity: 0; pointer-events: none; user-select: none;
 }
+.product-media.product-gallery-stage > .product-gallery-image.current { opacity: 1; }
 .product-gallery-empty { color: #777; font: 12px monospace; }
 .product-gallery-arrow {
-  position: absolute; top: 50%; transform: translateY(-50%);
+  position: absolute; z-index: 1; top: 50%; transform: translateY(-50%);
   display: grid; place-items: center; width: 36px; height: 40px;
   border: 0; border-radius: 3px;
   color: #ddd; background: #1116; cursor: pointer;
@@ -24,14 +27,15 @@
 .product-gallery-arrow:hover { background: #111a; color: #fff; }
 .product-gallery-thumbnails { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .product-gallery-thumbnail {
-  width: clamp(48px, 10%, 80px); aspect-ratio: 4 / 3; padding: 0;
+  width: clamp(48px, 10%, 80px); aspect-ratio: 16 / 9; padding: 0;
   border: 0; border-radius: 3px; background: #151515;
   opacity: .6; cursor: pointer; overflow: hidden;
-  transition: opacity 300ms;
 }
+.product-gallery .product-gallery-thumbnail { transition: opacity 360ms ease, background-color 360ms ease; }
 .product-gallery-thumbnail img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .product-gallery-thumbnail:hover, .product-gallery-thumbnail.selected { opacity: 1; }
 .product-gallery :is(button):focus-visible { outline: 2px solid #eee; outline-offset: 3px; }
+.product-gallery:focus-visible { outline: 2px solid #a9a9a1; outline-offset: 4px; }
 .product-gallery-status { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (hover: hover) and (pointer: fine) {
   .product-gallery-arrow { opacity: 0; }
@@ -42,5 +46,6 @@
   .product-gallery-arrow { width: 44px; height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .product-gallery .product-gallery-arrow, .product-gallery button { transition: none; }
+  .product-gallery .product-gallery-arrow, .product-gallery button,
+  .product-media.product-gallery-stage > .product-gallery-image { transition: none; }
 }

@@ -14,8 +14,8 @@ export default function PurchasePage() {
     let cancelled = false;
     const slug = new URLSearchParams(window.location.search).get("tool") ?? "";
     if (!/^[a-z0-9][a-z0-9_-]{0,127}$/.test(slug)) { window.location.replace("/"); return; }
-    supabase.from("products").select("slug").eq("slug", slug).eq("product_type", "tool").eq("published", true).maybeSingle().then(({data,error}) => {
-      if (!cancelled) { if (error || !data) setError("This tool is not available for purchase."); else setItem(data.slug); }
+    supabase.from("products").select("slug").eq("slug", slug).in("product_type", ["tool", "bundle", "project"]).eq("published", true).maybeSingle().then(({data,error}) => {
+      if (!cancelled) { if (error || !data) setError("This item is not available for purchase."); else setItem(data.slug); }
     });
     return () => { cancelled = true; };
   }, []);

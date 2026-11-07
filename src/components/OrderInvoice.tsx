@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-export default function OrderInvoice({ orderId }: { orderId: number }) {
+export default function OrderInvoice({ orderId, compact = false }: { orderId: number; compact?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pending = useRef<AbortController | null>(null);
@@ -34,10 +34,10 @@ export default function OrderInvoice({ orderId }: { orderId: number }) {
     } finally { if (!controller.signal.aborted) setBusy(false); }
   }
 
-  return <span style={{ display: "block", marginTop: "10px" }}>
-    <button type="button" onClick={download} disabled={busy}
-      style={{ border: "1px solid #333", background: "transparent", padding: "9px 11px", color: "#999", font: "8px monospace", cursor: busy ? "wait" : "pointer" }}>
-      {busy ? "PREPARING..." : "DOWNLOAD INVOICE"}
+  return <span style={compact ? undefined : { display: "block", marginTop: "10px" }}>
+    <button type="button" onClick={download} disabled={busy} className={compact ? "account-action" : undefined}
+      style={compact ? undefined : { border: "1px solid #333", background: "transparent", padding: "9px 11px", color: "#999", font: "8px monospace", cursor: busy ? "wait" : "pointer" }}>
+      {busy ? "Preparing…" : compact ? "Invoice" : "DOWNLOAD INVOICE"}
     </button>
     {error && <span role="alert" style={{ display: "block", color: "#e86565", font: "10px monospace", marginTop: "8px" }}>{error}</span>}
   </span>;

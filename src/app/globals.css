@@ -2370,4 +2370,5 @@ body:not(.products-page) .cart-overlay{
 .houdini-connect-page h1 {font-size:26px;}
 .houdini-connect-page button {padding:12px 18px;border:1px solid #397654;background:#153a28;color:#9be3b5;font:inherit;cursor:pointer;}
 .houdini-connect-page [role="alert"] {color:#e87373;}
-.card-purchase-actions > .card-add-cart:not(.purchased):not(.in-cart):hover { background:#112b45; color:#98caff; border-color:#356f9c; }
+.card-purchase-actions > .card-add-cart:not(.purchased):not(.in-cart):hover,
+.account-cart-action:not(:disabled):not(.in-cart):hover { background:#112b45; color:#98caff; border-color:#356f9c; }

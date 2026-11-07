@@ -918,8 +918,8 @@ export default function AdminPage() {
             }}
           >
             <div hidden={adminSection !== "dashboard"}>
-            <AdminSiteLogo key={user.id} />
-            <AdminDownloadCounts key={user.id} />
+            <AdminSiteLogo key={`site-logo-${user.id}`} />
+            <AdminDownloadCounts key={`download-counts-${user.id}`} />
             <div
               style={{
                 display:

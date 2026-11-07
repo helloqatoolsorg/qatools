@@ -2,10 +2,10 @@
 :root {
   --radius-control:3px;
   --radius-surface:4px;
-  --motion-fast:200ms;
-  --motion-normal:300ms;
+  --motion-fast:240ms;
+  --motion-normal:360ms;
   --motion-ease:cubic-bezier(.2,.75,.25,1);
-  --motion-spring:cubic-bezier(.2,1.45,.35,1);
+  --motion-spring:cubic-bezier(.2,1.2,.35,1);
 }
 body :is(button,input,select,textarea,summary,.card-tag,.filter-chip,.meta-filter,.user-nav,.admin-card-action,.check-cart-button,.cart-page-checkout) {
   border-radius:var(--radius-control);
@@ -46,7 +46,7 @@ body .admin-workspace-content>section:not([hidden])>section:not([hidden]),
 body .admin-workspace-content :is(.admin-finance,.admin-products,.admin-orders,.admin-payment-review) {animation:qatools-enter var(--motion-normal) var(--motion-ease) both;}
 body .filter-chip {animation:qatools-tag-in 300ms var(--motion-spring) backwards;}
 body :is(.heart.liked,.hero-heart.liked) {animation:qatools-like 480ms var(--motion-ease);}
-body :is(.card-add-cart.in-cart,.buy-button.in-cart) {animation:qatools-selected 300ms var(--motion-ease);}
+body :is(.card-add-cart,.buy-button,.account-cart-action).in-cart {animation:qatools-selected 300ms var(--motion-ease);}
 body [role="status"] {animation:qatools-status 260ms ease-out both;}
 body .cart-drawer {border-radius:var(--radius-surface) 0 0 var(--radius-surface);transition:transform 340ms var(--motion-ease);}
 body .cart-overlay {transition:opacity var(--motion-normal) ease;}
@@ -59,17 +59,17 @@ body .compact-nav-menu {border-radius:var(--radius-surface);transition:opacity 2
 /* Playful feedback: transforms never change layout dimensions. */
 @media (hover:hover) and (pointer:fine) {
   body button:not(:disabled):hover {filter:brightness(1.12);}
-  body :is(.card-tag,.filter-chip,.meta-filter):hover {translate:0 -1px;scale:1.025;}
-  body :is(.icon-nav .icon-link,.icon-nav button,.search-toggle):hover {translate:0 -2px;scale:1.08;}
-  body :is(.heart,.hero-heart):hover {rotate:-6deg;scale:1.12;}
+  body :is(.card-tag,.filter-chip,.meta-filter):hover {translate:0 -1px;scale:1.015;}
+  body :is(.icon-nav .icon-link,.icon-nav button,.search-toggle):hover {translate:0 -1px;scale:1.05;}
+  body :is(.heart,.hero-heart):hover {rotate:-3deg;scale:1.07;}
   body :is(.sort-menu button,.filter-option,.compact-nav-menu a):hover {translate:2px 0;}
   body :is(.admin-new-product,.user-nav):hover {box-shadow:inset 2px 0 0 #777;}
   body .admin-new-product:hover {translate:0 -2px;}
 }
 body :is(button:not(:disabled),summary,.icon-link,.user-nav,.admin-card-action,.check-cart-button):active {
-  scale:.96;translate:0 1px;rotate:0deg;transition-duration:110ms;
+  scale:.975;translate:0 1px;rotate:0deg;transition-duration:110ms;
 }
-body :is(.card-add-cart,.admin-card-action,.user-nav):active {translate:0 0;scale:.99;}
+body :is(.card-add-cart,.buy-button,.account-cart-action,.admin-card-action,.user-nav):active {translate:0 0;scale:.985;}
 body .admin-main-artwork:active {scale:.995;}
 body :is(button:disabled,[aria-disabled="true"]) {scale:1;translate:0 0;rotate:0deg;filter:none;}
 body :is(.filter-option.selected,.sort-option.selected,[aria-pressed="true"]):not(:disabled) {animation:qatools-choice 340ms var(--motion-ease);}
@@ -96,17 +96,17 @@ body .toolbar>.toolbar-left {grid-column:1;}
 body .toolbar>.toolbar-right {grid-column:3;}
 /* Shared logo: contain the taller symbol within the existing top shelf. */
 body .brand img {height:54px!important;width:auto;max-width:145px;object-fit:contain;filter:none;}
-/* Cart and ownership feedback use one consistent palette across card/tool pages. */
-body :is(.card-add-cart,.buy-button,#toolAddToCart).in-cart {
+/* Share cart feedback across product cards, tool pages, and the account dashboard. */
+body :is(.card-add-cart,.buy-button,.account-cart-action,#toolAddToCart).in-cart {
   background:#112b45!important;border-color:#356f9c!important;color:#98caff!important;
 }
 /* CSS alone owns the temporary removal label; touch devices keep IN CART. */
 @media (hover:hover) and (pointer:fine) {
-  body :is(.card-add-cart,.buy-button,#toolAddToCart).in-cart:not(:disabled):hover {
+  body :is(.card-add-cart,.buy-button,.account-cart-action,#toolAddToCart).in-cart:not(:disabled):hover {
     position:relative;background:#2a1111!important;border-color:#9e3d3d!important;color:transparent!important;
   }
-  body :is(.card-add-cart,.buy-button,#toolAddToCart).in-cart:not(:disabled):hover::after {
-    content:"REMOVE FROM CART";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  body :is(.card-add-cart,.buy-button,.account-cart-action,#toolAddToCart).in-cart:not(:disabled):hover::after {
+    content:var(--cart-remove-label,"REMOVE FROM CART");position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     color:#ea6d6d;pointer-events:none;
   }
 }
@@ -130,18 +130,7 @@ body :is(.card-add-cart,.buy-button,#toolAddToCart).purchased:hover::after {cont
   body .cart-flyer {display:none;}
 }
 
-/* Clear account navigation and a single, prominent license key field. */
-body .user-page .overview-link,
-body .user-page .sidebar-logout {
-  display:block;width:100%;padding:13px 16px;border:1px solid #3a3a3a;
-  background:#181818;color:#d6d6d2;text-align:left;cursor:pointer;border-radius:var(--radius-control);
-}
-body .user-page .overview-link {font:14px monospace;letter-spacing:.02em;margin-bottom:22px;}
-body .user-page .overview-link.active {background:#232323;border-color:#62625d;color:#fff;}
-body .user-page :is(.overview-link,.sidebar-logout):hover {background:#292929;color:#fff;}
-body .user-page .sidebar-logout:disabled {opacity:.5;cursor:default;}
-body .user-page .account-overview {grid-template-columns:1fr;gap:12px;max-width:720px;}
-body .user-page .account-overview>div {border:1px solid #252525;border-radius:var(--radius-surface);}
+/* License key controls. */
 body .account-license-key {padding:22px;background:#161616;border:1px solid #373737;border-radius:var(--radius-surface);margin:0 0 28px;max-width:720px;min-width:0;}
 body .account-license-key.embedded {border:0;padding:0;background:transparent;margin:0;}
 body .account-license-key h2 {margin:0 0 16px;font:18px monospace;color:#e5e5e1;}
@@ -205,3 +194,8 @@ body .information-content section[id] {scroll-margin-top:96px;}
 
 /* Keep touch feedback in our button styles; keyboard focus remains visible. */
 html { -webkit-tap-highlight-color: transparent; }
+
+/* Confirm successful download initiation, with the same feedback on repeat requests. */
+body .product-download-control button.download-confirmed { animation:qatools-download-confirm 480ms var(--motion-ease); }
+body .product-download-control button.is-preparing { cursor:progress; }
+@keyframes qatools-download-confirm { from { box-shadow:inset 0 0 0 1px #80d5a0; } to { box-shadow:inset 0 0 0 1px transparent; } }

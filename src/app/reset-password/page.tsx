@@ -15,7 +15,7 @@ export default function ResetPasswordPage() {
             <p role="alert" className="user-muted">Open the latest password reset link from your email. If it has expired or already been used, request a new one.</p>
             <a href="/user?mode=reset">Request a new reset link</a>
           </section>}
-      <p><a href="/user?section=general">Back to account</a></p>
+      <p><a href="/user">Back to account</a></p>
     </main>
   );
 }

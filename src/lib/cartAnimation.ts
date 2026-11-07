@@ -7,7 +7,7 @@ export function animateToCart(
       "cartButton"
     );
 
-  if (!image || !cartIcon) {
+  if (!image || !cartIcon || !image.complete || image.naturalWidth === 0) {
     return;
   }
 
@@ -85,6 +85,8 @@ export function animateToCart(
 
   flyer.className =
     "cart-flyer";
+  flyer.removeAttribute("id");
+  flyer.setAttribute("aria-hidden", "true");
 
   Object.assign(
     flyer.style,

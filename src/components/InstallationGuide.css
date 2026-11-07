@@ -4,20 +4,23 @@
   flex: 1; min-height: 0; padding: 40px 26px;
   display: grid; place-items: center;
 }
-.install-guide { width: 100%; max-width: 660px; font: 14px/1.8 monospace; }
+.install-guide { width: 100%; max-width: 495px; font: 14px/1.8 monospace; }
 .install-guide-instruction { animation: install-instruction-in 300ms ease both; }
 .install-guide-instruction > p { margin: 0 0 26px; color: #ccc; }
 .install-guide-instructions { margin: 0 0 26px; padding-left: 24px; color: #ccc; }
 .install-guide-instructions li + li { margin-top: 12px; }
 .install-guide-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.install-guide-start-options { display: grid; }
 .install-guide-instruction button, .install-guide-instruction a {
   display: inline-block; padding: 12px 16px; border: 0; border-radius: 3px;
   background: #202020; color: #ddd; font: inherit; text-align: left; cursor: pointer;
 }
+.install-guide-instruction a, .install-guide-instruction .install-guide-secondary {
+  background: transparent; box-shadow: inset 0 0 0 1px #444; color: #aaa;
+}
 .install-guide-instruction button:hover, .install-guide-instruction a:hover { background: #2a2a2a; color: #fff; }
-.install-guide-instruction a { background: transparent; box-shadow: inset 0 0 0 1px #444; color: #aaa; }
-.install-guide-instruction > button, .install-guide-buttons > button { background: #ededeb; color: #111; font-weight: 400; }
-.install-guide-instruction > button:hover, .install-guide-buttons > button:hover { background: #fff; color: #000; }
+.install-guide-instruction > button, .install-guide-buttons > button { background: #d5d5d2; color: #111; font-weight: 400; }
+.install-guide-instruction > button:hover, .install-guide-buttons > button:hover { background: #e5e5e2; color: #000; }
 .install-guide-buttons > .install-guide-answer-yes { background: #153a28; color: #9be3b5; }
 .install-guide-buttons > .install-guide-answer-yes:hover { background: #204c36; color: #b5edca; }
 .install-guide-buttons > .install-guide-answer-no { background: #3a1c1c; color: #efa3a3; }
@@ -31,6 +34,8 @@
 .install-guide-instructions li > .install-guide-path,
 .install-guide-instructions li > .install-guide-inline-link { margin-left: -24px; }
 .install-guide-instruction .install-guide-complete { color: #80d5a0; }
+.install-guide-activation-help { margin-top: 48px; }
+.install-guide-activation-help > p { margin: 0 0 22px; color: #aaa; }
 .install-guide-navigation { display: flex; justify-content: space-between; gap: 16px; margin-top: 32px; }
 .install-guide-navigation button { padding: 4px 0; border: 0; background: transparent; color: #888; font: 12px monospace; cursor: pointer; }
 .install-guide-navigation button:hover { color: #ddd; }
