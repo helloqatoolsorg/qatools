@@ -136,6 +136,7 @@
 .admin-gallery-add > span:first-child { font-size:28px; }
 .admin-gallery-editor .admin-gallery-file-input,.admin-zip-replace input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
 .admin-gallery-add:hover,.admin-gallery-replace:focus-within,.admin-gallery-add:focus-within { border-color:#aaa; background:#252525; }
+.admin-gallery-add.is-drag-over { border-color:#68c990; background:#172c20; color:#a6dfb7; }
 .admin-gallery-actions { justify-content:center; }
 .admin-products .admin-product-publication { margin:12px 0 0; padding:0; border:0; }
 .admin-products button.admin-publish-primary { width:100%; min-height:52px; font-size:15px; background:#153a28; border:1px solid #397654; color:#8cdda8; }

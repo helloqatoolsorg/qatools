@@ -53,6 +53,31 @@ test('gallery editing stages locally; only explicit save uploads then commits on
  function walk(node){if(!node)return;if(Array.isArray(node))return node.forEach(walk);if(typeof node==='object'){nodes.push(node);walk(node.props?.children);}}walk(tree);
  nodes.find(n=>n.props?.['aria-label']==='Move gallery image 1 later').props.onClick();assert.equal(changes[0].find(m=>m.id===2).sort_order,2);
  nodes.find(n=>n.type==='button' && n.props.children==='Remove').props.onClick();assert.equal(changes[1].length,2);assert.equal(media.length,3);assert.equal(calls.length,0);
+ const picker = nodes.find(node => node.props?.["aria-label"] === "Add gallery files");
+ const dropBox = nodes.find(node => node.props?.className === "admin-gallery-add");
+ const selection = ["last.webm", "first.webm"].map(name => new File(["clip"], name, { type: "video/webm" }));
+ const field = { files: selection, value: "selected" };
+ assert.equal(picker.props.multiple, true);
+ picker.props.onChange({ currentTarget: field });
+ assert.equal(field.value, "");
+ const chosen = changes[2].slice(media.length);
+ assert.deepEqual(Array.from(chosen, item => item.file.name), ["last.webm", "first.webm"]);
+ assert.deepEqual(Array.from(chosen, item => item.sort_order), [3, 4]);
+ assert.notEqual(chosen[0].id, chosen[1].id);
+
+ let prevented = false;
+ dropBox.props.onDrop({ preventDefault() { prevented = true; }, dataTransfer: { files: selection.toReversed() } });
+ assert.equal(prevented, true);
+ assert.deepEqual(Array.from(changes[3].slice(media.length), item => item.file.name), ["first.webm", "last.webm"]);
+ picker.props.onChange({ currentTarget: { files: Array(8).fill(selection[0]), value: "" } });
+ dropBox.props.onDrop({ preventDefault() {}, dataTransfer: { files: [...selection, new File(["bad"], "bad.txt")] } });
+ assert.equal(changes.length, 4);
+ assert.equal(calls.length, 0);
+
+ await component.saveArtwork(1, stamp, changes[2]);
+ assert.deepEqual(calls.slice(0, 2).map(call => call.options.body.name), ["last.webm", "first.webm"]);
+ assert.equal(calls[2].options.method, "PUT");
+ calls.length = 0;
  await component.saveArtwork(1,stamp,[{...media[0],file:new Blob([png])},media[1]]);assert.equal(calls.length,2);assert.equal(calls[0].options.method,'POST');assert.equal(calls[1].options.method,'PUT');assert.equal(JSON.parse(calls[1].options.body).media[0].path,'drafts/1/new.png');
  const source=fs.readFileSync('src/components/AdminProducts.tsx','utf8');assert.ok(!source.includes('Upload selected media'));assert.ok(source.includes('Update product'));assert.ok(!source.includes('uploadImage('));
 });
