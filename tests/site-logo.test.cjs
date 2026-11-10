@@ -1,6 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), vm = require('node:vm'), ts = require('typescript'), sharp = require('sharp');
+const oldPath = 'branding/logos/33333333-3333-4333-8333-333333333333.png';
 const revision = '11111111-1111-4111-8111-111111111111';
 function load(file, mocks) {
  const exports = {};
@@ -9,23 +10,23 @@ function load(file, mocks) {
 }
 function setup(options={}) {
  const calls=[];
- const db={from(table){let mutation=false;return {
+ const db={from(table){let mutation;return {
   select(){return this;},eq(field,value){calls.push(['filter',field,value]);return this;},
-  update(value){mutation=true;calls.push(['update',value]);return this;},
-  async single(){return {data:{logo_path:null,revision:options.stale?'22222222-2222-4222-8222-222222222222':revision},error:options.database?{message:'private detail'}:null};},
-  async maybeSingle(){return {data:options.conflict?null:{logo_path:null,revision},error:options.saveError?{message:'private detail'}:null};}
- };},storage:{async getBucket(){return {data:{public:!options.privateBucket},error:null};},from(){return {async upload(path,bytes,config){calls.push(['upload',path,bytes,config]);return {error:options.uploadError?{}:null};}};}}};
+  update(value){mutation=value;calls.push(['update',value]);return this;},
+  async single(){return {data:{logo_path:options.oldPath ?? null,revision:options.stale?'22222222-2222-4222-8222-222222222222':revision},error:options.database?{message:'private detail'}:null};},
+  async maybeSingle(){return {data:options.conflict?null:mutation,error:options.saveError?{message:'private detail'}:null};}
+ };},storage:{async getBucket(){return {data:{public:!options.privateBucket},error:null};},from(){return {async upload(path,bytes,config){calls.push(['upload',path,bytes,config]);return {error:options.uploadError?{}:null};},async remove(paths){calls.push(['remove', paths]);return {error:options.removeError?{}:null};}};}}};
  const route=load('src/app/api/admin/site-logo/route.ts',{
   '@/lib/requireAdmin':{requireAdmin:async()=>options.denied?{response:Response.json({error:'Denied'},{status:403})}:{user:{id:'admin'}}},
   '@/lib/supabaseAdmin':{supabaseAdmin:db},
   '@/lib/productMedia':load('src/lib/productMedia.ts',{'server-only':{}}),
-  '@/lib/activationHttp':{privateJson:(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}}),readActivationBody:async r=>{try{return await r.json();}catch{return null;}}}
+  '@/lib/activationHttp':{privateJson:(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}})}
  });return {route,calls};
 }
 const upload=bytes=>new Request('https://test/api/admin/site-logo?revision='+revision,{method:'POST',body:bytes});
-const restore=(body={revision})=>new Request('https://test/api/admin/site-logo',{method:'DELETE',body:JSON.stringify(body)});
-test('all logo operations require server authorization before database/storage access',async()=>{
- for(const method of ['GET','POST','DELETE']){const s=setup({denied:true});const res=await s.route[method](method==='POST'?upload('bad'):method==='DELETE'?restore():new Request('https://test'));assert.equal(res.status,403);assert.equal(s.calls.length,0);}
+test('logo reads and uploads require authorization before database or storage access',async()=>{
+ for(const method of ['GET','POST']){const s=setup({denied:true});const res=await s.route[method](method==='POST'?upload('bad'):new Request('https://test'));assert.equal(res.status,403);assert.equal(s.calls.length,0);}
+ assert.equal(setup().route.DELETE,undefined);
 });
 test('valid raster is decoded, resized, re-encoded and stored immutably before version checked update',async()=>{
  const png=await sharp({create:{width:1200,height:300,channels:4,background:{r:255,g:255,b:255,alpha:0.5}}}).png().toBuffer();
@@ -49,10 +50,21 @@ test('stale revisions and storage failures preserve current logo and redact inte
   if(['stale','database','privateBucket','uploadError'].includes(option))assert.ok(!s.calls.some(c=>c[0]==='update'));
  }
 });
-test('restoring clears only the version-checked pointer and invalid input cannot update',async()=>{
- const s=setup();assert.equal((await s.route.DELETE(restore())).status,200);assert.equal(s.calls.find(c=>c[0]==='update')[1].logo_path,null);assert.ok(!s.calls.some(c=>c[0]==='upload'));
- for(const invalid of [{revision:'bad'},{revision,extra:true},{}]){const s=setup();assert.equal((await s.route.DELETE(restore(invalid))).status,400);assert.ok(!s.calls.some(c=>c[0]==='update'));}
- assert.equal((await setup({conflict:true}).route.DELETE(restore())).status,409);
+test('logo cleanup removes only a known unused branding file',async()=>{
+ const png=await sharp({create:{width:10,height:10,channels:4,background:'white'}}).png().toBuffer();
+ const saved=setup({oldPath});
+ assert.equal((await saved.route.POST(upload(png))).status,200);
+ assert.deepEqual(saved.calls.filter(c=>['upload','update','remove'].includes(c[0])).map(c=>c[0]),['upload','update','remove']);
+ assert.equal(saved.calls.find(c=>c[0]==='remove')[1][0],oldPath);
+
+ const conflict=setup({oldPath,conflict:true});
+ assert.equal((await conflict.route.POST(upload(png))).status,409);
+ assert.equal(conflict.calls.find(c=>c[0]==='remove')[1][0],conflict.calls.find(c=>c[0]==='upload')[1]);
+
+ for(const options of [{oldPath,saveError:true},{oldPath,stale:true},{oldPath:'other/product.png'}]){
+  const s=setup(options);await s.route.POST(upload(png));assert.ok(!s.calls.some(c=>c[0]==='remove'));
+ }
+ assert.equal((await setup({oldPath,removeError:true}).route.POST(upload(png))).status,200);
 });
 test('branding migration grants public read only and uses singleton/version constraints',()=>{
  const sql=fs.readFileSync('supabase/migrations/20261008110000_site_logo.sql','utf8');

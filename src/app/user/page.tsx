@@ -553,31 +553,19 @@ export default function UserPage() {
         ================================================== */
 
         <main className="standalone-page">
-          <span className="eyebrow">
-            ACCOUNT
-          </span>
-
-          <h1>
-            {authMode ===
-            "login"
-              ? "Log in to QATools."
-              : authMode ===
-                  "signup"
-                ? "Create your QATools account."
-                : "Reset your password."}
-          </h1>
-
-          <p>
-            {authMode ===
-            "login"
-              ? "Access your purchases, downloads and license information."
-              : authMode ===
-                  "signup"
-                ? "Create one account for purchases, downloads and tool activation."
-                : "Enter your email and we will send you a password reset link."}
-          </p>
+          {authMode !== "login" && (
+            <>
+              <h1>{authMode === "signup" ? "Create your QATools account." : "Reset your password."}</h1>
+              <p>
+                {authMode === "signup"
+                  ? "Create one account for purchases, downloads and tool activation."
+                  : "Enter your email and we will send you a password reset link."}
+              </p>
+            </>
+          )}
 
           <form
+            aria-label={authMode === "login" ? "Log in" : undefined}
             onSubmit={
               handleSubmit
             }
@@ -586,7 +574,7 @@ export default function UserPage() {
                 "470px",
 
               marginTop:
-                "48px",
+                authMode === "login" ? 0 : "48px",
 
               display:
                 "grid",
@@ -853,7 +841,7 @@ export default function UserPage() {
                   cursor:
                     "pointer",
                   font:
-                    "9px monospace",
+                    "12px monospace",
                 }}
               >
                 LOG IN
@@ -879,7 +867,7 @@ export default function UserPage() {
                   cursor:
                     "pointer",
                   font:
-                    "9px monospace",
+                    "12px monospace",
                 }}
               >
                 SIGN UP
@@ -905,7 +893,7 @@ export default function UserPage() {
                   cursor:
                     "pointer",
                   font:
-                    "9px monospace",
+                    "12px monospace",
                 }}
               >
                 FORGOT PASSWORD

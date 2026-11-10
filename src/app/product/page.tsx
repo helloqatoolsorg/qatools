@@ -72,10 +72,10 @@ function formatPrice(
   const value = Number(price);
 
   if (Number.isInteger(value)) {
-    return `€${value}`;
+    return `${value}€`;
   }
 
-  return `€${value.toFixed(2)}`;
+  return `${value.toFixed(2)}€`;
 }
 
 export default function ProductPage() {

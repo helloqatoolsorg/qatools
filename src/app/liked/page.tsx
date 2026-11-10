@@ -563,129 +563,132 @@ const [
 
             {/* SORT */}
 
-            <div className="menu-wrap">
-              <button
-                className="menu-trigger"
-                type="button"
-                onClick={(
-                  event
-                ) => {
-                  event.stopPropagation();
+            <div className="sort-wrap">
+              <div className="menu-wrap">
+                <button
+                  className="menu-trigger"
+                  aria-expanded={sortMenuOpen}
+                  type="button"
+                  onClick={(
+                    event
+                  ) => {
+                    event.stopPropagation();
 
-                  toggleSortMenu();
-                }}
-              >
-                sort{" "}
-                <span>＋</span>
-              </button>
+                    toggleSortMenu();
+                  }}
+                >
+                  sort{" "}
+                  <span>＋</span>
+                </button>
 
-              <div
-                className={`dropdown sort-menu multi-sort-menu ${
-                  sortMenuOpen
-                    ? "open"
-                    : ""
-                }`}
-                onClick={(
-                  event
-                ) =>
-                  event.stopPropagation()
-                }
-              >
-                {(
-                  [
-                    "price",
-                    "complexity",
-                    "relevance",
-                    "date",
-                  ] as SortKey[]
-                ).map((key) => {
-                  const selected =
-                    activeSort
-                      ?.key === key;
+                <div
+                  className={`dropdown sort-menu multi-sort-menu ${
+                    sortMenuOpen
+                      ? "open"
+                      : ""
+                  }`}
+                  onClick={(
+                    event
+                  ) =>
+                    event.stopPropagation()
+                  }
+                >
+                  {(
+                    [
+                      "price",
+                      "complexity",
+                      "relevance",
+                      "date",
+                    ] as SortKey[]
+                  ).map((key) => {
+                    const selected =
+                      activeSort
+                        ?.key === key;
 
-                  const direction =
-                    selected
-                      ? activeSort.dir
-                      : sortDefaults[
-                          key
-                        ];
+                    const direction =
+                      selected
+                        ? activeSort.dir
+                        : sortDefaults[
+                            key
+                          ];
 
-                  return (
+                    return (
+                      <button
+                        key={key}
+                        className={`sort-option ${
+                          selected
+                            ? "selected"
+                            : ""
+                        }`}
+                        type="button"
+                        onClick={() =>
+                          selectSort(
+                            key
+                          )
+                        }
+                      >
+                        <span>
+                          {key}
+                        </span>
+
+                        <b>
+                          {direction ===
+                          "asc"
+                            ? "↑"
+                            : "↓"}
+                        </b>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="active-sort-chips">
+                {activeSort && (
+                  <div className="sort-chip-group">
                     <button
-                      key={key}
-                      className={`sort-option ${
-                        selected
-                          ? "selected"
-                          : ""
-                      }`}
+                      className="sort-chip-direction"
                       type="button"
-                      onClick={() =>
-                        selectSort(
-                          key
-                        )
-                      }
+                      title="Change sorting direction"
+                      onClick={(
+                        event
+                      ) => {
+                        event.stopPropagation();
+
+                        toggleSortDirection();
+                      }}
+                    >
+                      {activeSort.dir ===
+                      "asc"
+                        ? "↑"
+                        : "↓"}
+                    </button>
+
+                    <button
+                      className="sort-chip-name"
+                      type="button"
+                      title="Remove sorting"
+                      onClick={(
+                        event
+                      ) => {
+                        event.stopPropagation();
+
+                        setActiveSort(
+                          null
+                        );
+                      }}
                     >
                       <span>
-                        {key}
+                        {
+                          activeSort.key
+                        }
                       </span>
 
-                      <b>
-                        {direction ===
-                        "asc"
-                          ? "↑"
-                          : "↓"}
-                      </b>
+                      <b>×</b>
                     </button>
-                  );
-                })}
+                  </div>
+                )}
               </div>
-            </div>
-
-            <div className="active-sort-chips">
-              {activeSort && (
-                <div className="sort-chip-group">
-                  <button
-                    className="sort-chip-direction"
-                    type="button"
-                    title="Change sorting direction"
-                    onClick={(
-                      event
-                    ) => {
-                      event.stopPropagation();
-
-                      toggleSortDirection();
-                    }}
-                  >
-                    {activeSort.dir ===
-                    "asc"
-                      ? "↑"
-                      : "↓"}
-                  </button>
-
-                  <button
-                    className="sort-chip-name"
-                    type="button"
-                    title="Remove sorting"
-                    onClick={(
-                      event
-                    ) => {
-                      event.stopPropagation();
-
-                      setActiveSort(
-                        null
-                      );
-                    }}
-                  >
-                    <span>
-                      {
-                        activeSort.key
-                      }
-                    </span>
-
-                    <b>×</b>
-                  </button>
-                </div>
-              )}
             </div>
 
             {/* FILTER */}
@@ -699,6 +702,7 @@ const [
               >
                 <button
                   className="menu-trigger"
+                  aria-expanded={filterMenuOpen}
                   type="button"
                   onClick={(
                     event

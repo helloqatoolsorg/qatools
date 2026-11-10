@@ -24,8 +24,11 @@ export function recoveryMetadata(raw:string|null):DraftRecovery|null {
     return {...value,mainFile:null,galleryFiles:[],toolFile:null};
   } catch{return null;}
 }
+export function readDraftRecoveryMetadata(userId:string):DraftRecovery|null {
+  return recoveryMetadata(localStorage.getItem(prefix+userId));
+}
 export async function readDraftRecovery(userId:string):Promise<DraftRecovery|null>{
-  const meta=recoveryMetadata(localStorage.getItem(prefix+userId));if(!meta)return null;
+  const meta=readDraftRecoveryMetadata(userId);if(!meta)return null;
   let files; try {files=await fileStore<{revision:string;mainFile:File|null;galleryFiles:File[];toolFile:File|null;editedMedia?:RecoveryMedia[]|null}|undefined>("readonly",s=>s.get(userId));} catch {return {...meta,recoveryWarning:"Draft text recovered. Browser file storage is unavailable; reselect any pending files."};}
   if(files?.revision===meta.fileRevision)return {...meta,mainFile:files.mainFile,galleryFiles:files.galleryFiles,toolFile:files.toolFile,editedMedia:files.editedMedia};
   if(files || (meta as DraftRecovery & {hasFiles?:boolean}).hasFiles) return {...meta,recoveryWarning:"Draft text recovered, but the latest file selections were not saved. Reselect those files."};

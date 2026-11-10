@@ -24,7 +24,7 @@
 .product-page .product-heading > div:first-child { min-width: 0; }
 .product-page .product-heading h1 { font-size: clamp(28px, 2.6vw, 40px); line-height: 1.15; letter-spacing: -.045em; overflow-wrap: anywhere; }
 .product-page .tool-state-icons { flex-shrink: 0; padding-top: 4px; }
-.product-page .subtitle { margin-top: 6px; line-height: 1.6; }
+.product-page .subtitle { margin-top: 6px; font-size: 13.2px; line-height: 1.6; }
 .product-page .description { margin: 24px 0 22px; line-height: 1.75; }
 .product-page .product-meta { gap: 8px; }
 .product-page .product-included-tools { margin-top: 20px; }

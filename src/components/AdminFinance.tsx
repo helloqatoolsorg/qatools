@@ -48,22 +48,21 @@ export default function AdminFinance() {
   const weekly = ["6months", "year"].includes(period);
   const max = Math.max(1, ...(summary?.points.map(point => Math.abs(point[metric])) ?? []));
   return <section className="admin-finance" aria-labelledby="finance-heading">
-    <div className="finance-heading"><div><span className="finance-kicker">SALES REPORT</span><h2 id="finance-heading">Finance</h2></div>
+    <div className="finance-heading"><h2 id="finance-heading">Finance</h2>
       <div className="finance-controls">
         <label>Environment <select value={environment} onChange={event => setEnvironment(event.target.value)}><option value="sandbox">Sandbox</option><option value="live">Live</option></select></label>
         <label>Period <select value={period} onChange={event => setPeriod(event.target.value)}>{periods.map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <button type="button" disabled={loading} onClick={() => setRefresh(value => value+1)}>REFRESH FINANCE</button>
+        <button type="button" disabled={loading} onClick={() => setRefresh(value => value+1)}>Refresh</button>
       </div>
     </div>
-    {environment === "sandbox" && <p className="finance-notice">Sandbox test transactions. These amounts are not real revenue.</p>}
-    <p className="finance-description">Customer payments include tax where charged. Refunds reflect recorded full-order or full-item refunds. Remaining payments are after those refunds, before tax, fees and payouts.</p>
+    {environment === "sandbox" && <p className="finance-notice">Sandbox data only.</p>}
     {loading ? <p role="status">Loading finance…</p> : error ? <p role="alert" className="finance-error">{error}</p> : !summary ? <p>No completed {environment} orders recorded.</p> : <>
       {report && report.currencies.length > 1 && <label className="finance-currency">Currency <select value={summary.currency} onChange={event => setCurrency(event.target.value)}>{report.currencies.map(value => <option key={value.currency}>{value.currency}</option>)}</select></label>}
-      <div className="finance-stats">{[["All-time customer payments",summary.payments],["Recorded refunds",summary.refunds],["Remaining payments",summary.remaining],["Last 30 days · remaining",summary.last30DaysRemaining]].map(([label,value]) => <div className="finance-stat" key={String(label)}><span>{label}</span><strong>{money(Number(value),summary.currency)}</strong></div>)}</div>
+      <div className="finance-stats">{[["All-time payments",summary.payments],["All-time refunds",summary.refunds],["All-time after refunds",summary.remaining],["Last 30 days after refunds",summary.last30DaysRemaining]].map(([label,value]) => <div className="finance-stat" key={String(label)}><span>{label}</span><strong>{money(Number(value),summary.currency)}</strong></div>)}</div>
       <p>{summary.orders} completed orders · {summary.refundedOrders} orders with recorded refunds · {summary.periodOrders} orders in selected period</p>
-      {summary.reviewOrders>0 && <p role="status" className="finance-notice">{summary.reviewOrders} orders have inconsistent refund records. Totals require reconciliation in Payment review.</p>}
+      {summary.reviewOrders>0 && <p role="status" className="finance-notice">{summary.reviewOrders} orders need reconciliation in Payment review.</p>}
       <div className="finance-chart-heading"><h3>Payments by purchase date</h3><label>Show <select value={metric} onChange={event => setMetric(event.target.value as typeof metric)}><option value="remaining">Remaining payments</option><option value="payments">Customer payments</option><option value="refunds">Recorded refunds</option></select></label></div>
-      <p className="finance-description">UTC · {report?.startDate} to {report?.endDate}. Refunds update the original purchase period; this is not a refund-date cash-flow chart. Rolling periods include today. {weekly ? "Each column covers seven days from the start of the period; the final week may be shorter." : "Each column covers one day."}</p>
+      <p className="finance-description">UTC · {weekly ? "Weekly" : "Daily"} · Refunds are grouped by purchase date.</p>
       <div className="finance-chart-panel"><div className="finance-chart" role="group" aria-label={`${metric === "remaining" ? "Remaining payments" : metric === "refunds" ? "Recorded refunds" : "Customer payments"} in ${summary.currency}, by ${weekly ? "week" : "day"}. Hover or focus a column for its value. Exact amounts are listed below.`}>
         {summary.points.map((point,index) => {
           const label = `${date(point.date)}${weekly ? ` – ${date(point.endDate)}` : ""}: ${money(point[metric],summary.currency)}`;
@@ -75,8 +74,6 @@ export default function AdminFinance() {
       </div><div className="finance-chart-axis" aria-hidden="true">{[...new Set([0, Math.floor((summary.points.length-1)/2), summary.points.length-1])].map(index => <span key={index}>{date(summary.points[index].date)}</span>)}</div></div>
       <div className="finance-period-summary">Selected period: {money(summary.periodPayments,summary.currency)} payments · {money(summary.periodRefunds,summary.currency)} refunds · {money(summary.periodRemaining,summary.currency)} remaining</div>
       <details className="finance-table"><summary>Show exact amounts</summary><div><table><thead><tr><th>{weekly ? "Week" : "Day"} (UTC)</th><th>Orders</th><th>Payments</th><th>Refunds</th><th>Remaining</th></tr></thead><tbody>{summary.points.map(point => <tr key={point.date}><td>{date(point.date)}{weekly ? ` – ${date(point.endDate)}` : ""}</td><td>{point.orders}</td><td>{money(point.payments,summary.currency)}</td><td>{money(point.refunds,summary.currency)}</td><td>{money(point.remaining,summary.currency)}</td></tr>)}</tbody></table></div></details>
-      <p className="finance-description">Based on stored completed orders, including refunded orders. Pending/cancelled orders and free acquisitions are excluded. Unsupported partial monetary refunds and disputes may require Paddle reconciliation. Currency totals are never converted or combined. Live figures do not establish live checkout readiness.</p>
-      {report && <p className="finance-description">Updated {new Date(report.generatedAt).toLocaleString("en-GB", { timeZone: "UTC" })} UTC</p>}
     </>}
   </section>;
 }

@@ -63,7 +63,7 @@ body .compact-nav-menu {border-radius:var(--radius-surface);transition:opacity 2
   body :is(.icon-nav .icon-link,.icon-nav button,.search-toggle):hover {translate:0 -1px;scale:1.05;}
   body :is(.heart,.hero-heart):hover {rotate:-3deg;scale:1.07;}
   body :is(.sort-menu button,.filter-option,.compact-nav-menu a):hover {translate:2px 0;}
-  body :is(.admin-new-product,.user-nav):hover {box-shadow:inset 2px 0 0 #777;}
+  body .admin-new-product:hover {box-shadow:inset 2px 0 0 #777;}
   body .admin-new-product:hover {translate:0 -2px;}
 }
 body :is(button:not(:disabled),summary,.icon-link,.user-nav,.admin-card-action,.check-cart-button):active {
@@ -73,7 +73,6 @@ body :is(.card-add-cart,.buy-button,.account-cart-action,.admin-card-action,.use
 body .admin-main-artwork:active {scale:.995;}
 body :is(button:disabled,[aria-disabled="true"]) {scale:1;translate:0 0;rotate:0deg;filter:none;}
 body :is(.filter-option.selected,.sort-option.selected,[aria-pressed="true"]):not(:disabled) {animation:qatools-choice 340ms var(--motion-ease);}
-body .user-nav.active {box-shadow:inset 2px 0 0 #999;}
 body :is(input,select,textarea):focus-visible {box-shadow:0 0 0 3px #ffffff0d;}
 body label {transition:color 230ms ease;}
 body label:focus-within {color:#e3e3df;}
@@ -91,9 +90,6 @@ body :is(.admin-gallery-replace,.admin-new-product,.compact-nav-menu a,.sort-men
 }
 @keyframes qatools-choice {0%{scale:.97;}55%{scale:1.025;}100%{scale:1;}}
 @keyframes qatools-menu-item {from{opacity:.4;translate:-3px 0;}to{opacity:1;translate:0 0;}}
-/* Preserve the right shelf column after removing its middle count. */
-body .toolbar>.toolbar-left {grid-column:1;}
-body .toolbar>.toolbar-right {grid-column:3;}
 /* Shared logo: contain the taller symbol within the existing top shelf. */
 body .brand img {height:54px!important;width:auto;max-width:145px;object-fit:contain;filter:none;}
 /* Share cart feedback across product cards, tool pages, and the account dashboard. */
@@ -140,16 +136,6 @@ body .account-license-key button:hover {background:#333;color:#fff;}
 body .account-license-key button:disabled {opacity:.5;cursor:default;}
 body .license-key-actions {display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;}
 body .user-page .status-ok {color:#79c98e;}
-
-body .admin-site-logo {padding:22px;margin-bottom:24px;background:#141414;border:1px solid #303030;border-radius:var(--radius-surface);max-width:650px;}
-body .admin-site-logo h2 {margin:0 0 10px;font:18px monospace;color:#ddd;}
-body .admin-logo-preview {display:flex;align-items:center;justify-content:center;min-height:105px;margin:16px 0;background:#0b0b0b;border:1px solid #292929;border-radius:var(--radius-surface);}
-body .admin-logo-preview img {width:145px;height:54px;object-fit:contain;}
-body .admin-logo-upload {display:flex;flex-wrap:wrap;align-items:center;gap:12px;color:#ccc;font:12px monospace;}
-body .admin-logo-upload input {max-width:100%;min-width:0;}
-body .admin-logo-actions {display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
-body .admin-site-logo button,body .admin-logo-upload input::file-selector-button {padding:10px 14px;border:1px solid #444;background:#242424;color:#ddd;font:11px monospace;cursor:pointer;}
-body .admin-site-logo button:disabled {opacity:.45;cursor:default;}
 
 /* Account state follows shared authentication across every header. */
 body .outline-icon.account-signed-in {color:#79c98e;}

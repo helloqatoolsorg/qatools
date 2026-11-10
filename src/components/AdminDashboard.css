@@ -1,0 +1,79 @@
+.admin-dashboard-actions {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.admin-dashboard-actions .admin-product-entry-actions {
+  margin: 0;
+}
+
+.admin-site-logo {
+  width: min(100%, 252px);
+  padding: 12px;
+  background: #141414;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-surface);
+}
+
+.admin-logo-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-logo-preview {
+  display: grid;
+  place-items: center;
+  width: 108px;
+  height: 54px;
+  padding: 6px;
+  min-width: 0;
+  background: #0b0b0b;
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.admin-logo-preview img {
+  max-width: 100%;
+  height: 40px;
+  object-fit: contain;
+}
+
+.admin-logo-update {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  border: 1px solid #444;
+  background: #242424;
+  color: #ddd;
+  font: 11px monospace;
+  cursor: pointer;
+}
+
+.admin-logo-controls button:not(:disabled):hover {
+  border-color: #666;
+}
+
+.admin-logo-controls button:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+.admin-dashboard-error {
+  font: 11px monospace;
+  color: #e86565;
+}
+
+.admin-count-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 16px;
+  margin: 20px 0;
+  font: 11px monospace;
+}
+
+.admin-paid-activations strong {
+  color: #79c98e;
+}

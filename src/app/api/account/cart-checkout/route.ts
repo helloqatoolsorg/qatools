@@ -6,6 +6,7 @@ import { paddleCheckoutDatabase } from "@/lib/paddleCheckoutDatabase";
 import { cartMappings, validateCartPrice } from "@/lib/paddleCartCatalog";
 import { paddleEnvironment, paddleCheckoutEnabled, paddleCheckoutConfig } from "@/lib/paddleEnvironment";
 import { paddleScope } from "@/lib/paddleScope";
+import { readPaddleCheckoutBilling } from "@/lib/paddleCheckoutBilling";
 import { createCartTransaction, fetchPayableCart } from "@/lib/paddleCartTransaction";
 export async function GET(request: Request) {
   try {
@@ -46,7 +47,8 @@ export async function POST(request: Request) {
       transactionId = await fetchPayableCart(intent.transaction_id, intent.id, intent.snapshot, environment);
     } else {
       try {
-        transactionId = await createCartTransaction(intent.id, intent.snapshot, environment);
+        const billing = await readPaddleCheckoutBilling(auth.user, environment);
+        transactionId = await createCartTransaction(intent.id, intent.snapshot, environment, billing);
         const saved = await paddleCheckoutDatabase.rpc(scope.finish, { p_user_id: auth.user.id, p_intent_id: intent.id, p_transaction_id: transactionId });
         if (saved.error || !saved.data) throw new Error("Checkout binding failed.");
         await fetchPayableCart(transactionId, intent.id, intent.snapshot, environment);

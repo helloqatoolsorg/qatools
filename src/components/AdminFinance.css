@@ -1,8 +1,7 @@
 .admin-finance { margin-top:48px; color:#aaa; font:11px monospace; line-height:1.6; }
 .finance-heading,.finance-chart-heading { display:flex; justify-content:space-between; align-items:flex-end; gap:20px; flex-wrap:wrap; }
 .finance-heading { border-bottom:1px solid #242424; padding-bottom:18px; }
-.finance-kicker { color:#666; font:8px monospace; letter-spacing:.08em; }
-.admin-finance h2 { font:400 18px sans-serif; margin:8px 0 0; }
+.admin-finance h2 { font:400 18px sans-serif; margin:0; }
 .admin-finance h3 { font-size:12px; font-weight:400; margin:0; }
 .finance-controls { display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
 .admin-finance select,.admin-finance button { border:1px solid #333; background:#101010; color:#aaa; padding:9px 12px; font:10px monospace; }

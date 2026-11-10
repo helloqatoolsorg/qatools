@@ -11,8 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import AdminProducts from "@/components/AdminProducts";
 import PublicationState from "@/components/PublicationState";
-import AdminSiteLogo from "@/components/AdminSiteLogo";
-import AdminDownloadCounts from "@/components/AdminDownloadCounts";
+import AdminDashboard from "@/components/AdminDashboard";
 import AdminOrders from "@/components/AdminOrders";
 import AdminFinance from "@/components/AdminFinance";
 import AdminPaymentReview from "@/components/AdminPaymentReview";
@@ -319,6 +318,8 @@ export default function AdminPage() {
       return;
     }
 
+    if (!["customers", "downloads", "prices"].includes(adminSection)) return;
+
     let cancelled =
       false;
 
@@ -435,6 +436,7 @@ export default function AdminPage() {
   }, [
     user,
     adminState,
+    adminSection,
     refreshCounter,
   ]);
 
@@ -682,20 +684,6 @@ export default function AdminPage() {
     }
   }
 
-  const entitlementCount =
-    customers.reduce(
-      (
-        total,
-        customer
-      ) =>
-        total +
-        customer.entitlements.length,
-      0
-    );
-
-  const activeActivationCount = customers.reduce((total, customer) =>
-    total + customer.account_activations.filter(a => a.status === "active").length, 0);
-
   return (
     <div className="content-page">
       <AdminHeader />
@@ -917,318 +905,7 @@ export default function AdminPage() {
                 "38px",
             }}
           >
-            <div hidden={adminSection !== "dashboard"}>
-            <AdminSiteLogo key={`site-logo-${user.id}`} />
-            <AdminDownloadCounts key={`download-counts-${user.id}`} />
-            <div
-              style={{
-                display:
-                  "grid",
-
-                gridTemplateColumns:
-                  "repeat(auto-fit, minmax(220px, 1fr))",
-
-                gap:
-                  "14px",
-              }}
-            >
-              <div
-                style={{
-                  minHeight:
-                    "150px",
-
-                  border:
-                    "1px solid #242424",
-
-                  padding:
-                    "20px",
-                }}
-              >
-                <span
-                  style={{
-                    color:
-                      "#555",
-
-                    font:
-                      "8px monospace",
-
-                    letterSpacing:
-                      ".08em",
-                  }}
-                >
-                  CUSTOMERS
-                </span>
-
-                <h2
-                  style={{
-                    margin:
-                      "18px 0 8px",
-
-                    fontSize:
-                      "16px",
-
-                    fontWeight:
-                      400,
-                  }}
-                >
-                  Customer Accounts
-                </h2>
-
-                <p
-                  style={{
-                    margin:
-                      "0",
-
-                    color:
-                      "#999",
-
-                    font:
-                      "24px monospace",
-                  }}
-                >
-                  {customersLoading
-                    ? "—"
-                    : customers.length}
-                </p>
-
-                <p
-                  style={{
-                    marginTop:
-                      "8px",
-
-                    color:
-                      "#666",
-
-                    font:
-                      "9px monospace",
-
-                    lineHeight:
-                      1.6,
-                  }}
-                >
-                  Real Supabase Auth
-                  accounts.
-                </p>
-              </div>
-
-              <div
-                style={{
-                  minHeight:
-                    "150px",
-
-                  border:
-                    "1px solid #242424",
-
-                  padding:
-                    "20px",
-                }}
-              >
-                <span
-                  style={{
-                    color:
-                      "#555",
-
-                    font:
-                      "8px monospace",
-
-                    letterSpacing:
-                      ".08em",
-                  }}
-                >
-                  OWNERSHIP
-                </span>
-
-                <h2
-                  style={{
-                    margin:
-                      "18px 0 8px",
-
-                    fontSize:
-                      "16px",
-
-                    fontWeight:
-                      400,
-                  }}
-                >
-                  Entitlements
-                </h2>
-
-                <p
-                  style={{
-                    margin:
-                      "0",
-
-                    color:
-                      "#999",
-
-                    font:
-                      "24px monospace",
-                  }}
-                >
-                  {customersLoading
-                    ? "—"
-                    : entitlementCount}
-                </p>
-
-                <p
-                  style={{
-                    marginTop:
-                      "8px",
-
-                    color:
-                      "#666",
-
-                    font:
-                      "9px monospace",
-
-                    lineHeight:
-                      1.6,
-                  }}
-                >
-                  Current product
-                  ownership records.
-                </p>
-              </div>
-
-              <div
-                style={{
-                  minHeight:
-                    "150px",
-
-                  border:
-                    "1px solid #242424",
-
-                  padding:
-                    "20px",
-                }}
-              >
-                <span
-                  style={{
-                    color:
-                      "#555",
-
-                    font:
-                      "8px monospace",
-
-                    letterSpacing:
-                      ".08em",
-                  }}
-                >
-                  LICENSING
-                </span>
-
-                <h2
-                  style={{
-                    margin:
-                      "18px 0 8px",
-
-                    fontSize:
-                      "16px",
-
-                    fontWeight:
-                      400,
-                  }}
-                >
-                  Activations
-                </h2>
-
-                <p
-                  style={{
-                    margin:
-                      "0",
-
-                    color:
-                      "#999",
-
-                    font:
-                      "24px monospace",
-                  }}
-                >
-                  {customersLoading
-                    ? "—"
-                    : activeActivationCount}
-                </p>
-
-                <p
-                  style={{
-                    marginTop:
-                      "8px",
-
-                    color:
-                      "#666",
-
-                    font:
-                      "9px monospace",
-
-                    lineHeight:
-                      1.6,
-                  }}
-                >
-                  Active machine
-                  activations.
-                </p>
-              </div>
-
-              <div
-                style={{
-                  minHeight:
-                    "150px",
-
-                  border:
-                    "1px solid #242424",
-
-                  padding:
-                    "20px",
-                }}
-              >
-                <span
-                  style={{
-                    color:
-                      "#555",
-
-                    font:
-                      "8px monospace",
-
-                    letterSpacing:
-                      ".08em",
-                  }}
-                >
-                  SALES
-                </span>
-
-                <h2
-                  style={{
-                    margin:
-                      "18px 0 8px",
-
-                    fontSize:
-                      "16px",
-
-                    fontWeight:
-                      400,
-                  }}
-                >
-                  Orders
-                </h2>
-
-                <p
-                  style={{
-                    color:
-                      "#666",
-
-                    font:
-                      "9px monospace",
-
-                    lineHeight:
-                      1.6,
-                  }}
-                >
-                  Review order history in the Orders section.
-                </p>
-              </div>
-            </div>
-
-            </div>
+            {adminSection === "dashboard" && <AdminDashboard key={user.id} userId={user.id} />}
             {adminSection === "products" && <AdminProducts key={`products-${user.id}`} />}
             {adminSection === "orders" && <AdminOrders key={`orders-${user.id}`} />}
             {adminSection === "finance" && <AdminFinance key={`finance-${user.id}`} />}
@@ -1291,7 +968,7 @@ export default function AdminPage() {
                         400,
                     }}
                   >
-                    Customer Accounts
+                    Customers
                   </h2>
                 </div>
 
@@ -1376,7 +1053,7 @@ export default function AdminPage() {
                   <div
                     style={{
                       minWidth:
-                        "850px",
+                        "680px",
                     }}
                   >
                     <div
@@ -1385,7 +1062,7 @@ export default function AdminPage() {
                           "grid",
 
                         gridTemplateColumns:
-                          "minmax(190px, 1.5fr) minmax(110px, 1fr) 100px 100px 110px 30px",
+                          "minmax(190px, 1fr) 100px 100px 110px 30px",
 
                         gap:
                           "16px",
@@ -1408,10 +1085,6 @@ export default function AdminPage() {
                     >
                       <span>
                         ACCOUNT
-                      </span>
-
-                      <span>
-                        NAME
                       </span>
 
                       <span>
@@ -1499,7 +1172,7 @@ export default function AdminPage() {
                                   "grid",
 
                                 gridTemplateColumns:
-                                  "minmax(190px, 1.5fr) minmax(110px, 1fr) 100px 100px 110px 30px",
+                                  "minmax(190px, 1fr) 100px 100px 110px 30px",
 
                                 gap:
                                   "16px",
@@ -1546,11 +1219,6 @@ export default function AdminPage() {
                                 {customer.email ??
                                   customer.id}
                               </strong>
-
-                              <span>
-                                {customer.name ??
-                                  "—"}
-                              </span>
 
                               <span
                                 style={{

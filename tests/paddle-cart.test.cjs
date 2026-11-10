@@ -2,6 +2,8 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const {createRequire}=require('node:module');const repo=process.env.QATOOLS_TEST_REPO||process.cwd(),stage=process.env.QATOOLS_CART_STAGE||repo,ts=createRequire(path.join(repo,'package.json'))('typescript');
 const user='00000000-0000-4000-8000-000000000001',intent='00000000-0000-4000-8000-000000000002',txn='txn_'+'a'.repeat(26),pri='pri_01m41bkp4f0fxgb9cfm37n5p4b',pro='pro_01m41bf7cprd18e5aebzyp1rzw';
 const items=[{productId:1,slug:'qafit01',priceId:pri,paddleProductId:pro,amount:500},{productId:2,slug:'synthetic-tool',priceId:'pri_'+'b'.repeat(26),paddleProductId:'pro_'+'b'.repeat(26),amount:700}];
+const billingEmail='buyer@example.invalid',oldTxn='txn_'+'z'.repeat(26);
+const billingIds={customer_id:'ctm_'+'a'.repeat(26),address_id:'add_'+'b'.repeat(26),business_id:'biz_'+'c'.repeat(26)};
 const mapping=items.map(i=>({product_id:i.productId,price_id:i.priceId,paddle_product_id:i.paddleProductId,enabled:true}));
 function transaction(paid=false,environment="sandbox"){return {id:txn,status:paid?'completed':'ready',collection_mode:'automatic',currency_code:'EUR',subscription_id:null,discount_id:null,custom_data:{qatools_checkout_id:intent,qatools_environment:environment,qatools_checkout_version:'cart-v1'},items:items.map(i=>({quantity:1,price:{id:i.priceId,product_id:i.paddleProductId,billing_cycle:null,trial_period:null,tax_mode:'internal',unit_price:{amount:String(i.amount),currency_code:'EUR'}}})),details:{totals:{subtotal:'1000',tax:'200',total:'1200',grand_total:'1200',currency_code:'EUR',discount:'0',credit:'0',credit_to_balance:'0',balance:paid?'0':'1200'},line_items:items.map((i,n)=>({id:'txnitm_'+String(n+1).padStart(26,'0'),price_id:i.priceId,quantity:1,product:{id:i.paddleProductId},totals:{total:String(i.amount),discount:'0'}}))}};}
 function fixture(n=1){return {event_id:'evt_'+String(n).padStart(26,'0'),event_type:'transaction.completed',occurred_at:'2026-10-04T18:00:00Z',data:transaction(true)};}
@@ -14,9 +16,24 @@ function removeBusinessTax(t){
 }
 function setup(opts={}){
  const calls=[],network=[],cache=new Map();
- const db={from(table){calls.push({table});const filters={};const q={select(columns){calls.push({columns});return q;},eq(k,v){filters[k]=v;calls.push({k,v});return q;},async in(k,ids){return {data:items.filter(i=>ids.includes(i.productId)).map(i=>({id:i.productId,slug:i.slug,price_eur:i.amount/100,published:true})),error:opts.dbError?{}:null};},async maybeSingle(){return {data:table==='admin_users'?(opts.nonAdmin?null:{user_id:user}):{id:1,slug:'qafit01',price_eur:5,published:true},error:opts.membershipError?{}:null};},then(resolve,reject){return Promise.resolve({data:opts.unmapped?[]:mapping,error:opts.dbError?{}:null}).then(resolve,reject);}};return q;},async rpc(name,args){calls.push({name,args});if(opts.rpcError)return {data:null,error:{}};if(['reserve_sandbox_cart','reserve_live_cart'].includes(name))return {data:opts.reservation??{ok:true,created:true,intent:{id:intent,status:'creating',snapshot:items,version:'cart-v1'}},error:null};return {data:['finish_sandbox_checkout','finish_live_checkout'].includes(name)? !opts.bindError:{ok:!opts.casError},error:null};}};
+ const db={from(table){calls.push({table});const filters={};const q={select(columns){calls.push({columns});return q;},eq(k,v){filters[k]=v;calls.push({k,v});return q;},async in(k,ids){return {data:items.filter(i=>ids.includes(i.productId)).map(i=>({id:i.productId,slug:i.slug,price_eur:i.amount/100,published:true})),error:opts.dbError?{}:null};},order(k,v){calls.push({k,v});return q;},limit(v){calls.push({limit:v});return q;},abortSignal(){return q;},async maybeSingle(){
+ if(table==='orders'){
+  const previous=opts.previous;
+  const matches=previous && Object.entries(filters).every(([field,value])=>previous[field]===value);
+  return {data:matches?{provider_transaction_id:previous.provider_transaction_id}:null,error:opts.historyError?{}:null};
+ }
+ return {data:table==='admin_users'?(opts.nonAdmin?null:{user_id:user}):{id:1,slug:'qafit01',price_eur:5,published:true},error:opts.membershipError?{}:null};},then(resolve,reject){return Promise.resolve({data:opts.unmapped?[]:mapping,error:opts.dbError?{}:null}).then(resolve,reject);}};return q;},async rpc(name,args){calls.push({name,args});if(opts.rpcError)return {data:null,error:{}};if(['reserve_sandbox_cart','reserve_live_cart'].includes(name))return {data:opts.reservation??{ok:true,created:true,intent:{id:intent,status:'creating',snapshot:items,version:'cart-v1'}},error:null};return {data:['finish_sandbox_checkout','finish_live_checkout'].includes(name)? !opts.bindError:{ok:!opts.casError},error:null};}};
  function load(file){if(cache.has(file))return cache.get(file);const mod={exports:{}};const target=fs.existsSync(path.join(stage,file))?path.join(stage,file):path.join(repo,file);
-  vm.runInNewContext(ts.transpileModule(fs.readFileSync(target,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:mod.exports,URL,Date,AbortSignal,Buffer,process:{env:{ PADDLE_ENVIRONMENT: opts.environment ?? 'sandbox', PADDLE_API_KEY:'pdl_sdbx_apikey_synthetic',NEXT_PUBLIC_PADDLE_CLIENT_TOKEN:'test_synthetic',PADDLE_WEBHOOK_SECRET:'synthetic-secret',PADDLE_LIVE_API_KEY:'pdl_live_apikey_synthetic',PADDLE_LIVE_CLIENT_TOKEN:'live_synthetic',PADDLE_LIVE_WEBHOOK_SECRET:'live-synthetic-secret',PADDLE_LIVE_CHECKOUT_ENABLED:opts.disabled?'false':'true',PADDLE_SANDBOX_CHECKOUT_ENABLED:opts.disabled?'':'true',NEXT_PUBLIC_SUPABASE_URL:'https://example.invalid',NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'synthetic'}},fetch:async(url,config)=>{network.push({url,config});if(opts.providerError)throw Error('private transport');if(url.includes('/prices/')){const i=items.find(i=>url.includes(i.priceId));return {ok:!opts.httpError,json:async()=>({data:{id:i.priceId,product_id:i.paddleProductId,status:'active',type:'standard',billing_cycle:null,trial_period:null,tax_mode:opts.taxMismatch?'external':'internal',unit_price:{amount:String(i.amount),currency_code:'EUR'},quantity:{minimum:1,maximum:1},unit_price_overrides:[],product:{id:i.paddleProductId,name:i.slug,status:'active',tax_category:'standard'}}})};}return {ok:!opts.httpError,json:async()=>({data:opts.vatAdjusted?removeBusinessTax(transaction(false,opts.environment)):transaction(false,opts.environment)})};},require(name){if(name==='server-only')return {};if(name==='next/server')return {NextResponse:{json:Response.json}};if(name==='@/lib/supabaseAdmin')return {supabaseAdmin:db};if(name==='@/lib/paddleCartDatabase')return {paddleCartDatabase:db};if(name==='@/lib/paddleCheckoutDatabase')return {paddleCheckoutDatabase:db};if(name==='./paddleCartDatabase')return {paddleCartDatabase:db};if(name==='@/lib/paddleSandbox'||name==='./paddleSandbox')return {paddleSandboxConfig:()=>({clientToken:'test_synthetic'}),paddleSandboxApiConfig:()=>({apiBase:'https://sandbox-api.paddle.com',apiKey:'synthetic-private'})};if(name==='@supabase/supabase-js')return {createClient:()=>({auth:{getUser:async()=>({data:{user:opts.invalidToken?null:{id:user,email_confirmed_at:opts.unconfirmed?null:'confirmed'}},error:null})}})};if(name.startsWith('@/lib/'))return load('src/lib/'+name.slice(6)+'.ts');if(name.startsWith('./'))return load('src/lib/'+name.slice(2)+'.ts');throw Error(name);}});cache.set(file,mod.exports);return mod.exports;}
+  vm.runInNewContext(ts.transpileModule(fs.readFileSync(target,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:mod.exports,URL,Date,AbortSignal,Buffer,process:{env:{ PADDLE_ENVIRONMENT: opts.environment ?? 'sandbox', PADDLE_API_KEY:'pdl_sdbx_apikey_synthetic',NEXT_PUBLIC_PADDLE_CLIENT_TOKEN:'test_synthetic',PADDLE_WEBHOOK_SECRET:'synthetic-secret',PADDLE_LIVE_API_KEY:'pdl_live_apikey_synthetic',PADDLE_LIVE_CLIENT_TOKEN:'live_synthetic',PADDLE_LIVE_WEBHOOK_SECRET:'live-synthetic-secret',PADDLE_LIVE_CHECKOUT_ENABLED:opts.disabled?'false':'true',PADDLE_SANDBOX_CHECKOUT_ENABLED:opts.disabled?'':'true',NEXT_PUBLIC_SUPABASE_URL:'https://example.invalid',NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'synthetic'}},fetch:async(url,config)=>{network.push({url,config});if(opts.providerError)throw Error('private transport');if(url.includes('/prices/')){const i=items.find(i=>url.includes(i.priceId));return {ok:!opts.httpError,json:async()=>({data:{id:i.priceId,product_id:i.paddleProductId,status:'active',type:'standard',billing_cycle:null,trial_period:null,tax_mode:opts.taxMismatch?'external':'internal',unit_price:{amount:String(i.amount),currency_code:'EUR'},quantity:{minimum:1,maximum:1},unit_price_overrides:[],product:{id:i.paddleProductId,name:i.slug,status:'active',tax_category:'standard'}}})};}if(url.endsWith('/transactions/'+oldTxn))return {ok:!opts.historyUnavailable,json:async()=>({data:{id:oldTxn,status:'completed',collection_mode:'automatic',...billingIds,...opts.previousTransaction}})};
+ if(url.endsWith('/customers/'+billingIds.customer_id))return {ok:!opts.customerUnavailable,json:async()=>({data:{id:billingIds.customer_id,status:'active',email:billingEmail,...opts.customer}})};
+ if(url.endsWith('/addresses/'+billingIds.address_id))return {ok:true,json:async()=>({data:{id:billingIds.address_id,customer_id:billingIds.customer_id,status:'active',...opts.address}})};
+ if(url.endsWith('/businesses/'+billingIds.business_id))return {ok:true,json:async()=>({data:{id:billingIds.business_id,customer_id:billingIds.customer_id,status:'active',...opts.business}})};
+ const data=opts.vatAdjusted?removeBusinessTax(transaction(false,opts.environment)):transaction(false,opts.environment);
+ if(config.method==='POST'){
+  const submitted=JSON.parse(config.body);
+  for(const field of Object.keys(billingIds))if(submitted[field]&&!opts.dropBilling) data[field]=submitted[field];
+ }
+ return {ok:!opts.httpError,json:async()=>({data})};},require(name){if(name==='server-only')return {};if(name==='next/server')return {NextResponse:{json:Response.json}};if(name==='@/lib/supabaseAdmin'||name==='./supabaseAdmin')return {supabaseAdmin:db};if(name==='@/lib/paddleCartDatabase')return {paddleCartDatabase:db};if(name==='@/lib/paddleCheckoutDatabase')return {paddleCheckoutDatabase:db};if(name==='./paddleCartDatabase')return {paddleCartDatabase:db};if(name==='@/lib/paddleSandbox'||name==='./paddleSandbox')return {paddleSandboxConfig:()=>({clientToken:'test_synthetic'}),paddleSandboxApiConfig:()=>({apiBase:'https://sandbox-api.paddle.com',apiKey:'synthetic-private'})};if(name==='@supabase/supabase-js')return {createClient:()=>({auth:{getUser:async()=>({data:{user:opts.invalidToken?null:{id:user,email:billingEmail,email_confirmed_at:opts.unconfirmed?null:'confirmed'}},error:null})}})};if(name.startsWith('@/lib/'))return load('src/lib/'+name.slice(6)+'.ts');if(name.startsWith('./'))return load('src/lib/'+name.slice(2)+'.ts');throw Error(name);}});cache.set(file,mod.exports);return mod.exports;}
  function request(body){return new Request('http://localhost/api/test',{method:'POST',headers:opts.noToken?{}:{Authorization:'Bearer synthetic'},body:JSON.stringify(body)});}
  return {load,calls,network,post(body={productIds:[1,2]}){return load('src/app/api/account/cart-checkout/route.ts').POST(request(body));},admin(body={productId:1,priceId:pri,paddleProductId:pro,enabled:true,expectedPrice:pri,expectedEnabled:true}){return load('src/app/api/admin/prices/route.ts').POST(request(body));}};
 }
@@ -51,6 +68,57 @@ test('admin payment comparison uses recorded charge without rewriting the catalo
 for(const [option,status] of [['noToken',401],['invalidToken',401],['unconfirmed',403],['disabled',503]])test('cart authentication gate: '+option,async()=>{const s=setup({[option]:true});assert.equal((await s.post()).status,status);assert.equal(s.network.length,0);assert.equal(s.calls.length,0);});
 test('cart refuses identity/amount claims, duplicates, empty and oversized carts',async()=>{for(const body of [{productIds:[]},{productIds:[1,1]},{productIds:['1']},{productIds:[0]},{productIds:[1],userId:'forged'},{productIds:[1],total:1},{productIds:Array.from({length:21},(_,i)=>i+1)}]){const s=setup();assert.equal((await s.post(body)).status,400);assert.equal(s.network.length,0);}});
 test('cart creates exactly one attributed transaction after trusted reservation and revalidation',async()=>{const s=setup(),r=await s.post(),b=await r.json();assert.equal(r.status,200);assert.equal(b.expected.total,12);assert.equal(b.expected.items.length,2);assert.equal(r.headers.get('cache-control'),'no-store');const posts=s.network.filter(n=>n.config.method==='POST');assert.equal(posts.length,1);const p=JSON.parse(posts[0].config.body);assert.equal(p.items.length,2);assert.ok(p.items.every(i=>i.quantity===1));assert.equal(p.custom_data.qatools_checkout_version,'cart-v1');assert.ok(!JSON.stringify(p).includes(user));assert.ok(s.calls.some(c=>c.name==='reserve_sandbox_cart'&&c.args.p_user_id===user));});
+const previousOrder={user_id:user,provider:'paddle_sandbox',status:'paid',provider_transaction_id:oldTxn};
+test('cart prefills verified Paddle billing on a new automatic transaction and keeps invoices on the new order',async()=>{
+ const s=setup({previous:previousOrder,vatAdjusted:true}),r=await s.post(),result=await r.json();
+ assert.equal(r.status,200);assert.equal(result.transactionId,txn);
+ assert.equal(result.expected.total,12);
+ assert.ok(s.calls.some(c=>c.table==='orders'));
+ assert.ok(s.calls.some(c=>c.k==='user_id'&&c.v===user));
+ assert.ok(s.calls.some(c=>c.k==='provider'&&c.v==='paddle_sandbox'));
+ const posts=s.network.filter(n=>n.config.method==='POST');assert.equal(posts.length,1);
+ const created=JSON.parse(posts[0].config.body);
+ for(const [field,id] of Object.entries(billingIds))assert.equal(created[field],id);
+ assert.equal(created.collection_mode,'automatic');
+ assert.deepEqual(created.custom_data,{qatools_checkout_id:intent,qatools_environment:'sandbox',qatools_checkout_version:'cart-v1'});
+ assert.ok(s.calls.some(c=>c.name==='finish_sandbox_checkout'&&c.args.p_transaction_id===txn));
+ assert.ok(!JSON.stringify(result).includes(billingIds.customer_id));
+ assert.ok(!JSON.stringify(result).includes(billingEmail));
+});
+test('cart leaves billing blank for missing, foreign, cross-environment, incomplete, or unverifiable history',async()=>{
+ for(const options of [
+  {previous:null},
+  {previous:{...previousOrder,user_id:'another-user'}},
+  {previous:{...previousOrder,provider:'paddle'}},
+  {previous:{...previousOrder,status:'pending'}},
+  {previous:{...previousOrder,provider_transaction_id:'bad'}},
+  {historyError:true},{historyUnavailable:true},{customerUnavailable:true},
+  {previousTransaction:{status:'ready'}},{customer:{email:'other@example.invalid'}},{customer:{status:'archived'}},
+ ]){
+  const s=setup({previous:previousOrder,...options});
+  assert.equal((await s.post()).status,200);
+  const posts=s.network.filter(n=>n.config.method==='POST');assert.equal(posts.length,1);
+  const created=JSON.parse(posts[0].config.body);
+  for(const field of Object.keys(billingIds))assert.ok(!(field in created));
+  if('previous' in options||options.historyError)assert.ok(!s.network.some(n=>n.url.includes(oldTxn)));
+ }
+});
+test('cart omits archived or foreign address and business records',async()=>{
+ for(const options of [{address:{status:'archived'}},{address:{customer_id:'another'}},{business:{status:'archived'}},{business:{customer_id:'another'}}]){
+  const s=setup({previous:previousOrder,...options});
+  assert.equal((await s.post()).status,200);
+  const created=JSON.parse(s.network.find(n=>n.config.method==='POST').config.body);
+  assert.equal(created.customer_id,billingIds.customer_id);
+  assert.equal(created.address_id,options.address?undefined:billingIds.address_id);
+  assert.equal(created.business_id,undefined);
+ }
+});
+test('cart never opens an incorrectly bound billing transaction or creates a second transaction',async()=>{
+ const s=setup({previous:previousOrder,dropBilling:true});
+ assert.equal((await s.post()).status,503);
+ assert.equal(s.network.filter(n=>n.config.method==='POST').length,1);
+ assert.equal(s.calls.at(-1).args.p_transaction_id,null);
+});
 test('blocked and ambiguous carts never issue another provider POST',async()=>{for(const reservation of [{ok:false},{ok:true,created:false,intent:{id:intent,status:'unknown',snapshot:items,version:'cart-v1'}},{ok:true,created:false,intent:{id:intent,status:'creating',snapshot:items,version:'cart-v1'}}]){const s=setup({reservation});assert.equal((await s.post()).status,409);assert.equal(s.network.filter(n=>n.config.method==='POST').length,0);}const s=setup({reservation:{ok:true,created:false,intent:{id:intent,status:'ready',transaction_id:txn,snapshot:items,version:'cart-v1'}}});assert.equal((await s.post()).status,200);assert.equal(s.network.filter(n=>n.config.method==='POST').length,0);});
 test('VAT-adjusted ready transaction reopens without creating a second payment',async()=>{
  const s=setup({vatAdjusted:true,reservation:{ok:true,created:false,intent:{id:intent,status:'ready',transaction_id:txn,snapshot:items,version:'cart-v1'}}}),r=await s.post();

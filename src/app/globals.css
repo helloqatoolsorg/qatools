@@ -91,11 +91,12 @@
   z-index:18;
   background:rgba(13,13,13,.96);
   backdrop-filter:blur(12px);
-  height:54px;
-  padding:0 26px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
+  min-height:54px;
+  padding:12px 26px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:start;
+  gap:12px;
   border-bottom:1px solid var(--soft);
   color:#666;
   font:10px monospace
@@ -103,13 +104,22 @@
 
 .toolbar-left{
   display:flex;
-  gap:22px
+  align-items:flex-start;
+  flex-wrap:wrap;
+  gap:8px 22px;
+  min-width:0
 }
 
 .toolbar-right{
   display:flex;
   align-items:center;
+  min-height:28px;
   gap:12px
+}
+
+.toolbar .menu-trigger{
+  min-height:27px;
+  white-space:nowrap
 }
 
 .liked-mode-label{
@@ -604,7 +614,7 @@ footer{
 
 @media(max-width:900px){
   .toolbar{
-    padding:0 16px
+    padding-inline:16px
   }
 
   .product-grid{
@@ -678,18 +688,29 @@ footer{
 
 /* Prototype 05 — filter chips / selected filter states */
 
+.sort-wrap,
 .filter-wrap{
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   gap:9px;
-  min-width:0
+  min-width:0;
+  max-width:100%
+}
+
+.toolbar-left .menu-wrap{
+  flex-shrink:0
+}
+
+.toolbar-left :is(.active-sort-chips,.active-filter-chips):empty{
+  display:none
 }
 
 .active-filter-chips{
   display:flex;
   align-items:center;
   gap:6px;
-  flex-wrap:wrap
+  flex-wrap:wrap;
+  min-width:0
 }
 
 .filter-chip{
@@ -704,6 +725,22 @@ footer{
   cursor:pointer;
   font:9px monospace;
   animation:filterChipIn .18s ease both
+}
+
+.toolbar .filter-chip{
+  min-height:27px;
+  min-width:0;
+  max-width:100%
+}
+
+.toolbar .search-chip{
+  max-width:min(190px,100%)
+}
+
+.toolbar .filter-chip span{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap
 }
 
 .filter-chip:hover{
@@ -756,13 +793,13 @@ footer{
   border:1px solid var(--line);
   padding:7px 10px;
   color:#888;
-  font:12px monospace;
+  font:18px monospace;
   transition:background .15s,color .15s,border-color .15s
 }
 
 .product-page .product-included-tools .card-tag{
   padding:7px 10px;
-  font-size:12px
+  font-size:18px
 }
 
 .product-meta .meta-filter:hover{
@@ -772,13 +809,22 @@ footer{
 }
 
 @media(max-width:760px){
-  .filter-wrap{
-    align-items:flex-start;
-    flex-direction:column
+  .toolbar-left{
+    column-gap:14px
   }
 
-  .active-filter-chips{
-    padding-top:4px
+  .toolbar .filter-wrap .menu-wrap{
+    position:static
+  }
+
+  .toolbar .filter-menu{
+    top:100%;
+    left:16px;
+    width:min(330px,calc(100% - 32px))
+  }
+
+  .toolbar .search-shell.open{
+    width:min(270px,calc(100vw - 64px))
   }
 }
 
@@ -910,11 +956,6 @@ footer{
 .search-result small{
   color:#555;
   font:8px monospace
-}
-
-.active-search-chip{
-  display:flex;
-  align-items:center
 }
 
 
@@ -1227,23 +1268,6 @@ footer{
 
 
 /* Prototype 08 refinements */
-
-.toolbar{
-  grid-template-columns:1fr auto 1fr;
-  display:grid
-}
-
-.toolbar-left{
-  justify-self:start
-}
-
-.toolbar-center{
-  justify-self:center
-}
-
-.toolbar-right{
-  justify-self:end
-}
 
 .search-wrap{
   justify-content:flex-end
@@ -2334,11 +2358,6 @@ body:not(.products-page) .cart-overlay{
 .publication-state.published,.publication-option-published{color:#80bd90!important}
 .publication-state.unpublished,.publication-option-unpublished{color:#e56b6b!important}
 
-.admin-download-counts{font:11px monospace;border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:26px}
-.admin-count-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
-.admin-count-heading h2{font:16px monospace}
-.admin-count-heading button{font:10px monospace;background:none;color:#aaa;border:1px solid #333;padding:8px;cursor:pointer}
-.admin-count-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin:20px 0}
 .admin-count-grid>div{padding:16px;background:#141414;border:1px solid var(--line)}
 .admin-count-grid span{color:#888}
 .admin-count-grid strong{display:block;font:24px monospace;margin-top:12px}

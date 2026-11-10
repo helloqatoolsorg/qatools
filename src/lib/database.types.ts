@@ -479,6 +479,7 @@ export type Database = {
       delete_unused_product_draft: { Args: { p_admin_id: string; p_product_id: number; p_expected_updated_at: string }; Returns: { id: number } };
       product_publication_checks: { Args: { p_admin_id: string; p_product_id: number }; Returns: { missing: string[]; ready: boolean; updated_at: string } };
       record_product_download: { Args: { p_request_id: string; p_user_id: string; p_product_id: number; p_file_path: string }; Returns: boolean };
+      read_admin_dashboard_counts: { Args: { p_admin_id: string }; Returns: { downloads: number; users: number; paidToolActivations: number } };
       read_admin_download_counts: { Args: { p_admin_id: string }; Returns: { free: number; paid: number; admin: number; total: number } };
       save_published_product_content: { Args: {p_admin_id:string;p_product_id:number;p_expected_updated_at:string;p_content:unknown;p_media:unknown}; Returns: {id:number;updated_at:string;media:{id:number;file_path:string|null;role:string;sort_order:number}[]} };
       save_product_artwork: { Args: {p_admin_id:string;p_product_id:number;p_expected_updated_at:string;p_media:unknown}; Returns: {id:number;updated_at:string;media:{id:number;file_path:string|null;role:string;sort_order:number}[]} };

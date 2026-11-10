@@ -81,10 +81,10 @@ export function formatLikedPrice(
   const price = Number(value);
 
   if (Number.isInteger(price)) {
-    return `€${price}`;
+    return `${price}€`;
   }
 
-  return `€${price.toFixed(2)}`;
+  return `${price.toFixed(2)}€`;
 }
 
 export function useLikedProducts() {

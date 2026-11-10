@@ -517,7 +517,7 @@ export default function UserMenu() {
             color: "#666",
 
             font:
-              "8px monospace",
+              "12px monospace",
           }}
         >
           FORGOT PASSWORD
@@ -529,7 +529,7 @@ export default function UserMenu() {
             color: "#999",
 
             font:
-              "8px monospace",
+              "12px monospace",
           }}
         >
           SIGN UP

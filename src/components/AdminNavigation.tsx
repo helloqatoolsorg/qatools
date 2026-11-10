@@ -4,7 +4,7 @@ import OutlineIcon from "@/components/OutlineIcon";
 import Link from "next/link";
 import AccountName from "@/components/AccountName";
 import { useQAToolsState } from "@/context/QAToolsState";
-export const adminSections = [["dashboard", "Dashboard"], ["customers", "Customers / Accounts"], ["orders", "Orders"], ["products", "Products"], ["finance", "Finance"], ["payments", "Payment review"]] as const;
+export const adminSections = [["dashboard", "Dashboard"], ["customers", "Customers"], ["orders", "Orders"], ["products", "Products"], ["finance", "Finance"], ["payments", "Payment review"]] as const;
 export function AdminHeader() {
   const { likedCount, cartCount } = useQAToolsState();
   return <header className="site-header">
