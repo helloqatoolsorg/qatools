@@ -1,3 +1,10 @@
+const firstHoudiniVersion = 21;
+const lastHoudiniVersion = 30;
+export const houdiniCompatibilityOptions = Array.from(
+  { length: lastHoudiniVersion - firstHoudiniVersion + 1 },
+  (_, index) => "Houdini " + (firstHoudiniVersion + index) + " and newer",
+);
+
 export const productTypes = ["tool", "bundle", "project"] as const;
 export type ProductType = typeof productTypes[number];
 export type DraftInput = { name: string; slug?: string; product_type: ProductType; subtitle: string; description: string; price_eur: number | null; compatibility: string; current_version: string; release_date: string | null; category_id: number; complexity_id: number; tool_ids: number[] };

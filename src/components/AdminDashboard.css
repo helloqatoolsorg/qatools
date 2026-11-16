@@ -77,3 +77,49 @@
 .admin-paid-activations strong {
   color: #79c98e;
 }
+
+.admin-recent {
+  margin-top: 24px;
+  font: 11px/1.5 monospace;
+  color: #aaa;
+}
+
+.admin-dashboard .admin-recent h2 {
+  margin: 0 0 12px;
+  color: #eee;
+  font: 17px monospace;
+}
+
+.admin-recent ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-surface);
+  background: #141414;
+}
+
+.admin-recent li + li {
+  border-top: 1px solid var(--line);
+}
+
+.admin-recent-order {
+  display: grid;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 12px 16px;
+  overflow-wrap: anywhere;
+}
+
+.admin-recent-order {
+  grid-template-columns: minmax(110px, 1fr) minmax(0, 1.5fr) minmax(85px, .6fr) auto auto;
+}
+
+.admin-recent strong { color: #ddd; }
+.admin-recent time { color: #999; }
+
+@media (max-width: 700px) {
+  .admin-recent-order {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

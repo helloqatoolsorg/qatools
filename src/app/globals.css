@@ -190,6 +190,13 @@
   display:grid
 }
 
+.toolbar .filter-menu{
+  width:480px;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  max-height:60dvh;
+  overflow-y:auto
+}
+
 .filter-group{
   display:flex;
   flex-direction:column;
@@ -820,7 +827,8 @@ footer{
   .toolbar .filter-menu{
     top:100%;
     left:16px;
-    width:min(330px,calc(100% - 32px))
+    width:min(330px,calc(100% - 32px));
+    grid-template-columns:minmax(0,1fr)
   }
 
   .toolbar .search-shell.open{

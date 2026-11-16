@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { productSlug, validProductTitle, productTypes, type DraftInput, type ProductType } from "@/lib/productDraft";
+import { houdiniCompatibilityOptions, productSlug, validProductTitle, productTypes, type DraftInput, type ProductType } from "@/lib/productDraft";
 import "./AdminProducts.css";
 type Media = { id: number; file_path: string | null; role: string; sort_order: number };
 type Product = DraftInput & { id: number; slug: string; published: boolean; updated_at: string; prepared_identity?: object | null; has_installer?:boolean; draft_request_id?:string; product_media: Media[] };
@@ -63,7 +63,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
       name: value.name || (value.product_type === "tool" ? "" : "Lorem Ipsum"),
       subtitle: value.subtitle || "Lorem ipsum dolor sit amet.",
       description: value.description || "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-      compatibility: value.compatibility || "Lorem ipsum — test content",
+      compatibility: value.compatibility || houdiniCompatibilityOptions[0],
       current_version: value.current_version || "1.0",
       category_id: value.category_id || pick(catalog?.categories ?? []),
       complexity_id: value.complexity_id || pick(catalog?.complexities ?? []),
@@ -265,7 +265,16 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
         <label>Price · EUR including tax<input readOnly={readOnly} type="text" inputMode="decimal" maxLength={9} value={priceText} onChange={e => {setPriceText(e.target.value);setDirty(true);setMessage(null);}} placeholder="0.00" /></label>
         <label>Version<input readOnly={readOnly} maxLength={40} value={draft.current_version} onChange={e => change("current_version",e.target.value)} /></label>
         <p>Release date is recorded when first published.</p>
-        <label className="admin-product-wide">Compatibility<input readOnly={readOnly} maxLength={200} value={draft.compatibility} onChange={e => change("compatibility",e.target.value)} /></label>
+        <label className="admin-product-wide">
+          Compatibility
+          <select disabled={readOnly} value={draft.compatibility} onChange={event => change("compatibility", event.target.value)}>
+            <option value="">Choose compatibility</option>
+            {draft.compatibility && !houdiniCompatibilityOptions.includes(draft.compatibility) && (
+              <option value={draft.compatibility}>{draft.compatibility} (current value)</option>
+            )}
+            {houdiniCompatibilityOptions.map(option => <option key={option} value={option}>{option}</option>)}
+          </select>
+        </label>
         <label>Category<select value={draft.category_id || ""} onChange={e => change("category_id",Number(e.target.value))}><option value="">Choose category</option>{catalog.categories.filter(v => v.active || v.id === draft.category_id).map(v => <option key={v.id} value={v.id}>{v.name}{v.active ? "" : " (inactive)"}</option>)}</select></label>
         <label>Complexity<select value={draft.complexity_id || ""} onChange={e => change("complexity_id",Number(e.target.value))}><option value="">Choose complexity</option>{catalog.complexities.filter(v => v.active || v.id === draft.complexity_id).map(v => <option key={v.id} value={v.id}>{v.name}{v.active ? "" : " (inactive)"}</option>)}</select></label>
       </div>

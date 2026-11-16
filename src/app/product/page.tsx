@@ -522,10 +522,10 @@ export default function ProductPage() {
                   compatibility
                 </span>
 
-                <strong>
-                  {
-                    product.compatibility
-                  }
+                <strong className="product-compatibility">
+                  {/^Houdini \d+ and newer$/i.test(product.compatibility) ? (
+                    <><b>{product.compatibility.slice(0, -" and newer".length)}</b>{" "}<em>and newer</em></>
+                  ) : product.compatibility}
                 </strong>
               </div>
 

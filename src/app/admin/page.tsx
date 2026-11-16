@@ -124,7 +124,23 @@ function formatDate(
 
 export default function AdminPage() {
   const [adminSection, setAdminSection] = useState("dashboard");
-  useEffect(() => { const section = new URLSearchParams(window.location.search).get("section"); if (section && adminSections.some(([id]) => id === section)) setAdminSection(section); }, []);
+  useEffect(() => {
+    function syncSection() {
+      const section = new URLSearchParams(window.location.search).get("section");
+      setAdminSection(adminSections.find(([id]) => id === section)?.[0] ?? "dashboard");
+    }
+    syncSection();
+    window.addEventListener("popstate", syncSection);
+    return () => window.removeEventListener("popstate", syncSection);
+  }, []);
+
+  function selectAdminSection(section: string) {
+    const url = new URL(window.location.href);
+    if (section === "dashboard") url.searchParams.delete("section");
+    else url.searchParams.set("section", section);
+    if (url.href !== window.location.href) window.history.pushState(null, "", url);
+    setAdminSection(section);
+  }
 
   const {
     user,
@@ -811,7 +827,7 @@ export default function AdminPage() {
         </main>
       ) : (
         <main className="admin-workspace">
-          <AdminSidebar active={adminSection} onSelect={setAdminSection} />
+          <AdminSidebar active={adminSection} onSelect={selectAdminSection} />
           <div className="admin-workspace-content">
           <div
             style={{
