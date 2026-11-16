@@ -827,8 +827,14 @@ footer{
   .toolbar .filter-menu{
     top:100%;
     left:16px;
-    width:min(330px,calc(100% - 32px));
-    grid-template-columns:minmax(0,1fr)
+    width:min(480px,calc(100% - 32px));
+    gap:12px 8px;
+    padding:12px
+  }
+
+  .toolbar .filter-group .filter-option{
+    padding-inline:4px;
+    overflow-wrap:anywhere
   }
 
   .toolbar .search-shell.open{
