@@ -34,7 +34,7 @@ test('empty POST stream is accepted, while real payload bytes are rejected befor
 function projectForm(entries=[{name:'scene.hip',bytes:Buffer.from('test scene')}]){const form=new FormData();form.set('tool',new File([pack.makePackageZip(entries)],'project.zip'));return form;}
 test('project assembly validates project resources and commits their fingerprint with the selected private tools',async()=>{
  const s=setup({project:true}),response=await s.post(projectForm());assert.equal(response.status,200);assert.equal(response.headers.get('Cache-Control'),'no-store');
- const saved=s.calls.find(c=>c.name);assert.equal(saved.name,'set_assembled_project_download');assert.match(saved.args.p_project_sha256,/^[a-f0-9]{64}$/);assert.deepEqual(Array.from(saved.args.p_sources,x=>x.tool_id),[1,2]);
+ const saved=s.calls.find(c=>c.name);assert.equal(saved.name,'set_prepared_project_download');assert.match(saved.args.p_project_sha256,/^[a-f0-9]{64}$/);assert.deepEqual(Array.from(saved.args.p_sources,x=>x.tool_id),[1,2]);
  const zip=s.calls.find(c=>c.upload).bytes;assert.ok(zip.includes(Buffer.from('project/bundle.zip')));assert.ok(zip.includes(Buffer.from('PROJECT-README.txt')));assert.equal(zip.readUInt16LE(zip.length-12),10);
  for(const option of ['public','missing','disabled','unavailable','corrupt','identity','upload','conflict']){const bad=setup({project:true,[option]:true});assert.equal((await bad.post(projectForm())).status,['upload','public','unavailable'].includes(option)?503:409,option);}
  for(const entries of [[{name:'readme.txt',bytes:Buffer.from('no scene')}],[{name:'scene.hip',bytes:Buffer.alloc(0)}],[{name:'QATools/otls/a.hda',bytes:hda},{name:'scene.hip',bytes:Buffer.from('scene')}]] ){
@@ -42,4 +42,14 @@ test('project assembly validates project resources and commits their fingerprint
  }
  const denied=setup({project:true,denied:true});assert.equal((await denied.post(projectForm())).status,403);assert.equal(denied.calls.length,0);
  const duplicate=projectForm();duplicate.append('tool',new File(['x'],'other.zip'));assert.equal((await setup({project:true}).post(duplicate)).status,400);
+});
+
+test('prepared project rejects mismatched identity and omitted dependencies before storing a release',async()=>{
+ const manifest={schema:1,label:'Bundle',slug:'bundle',scene:'scene.hiplc',houdini:'21.0.512',tools:['one','two'],warnings:[{type:'Sop/external',node:'/obj/geo/external'}]};
+ const entries=value=>[{name:'scene.hiplc',bytes:Buffer.from('scene')},{name:'qatools-project.json',bytes:Buffer.from(JSON.stringify(value))}];
+ const s=setup({project:true});assert.equal((await s.post(projectForm(entries(manifest)))).status,200);
+ assert.deepEqual(JSON.parse(JSON.stringify(s.calls.find(c=>c.name).args.p_manifest)),manifest);
+ for(const value of [{...manifest,label:'Another Project',slug:'another_project'},{...manifest,tools:['one','absent']}]){
+  const bad=setup({project:true});assert.equal((await bad.post(projectForm(entries(value)))).status,409);assert.equal(bad.calls.length,0);
+ }
 });

@@ -8,7 +8,7 @@ function Get-PortableHash([string]$Path){
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 $OutputDirectory=(Resolve-Path -LiteralPath $OutputDirectory).ProviderPath
-$portableFiles=@('__init__.py','prepare_tool.py','prepared_tool.py','export_worker.py','install-authoring.ps1')
+$portableFiles=@('__init__.py','prepare_tool.py','prepared_tool.py','export_worker.py','prepare_shelf_tool.py','prepare_project.py','install-authoring.ps1')
 foreach($portableVersion in @('21.0','22.0')){
  $portableStage=Join-Path ([IO.Path]::GetTempPath()) ('qatools-authoring-kit-'+[guid]::NewGuid().ToString('N'))
  $portableTempZip=Join-Path $OutputDirectory ('.authoring-'+[guid]::NewGuid().ToString('N')+'.zip')
@@ -25,11 +25,18 @@ QATools authoring utility for Houdini $portableVersion (Qt6/PySide6 build)
 
 Extract this entire ZIP into a folder, then double-click '$portableCmdName'.
 Restart Houdini and enable the 'QATools dev' shelf tab. Select your saved,
-locked development SOP HDA and click 'Prepare QATools tool'.
+locked development SOP HDA and click 'QA HDA auth'.
 
 Source: QA_Tool_Name_dev.hdalc (editable; retained unchanged).
 Export: QA_Tool_Name.zip containing the black-box QA_Tool_Name.hdalc and identity.
 An existing same-named ZIP is replaced only after successful export.
+
+For Python shelf tools, save a shelf tool named QA_Tool_Name_dev with the
+label QA Tool Name. Use 'QA Shelf Tool auth' to choose it and export.
+Upload the prepared ZIP through New product > Tool.
+
+For projects, save the scene in the project folder and click 'QA Project auth'.
+Review detected dependencies and upload the ZIP through New product > Project.
 
 Install uses your Documents/houdini$portableVersion/packages preferences, no admin rights.
 For custom preferences, run install-authoring.ps1 -HoudiniVersion $portableVersion

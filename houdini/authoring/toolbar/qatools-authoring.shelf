@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <shelfDocument>
- <toolshelf name="qatools_authoring" label="QATools dev"><memberTool name="qatools_prepare_tool" /></toolshelf>
- <tool name="qatools_prepare_tool" label="Prepare QATools tool" icon="MISC_python"><script scriptType="python"><![CDATA[from qatools_authoring.prepare_tool import shelf_action
+ <toolshelf name="qatools_authoring" label="QATools dev"><memberTool name="qatools_prepare_tool" /><memberTool name="qatools_prepare_shelf_tool" /><memberTool name="qatools_prepare_project" /></toolshelf>
+ <tool name="qatools_prepare_tool" label="QA HDA auth" icon="MISC_python"><script scriptType="python"><![CDATA[from qatools_authoring.prepare_tool import shelf_action
+shelf_action()
+]]></script></tool>
+ <tool name="qatools_prepare_shelf_tool" label="QA Shelf Tool auth" icon="MISC_python"><script scriptType="python"><![CDATA[from qatools_authoring.prepare_shelf_tool import shelf_action
+shelf_action()
+]]></script></tool>
+ <tool name="qatools_prepare_project" label="QA Project auth" icon="MISC_python"><script scriptType="python"><![CDATA[from qatools_authoring.prepare_project import shelf_action
 shelf_action()
 ]]></script></tool>
 </shelfDocument>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
 import IncludedTools from "@/components/IncludedTools";
+import ProjectDetails from "@/components/ProjectDetails";
 import ProductGallery from "@/components/ProductGallery";
 import ProductDownload from "@/components/ProductDownload";
 import AccountName from "@/components/AccountName";
@@ -118,7 +119,7 @@ export default function ProductPage() {
         );
 
       const slug =
-        params.get("id");
+        params.get("id") ?? params.get("slug");
 
       if (!slug) {
         setError(
@@ -163,6 +164,7 @@ export default function ProductPage() {
             sort_order
           )
         `)
+        .eq("published", true)
         .eq("slug", slug)
         .single();
 
@@ -219,12 +221,12 @@ export default function ProductPage() {
           </Link>
 
           <nav className="main-nav">
-            <a
+            <Link
               className="active"
               href="/"
             >
               products
-            </a>
+            </Link>
 
             <a href="/install">
               how to install
@@ -237,12 +239,12 @@ export default function ProductPage() {
         </header>
 
         <main className="product-page">
-          <a
+          <Link
             className="back-link"
             href="/"
           >
             ← products
-          </a>
+          </Link>
 
           <p>
             Product not found.
@@ -305,12 +307,12 @@ export default function ProductPage() {
           </Link>
 
         <nav className="main-nav">
-          <a
+          <Link
             className="active"
             href="/"
           >
             products
-          </a>
+          </Link>
 
           <a href="/install">
             how to install
@@ -379,12 +381,12 @@ export default function ProductPage() {
       </header>
 
       <main className="product-page">
-        <a
+        <Link
           className="back-link"
           href="/"
         >
           ← products
-        </a>
+        </Link>
 
         <section className="product-hero">
           <ProductGallery key={product.id} images={galleryImages} name={product.name} />
@@ -471,6 +473,7 @@ export default function ProductPage() {
             </div>
 
             <IncludedTools key={product.id} productId={product.id}/>
+            {product.product_type === "project" && <ProjectDetails key={product.id} productId={product.id} />}
             <div className="buy-row">
               <strong>
                 {formatPrice(

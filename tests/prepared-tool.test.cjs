@@ -20,3 +20,23 @@ test('capitalized limited-commercial filenames preserve display identity and low
  const bytes=pack.makePackageZip([{name:'qatools-tool.json',bytes:Buffer.from(JSON.stringify(value))},{name:value.file,bytes:hda}]);
  const result=lib.preparedTool(bytes);assert.equal(result.tool.name,'Beautiful_Noise.hdalc');assert.equal(result.identity.slug,'beautiful_noise');
 });
+test('prepared shelf tool imports under toolbar with a runtime for Houdini 21 and 22', async () => {
+ const label='QA Rename', slug='qa_rename', file='QA_Rename.shelf', toolId='qatools_shelf_'+slug;
+ const content=Buffer.from('<?xml version=\'1.0\' encoding=\'utf-8\'?>\\n'
+  .replace('\\n','\n')+'<shelfDocument><toolshelf name="'+toolId+'" label="'+label+'"><memberTool name="'+toolId+'" /></toolshelf>'
+  +'<tool name="'+toolId+'" label="'+label+'" icon="MISC_python"><helpText>Shift-click for license information.</helpText>'
+  +'<script scriptType="python">from qatools_licensing.houdini_ui import run_shelf_tool</script></tool></shelfDocument>');
+ const manifest={schema:2,label,internal_name:'QA_Rename',slug,file,sha256:crypto.createHash('sha256').update(content).digest('hex')};
+ const archive=(identity,bytes=content)=>pack.makePackageZip([{name:'qatools-tool.json',bytes:Buffer.from(JSON.stringify(identity))},{name:file,bytes}]);
+ assert.equal(lib.preparedTool(archive(manifest)).identity.slug,slug);
+ assert.throws(()=>lib.preparedTool(archive({...manifest,sha256:'0'.repeat(64)})));
+ const altered=Buffer.from(content.toString().replace('</shelfDocument>','<tool name="extra" /></shelfDocument>'));
+ assert.throws(()=>lib.preparedTool(archive({...manifest,sha256:crypto.createHash('sha256').update(altered).digest('hex')},altered)));
+ const s=setup();
+ assert.equal((await s.post(archive(manifest))).status,200);
+ const uploaded=s.calls.find(c=>c.upload).bytes;
+ assert.ok(uploaded.includes(Buffer.from('QATools/toolbar/QA_Rename.shelf')));
+ assert.ok(uploaded.includes(Buffer.from('QATools/scripts/python/qatools_licensing/houdini_ui.py')));
+ const bundle=load('src/lib/bundlePackage.ts',{'server-only':{},'./houdiniPackage':pack,'./adminDownloadUpload':zip});
+ assert.equal(bundle.bundleTools(uploaded,[{id:12,slug}])[0].name,file);
+});

@@ -1,7 +1,7 @@
 import "server-only";
 import { inflateRawSync } from "node:zlib";
 import { validToolZip } from "./adminDownloadUpload";
-import { crc32, validHda, runtimeFiles } from "./houdiniPackage";
+import { crc32, validHda, validShelfTool, runtimeFiles } from "./houdiniPackage";
 export type BundleTool = { id:number; slug:string };
 // Only installer paths are accepted. Uploaded runtime/config copies are discarded;
 // the release builder inserts the current centrally maintained versions once.
@@ -10,8 +10,8 @@ export function bundleTools(bytes:Buffer, tools:BundleTool[]):{name:string;bytes
  let end=bytes.length-22;while(end>=0 && (bytes.readUInt32LE(end)!==0x06054b50 || end+22+bytes.readUInt16LE(end+20)!==bytes.length))end--;
  if(end<0)throw new Error("Invalid bundle ZIP.");
  const count=bytes.readUInt16LE(end+10),offset=bytes.readUInt32LE(end+16),seen=new Set<string>(),found=new Map<number,{name:string;bytes:Buffer}>(),ranges:{start:number;end:number}[]=[];
- const shared=new Set(["QATools.json",...runtimeFiles.map(n=>"QATools/python3.13libs/qatools_licensing/"+n),"QATools/scripts/pythonrc.py"]);
- const directories=new Set(["QATools/","QATools/otls/","QATools/python3.13libs/","QATools/python3.13libs/qatools_licensing/","QATools/scripts/"]);
+ const shared=new Set(["QATools.json",...runtimeFiles.map(n=>"QATools/python3.13libs/qatools_licensing/"+n),...runtimeFiles.map(n=>"QATools/scripts/python/qatools_licensing/"+n),"QATools/scripts/pythonrc.py"]);
+ const directories=new Set(["QATools/","QATools/otls/","QATools/python3.13libs/","QATools/python3.13libs/qatools_licensing/","QATools/scripts/","QATools/scripts/python/","QATools/scripts/python/qatools_licensing/","QATools/toolbar/"]);
  let cursor=offset,total=0;
  for(let i=0;i<count;i++){
   const flags=bytes.readUInt16LE(cursor+8),method=bytes.readUInt16LE(cursor+10),compressed=bytes.readUInt32LE(cursor+20),length=bytes.readUInt32LE(cursor+24),nameLength=bytes.readUInt16LE(cursor+28),local=bytes.readUInt32LE(cursor+42);
@@ -25,10 +25,15 @@ export function bundleTools(bytes:Buffer, tools:BundleTool[]):{name:string;bytes
   if(directories.has(name)){if(length!==0)throw new Error("Invalid bundle directory.");}
   else if(shared.has(name)){/* Replaced by the trusted release builder. */}
   else {
-   if(!name.startsWith("QATools/otls/") || !validHda(name.slice(13),data))throw new Error("Bundle ZIP must contain only selected HDAs under QATools/otls and standard installer files.");
-   const file=name.slice(13),stem=file.replace(/\.hda(lc|nc)?$/i,"");
+   const shelfPrefix = "QATools/toolbar/", hdaPrefix = "QATools/otls/";
+   const isShelf = name.startsWith(shelfPrefix);
+   const file = name.slice(isShelf ? shelfPrefix.length : hdaPrefix.length);
+   if (isShelf ? !validShelfTool(file, data) : !name.startsWith(hdaPrefix) || !validHda(file, data)) {
+    throw new Error("Bundle ZIP must contain selected tool files under QATools/otls or QATools/toolbar.");
+   }
+   const stem = file.replace(/\.(?:hda(?:lc|nc)?|shelf)$/i, "");
    const matches=tools.filter(t=>stem.toLowerCase()===t.slug || stem.toLowerCase()===t.slug+"_online");
-   if(matches.length!==1 || found.has(matches[0].id))throw new Error("Use one HDA per selected tool, named tool-slug.hda (or tool-slug_online.hdalc).");
+   if(matches.length!==1 || found.has(matches[0].id))throw new Error("Use one installer file matching each selected tool’s slug.");
    found.set(matches[0].id,{name:file,bytes:data});
   }
   cursor+=46+nameLength+bytes.readUInt16LE(cursor+30)+bytes.readUInt16LE(cursor+32);

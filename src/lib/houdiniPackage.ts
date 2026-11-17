@@ -18,6 +18,20 @@ export function validPackageJson(bytes: Buffer): boolean {
 export function validHda(name: string, bytes: Buffer): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}\.(hda|hdalc|hdanc)$/i.test(name) && bytes.length > 24 && bytes.length <= 4 * 1024 * 1024 && bytes.toString("ascii",0,4) === "INDX";
 }
+export function validShelfTool(name: string, bytes: Buffer): boolean {
+  const stem = /^([A-Za-z]+(?:_[A-Za-z]+)*)\.shelf$/.exec(name)?.[1];
+  if (!stem || stem.length > 80 || bytes.length > 4 * 1024 * 1024) return false;
+  const xml = bytes.toString("utf8");
+  const id = "qatools_shelf_" + stem.toLowerCase();
+  const label = stem.replaceAll("_", " ");
+  const prefix = "<shelfDocument><toolshelf name=\"" + id + "\" label=\"" + label +
+    "\"><memberTool name=\"" + id + "\" /></toolshelf><tool name=\"" + id + "\" label=\"" + label + "\" icon=\"";
+  const wrapper = /^(?:<\?xml version='1\.0' encoding='utf-8'\?>\r?\n)?([^]*)$/.exec(xml)?.[1];
+  if (!wrapper?.startsWith(prefix)) return false;
+  return /^[A-Za-z0-9_]+"><helpText>Shift-click for license information\.<\/helpText><script scriptType="python">[^<]+<\/script><\/tool><\/shelfDocument>$/.test(wrapper.slice(prefix.length))
+    && wrapper.includes("from qatools_licensing.houdini_ui import run_shelf_tool");
+}
+
 export function crc32(bytes: Buffer) {
   let crc = 0xffffffff;
   for (const byte of bytes) { crc ^= byte; for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0); }
@@ -25,7 +39,7 @@ export function crc32(bytes: Buffer) {
 }
 // Stored ZIP entries: no extraction, uploaded paths or compression-ratio hazards.
 export function makePackageZip(entries: PackageEntry[]): Buffer {
-  if (!entries.length || entries.length > 109 || entries.reduce((n,e) => n + e.bytes.length,0) > 25 * 1024 * 1024) throw new Error("Package exceeds limits.");
+  if (!entries.length || entries.length > 113 || entries.reduce((n,e) => n + e.bytes.length,0) > 25 * 1024 * 1024) throw new Error("Package exceeds limits.");
   const names = new Set<string>(), files: Buffer[] = [], directory: Buffer[] = []; let offset = 0;
   for (const entry of entries) {
     if (!/^[A-Za-z0-9_.\/-]+$/.test(entry.name) || entry.name.startsWith("/") || entry.name.split("/").some(p => !p || p === "." || p === "..") || names.has(entry.name.toLowerCase())) throw new Error("Invalid or duplicate package path.");
@@ -38,10 +52,16 @@ export function makePackageZip(entries: PackageEntry[]): Buffer {
   return Buffer.concat([...files,central,end]);
 }
 export async function houdiniPackageEntries(json: Buffer, tools: { name: string; bytes: Buffer }[]): Promise<PackageEntry[]> {
-  if (!validPackageJson(json) || !tools.length || tools.length > 100 || tools.some(t => !validHda(t.name,t.bytes))) throw new Error("Invalid installer inputs.");
+  if (!validPackageJson(json) || !tools.length || tools.length > 100 || tools.some(t => !validHda(t.name,t.bytes) && !validShelfTool(t.name,t.bytes))) throw new Error("Invalid installer inputs.");
   const runtime = await Promise.all(runtimeFiles.map(async name => ({ name: "QATools/python3.13libs/qatools_licensing/" + name, bytes: await readFile(join(process.cwd(),"houdini/python/qatools_licensing",name)) })));
   const startup = await readFile(join(process.cwd(),"houdini/scripts/pythonrc.py"));
-  return [{ name: "QATools.json", bytes: json }, ...tools.map(t => ({ name: "QATools/otls/" + t.name, bytes: t.bytes })), ...runtime, { name: "QATools/scripts/pythonrc.py", bytes: startup }];
+  const hasShelf = tools.some(tool => tool.name.endsWith(".shelf"));
+  const commonRuntime = hasShelf ? runtime.map((entry, index) => ({
+    name: "QATools/scripts/python/qatools_licensing/" + runtimeFiles[index], bytes: entry.bytes,
+  })) : [];
+  return [{ name: "QATools.json", bytes: json }, ...tools.map(tool => ({
+    name: "QATools/" + (tool.name.endsWith(".shelf") ? "toolbar/" : "otls/") + tool.name, bytes: tool.bytes,
+  })), ...runtime, ...commonRuntime, { name: "QATools/scripts/pythonrc.py", bytes: startup }];
 }
 
 export async function buildHoudiniPackage(json: Buffer, tools: PackageEntry[]): Promise<Buffer> {

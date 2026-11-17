@@ -1,7 +1,8 @@
 "use client";
 import {useEffect,useState} from "react";
 import {supabase} from "@/lib/supabase";
-import AdminProjectPackage from "./AdminProjectPackage";
+import AdminProjectPackage, {type ProjectPackageProps} from "./AdminProjectPackage";
+export {inspectProjectFile} from "@/lib/projectUpload";
 export async function savePendingInstaller(id:number,kind:"tool"|"bundle"|"project",file:File|null){
  const session=await supabase.auth.getSession();if(!session.data.session)throw Error("Please log in again.");
  const headers={Authorization:"Bearer "+session.data.session.access_token};
@@ -13,7 +14,7 @@ export async function savePendingInstaller(id:number,kind:"tool"|"bundle"|"proje
  const response=await fetch("/api/admin/products/"+(!file && kind==="tool"?"rebuild":file && kind!=="project"?"package":"assemble")+"?"+params,{method:"POST",headers,...(file?{body}:{})});
  const result=await response.json();if(!response.ok)throw Error(result.error??"Unable to prepare download. Existing ZIP retained.");return result;
 }
-type Props={productId:number|null;disabled:boolean;onBusyChange:(busy:boolean)=>void;tool:File|null;onToolChange:(file:File|null)=>void;ensureDraft:()=>Promise<number>;kind?:"tool"|"bundle"|"project";prepared?:boolean};
+type Props = ProjectPackageProps & {kind?: "tool" | "bundle" | "project"; prepared?: boolean};
 export default function AdminToolPackage(props:Props){return props.kind==="project"?<AdminProjectPackage {...props}/>:<InstallerSummary {...props}/>;}
 function InstallerSummary({productId,disabled,tool,onToolChange,kind="tool"}:Props){
  const [download,setDownload]=useState<{file_name:string}|null>(null),[error,setError]=useState<string|null>(null);

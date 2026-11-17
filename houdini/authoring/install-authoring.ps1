@@ -13,7 +13,7 @@ $taskDestination = Join-Path $taskPackages 'qatools-authoring'
 $taskPython = Join-Path $taskDestination 'scripts\python\qatools_authoring'
 $taskToolbar = Join-Path $taskDestination 'toolbar'
 $taskStamp = (Get-Date -Format 'yyyyMMdd-HHmmss-fff')+'-'+[guid]::NewGuid().ToString('N')
-$taskFiles = @('__init__.py','prepared_tool.py','prepare_tool.py','export_worker.py')
+$taskFiles = @('__init__.py','prepared_tool.py','prepare_tool.py','export_worker.py','prepare_shelf_tool.py','prepare_project.py')
 New-Item -ItemType Directory -Path $taskPython,$taskToolbar -Force | Out-Null
 foreach ($taskFile in $taskFiles) {
  $taskTarget = Join-Path $taskPython $taskFile

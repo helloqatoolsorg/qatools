@@ -1,4 +1,4 @@
-import { validDraft, type DraftInput } from "./productDraft";
+import { compatibilitySelection, validDraft, type DraftInput } from "./productDraft";
 type RecoveryMedia={id:number;file_path:string|null;role:string;sort_order:number;file?:File;preview?:string};
 export type DraftRecovery = { version:1; requestId:string; id:number|null; updatedAt:string|null; draft:DraftInput; priceText:string; savedAt:string; fileRevision:string; mainFile:File|null; galleryFiles:File[]; toolFile:File|null;editedMedia?:RecoveryMedia[]|null; recoveryWarning?:string };
 const prefix="qatools.admin-draft:";
@@ -20,8 +20,10 @@ export function recoveryMetadata(raw:string|null):DraftRecovery|null {
   try {const value=JSON.parse(raw ?? "null");
     if(!value || value.version!==1 || typeof value.requestId!=="string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.requestId) || typeof value.priceText!=="string" || typeof value.fileRevision!=="string" || !Number.isFinite(Date.parse(value.savedAt)) || (value.id!==null && (!Number.isSafeInteger(value.id)||value.id<1)) || (value.updatedAt!==null && !Number.isFinite(Date.parse(value.updatedAt)))) return null;
     // A work-in-progress title may be blank or incomplete; never send it to SQL until validated.
-    if(!value.draft || typeof value.draft.name!=="string" || value.draft.name.length>80 || !validDraft({...value.draft,name:"recovery"})) return null;
-    return {...value,mainFile:null,galleryFiles:[],toolFile:null};
+    if(!value.draft || typeof value.draft.name!=="string" || value.draft.name.length>80 || typeof value.draft.compatibility!=="string") return null;
+    const draft = {...value.draft, compatibility: compatibilitySelection(value.draft.compatibility)};
+    if(!validDraft({...draft,name:"recovery"})) return null;
+    return {...value,draft,mainFile:null,galleryFiles:[],toolFile:null};
   } catch{return null;}
 }
 export function readDraftRecoveryMetadata(userId:string):DraftRecovery|null {

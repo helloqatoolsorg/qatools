@@ -6,6 +6,7 @@ import tempfile
 import unittest
 import zipfile
 import hashlib
+import xml.etree.ElementTree as xml
 
 
 class PortableAuthoringTests(unittest.TestCase):
@@ -22,6 +23,9 @@ class PortableAuthoringTests(unittest.TestCase):
                     manifest = json.loads(archive.read("authoring-kit.json"))
                     for name, digest in manifest["files"].items():
                         self.assertEqual(hashlib.sha256(archive.read(name)).hexdigest(), digest)
+                    self.assertIn("prepare_shelf_tool.py", manifest["files"])
+                    shelf = xml.fromstring(archive.read("toolbar/qatools-authoring.shelf"))
+                    self.assertIsNotNone(shelf.find("./tool[@name='qatools_prepare_shelf_tool']"))
                     self.assertNotIn("qatools_licensing", " ".join(archive.namelist()))
                     extracted = root / ("kit" + version)
                     archive.extractall(extracted)
@@ -32,7 +36,7 @@ class PortableAuthoringTests(unittest.TestCase):
 
     def test_modules_parse_with_python_311_and_install_in_both_preference_folders(self):
         source = Path(__file__).resolve().parents[1] / "houdini" / "authoring"
-        for name in ("__init__.py", "prepare_tool.py", "prepared_tool.py", "export_worker.py"):
+        for name in ("__init__.py", "prepare_tool.py", "prepared_tool.py", "export_worker.py", "prepare_shelf_tool.py"):
             ast.parse((source / name).read_text(encoding="utf-8"), feature_version=(3, 11))
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -45,7 +49,7 @@ class PortableAuthoringTests(unittest.TestCase):
                     result = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(source / "install-authoring.ps1"), "-HoudiniVersion", version, "-HoudiniPreferences", str(prefs)], capture_output=True, text=True, timeout=45)
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 package = prefs / "packages/qatools-authoring"
-                for name in ("__init__.py", "prepare_tool.py", "prepared_tool.py", "export_worker.py"):
+                for name in ("__init__.py", "prepare_tool.py", "prepared_tool.py", "export_worker.py", "prepare_shelf_tool.py"):
                     self.assertEqual((package / "scripts/python/qatools_authoring" / name).read_bytes(), (source / name).read_bytes())
                 self.assertFalse(legacy.exists())
                 backup = list((package / "backups").glob("*/python3.13libs/qatools_authoring/old.py"))

@@ -1,7 +1,7 @@
 import "server-only";
 
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
-export async function readUpload(request: Request): Promise<Buffer | null> {
+export async function readUpload(request: Request, limit = MAX_UPLOAD_BYTES): Promise<Buffer | null> {
   const reader = request.body?.getReader();
   if (!reader) return Buffer.alloc(0);
   try {
@@ -10,7 +10,7 @@ export async function readUpload(request: Request): Promise<Buffer | null> {
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > MAX_UPLOAD_BYTES) { await reader.cancel(); return null; }
+      if (size > limit) { await reader.cancel(); return null; }
       chunks.push(value);
     }
     return Buffer.concat(chunks);

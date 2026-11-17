@@ -186,6 +186,11 @@ test('actual PostgreSQL bundle sources, pinned checkout, overlapping refunds and
  await db.exec('UPDATE products SET price_eur=9 WHERE id=10');
  const rid='00000000-0000-4000-8000-000000000080';
  await db.exec(read('20261104100000_prepared_export_filenames.sql'));
+ await db.exec(read('20261117100000_prepared_shelf_tool_identity.sql'));
+ const shelf={schema:2,label:'QA Shelf Test',internal_name:'QA_Shelf_Test',slug:'qa_shelf_test',file:'QA_Shelf_Test.shelf',sha256:'b'.repeat(64)};
+ const shelfImport=(await db.query('SELECT import_prepared_tool($1,gen_random_uuid(),$2) r',[admin,shelf])).rows[0].r;
+ assert.equal(shelfImport.slug,shelf.slug);
+ await assert.rejects(db.query('SELECT import_prepared_tool($1,gen_random_uuid(),$2)',[admin,{...shelf,file:'QA_Shelf_Test.hdalc'}]),/Invalid prepared identity/);
  const capital={schema:1,label:'Capital Tool',internal_name:'Capital_Tool',slug:'capital_tool',file:'Capital_Tool.hdalc',sha256:'a'.repeat(64)};
  assert.equal((await db.query('SELECT import_prepared_tool($1,gen_random_uuid(),$2) r',[admin,capital])).rows[0].r.slug,'capital_tool');
  await assert.rejects(db.query('SELECT import_prepared_tool($1,gen_random_uuid(),$2)',[admin,{...capital,file:'../Capital_Tool.hdalc'}]),/Invalid prepared identity/);
@@ -251,6 +256,28 @@ test('actual PostgreSQL bundle sources, pinned checkout, overlapping refunds and
  await db.exec(read('20261008130000_live_paddle_flows.sql'));
  assert.equal((await db.query('SELECT count(*)::int n FROM live_product_prices')).rows[0].n,0);
  assert.equal((await db.query('SELECT count(*)::int n FROM sandbox_payment_events')).rows[0].n,sandboxCount);
+
+ // Prepared details and release mapping commit together.
+ await db.exec(read('20261117110000_prepared_project_details.sql'));
+ const manifest={schema:1,label:'Example Project',slug:'example_project',scene:'scene.hiplc',houdini:'21.0.512',tools:['one','two'],warnings:[{type:'Sop/extra',node:'/obj/geo/private_node'}]};
+ for(const role of ['anon','authenticated']){
+  assert.equal((await db.query("SELECT has_function_privilege($1,'set_prepared_project_download(uuid,bigint,text,text,text,jsonb,text,jsonb)','EXECUTE') allowed",[role])).rows[0].allowed,false);
+  assert.equal((await db.query("SELECT has_function_privilege($1,'project_product_details(bigint)','EXECUTE') allowed",[role])).rows[0].allowed,true);
+ }
+ assert.equal((await db.query("SELECT set_prepared_project_download($1,200,$2,$2,'package.zip',$3,$4,$5) r",[projectBuyer,projectPath,projectSources,fingerprint,manifest])).rows[0].r.ok,false);
+ assert.equal((await db.query("SELECT set_prepared_project_download($1,200,$2,$2,'package.zip',$3,$4,$5) r",[admin,projectPath,projectSources,fingerprint,{...manifest,tools:['unknown']}])).rows[0].r.ok,false);
+ assert.equal((await db.query("SELECT set_prepared_project_download($1,200,$2,$2,'package.zip',$3,$4,$5) r",[admin,projectPath,projectSources,fingerprint,manifest])).rows[0].r.ok,true);
+ assert.deepEqual((await db.query("SELECT project_product_details(200) r")).rows[0].r,{scene:'scene.hiplc',houdini:'21.0.512',dependencies:['Sop/extra']});
+ await db.exec("UPDATE product_downloads SET enabled=false WHERE product_id=200");
+ assert.equal((await db.query("SELECT project_product_details(200) r")).rows[0].r,null);
+ await db.exec("UPDATE product_downloads SET enabled=true WHERE product_id=200;UPDATE products SET published=false WHERE id=200");
+ assert.equal((await db.query("SELECT project_product_details(200) r")).rows[0].r,null);
+ await db.exec("UPDATE products SET published=true WHERE id=200");
+ await assert.rejects(db.query("SELECT set_prepared_project_download($1,200,NULL,$2,'package.zip',$3,$4,$5)",[admin,projectPath,projectSources,'e'.repeat(64),{...manifest,scene:'different.hiplc'}]),/changed/);
+ assert.deepEqual((await db.query("SELECT project_manifest FROM bundle_releases WHERE product_id=200")).rows[0].project_manifest,manifest);
+ assert.equal((await db.query("SELECT set_assembled_project_download($1,200,$2,$2,'package.zip',$3,$4) r",[admin,projectPath,projectSources,fingerprint])).rows[0].r.ok,true);
+ assert.equal((await db.query("SELECT project_product_details(200) r")).rows[0].r,null);
+
  const liveChecks=(await db.query('SELECT live_product_publication_checks($1,10) r',[admin])).rows[0].r;assert.ok(liveChecks.missing.includes('Verified Paddle price'));
  await db.exec('UPDATE products SET price_eur=7 WHERE id=2');
  const job=(await db.query('SELECT reserve_live_catalog_setup($1,2,$2,700) r',[admin,'two'])).rows[0].r;assert.equal(job.ok,true);assert.equal(job.created,true);

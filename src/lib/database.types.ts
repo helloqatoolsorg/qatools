@@ -1,3 +1,4 @@
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 import type { AccountPurchases } from "./accountPurchases";
 import type { FinanceReport } from "./adminFinance";
 // Table types derived from supabase/migrations/20261002172027_remote_schema.sql.
@@ -6,6 +7,13 @@ import type { FinanceReport } from "./adminFinance";
 export type Database = {
   public: {
     Tables: {
+      bundle_releases: {
+        Row: {product_id: number; file_path: string; tool_ids: number[]; project_sha256: string | null; project_manifest: Json | null};
+        Insert: {product_id: number; file_path: string; tool_ids: number[]; project_sha256?: string | null; project_manifest?: Json | null};
+        Update: {file_path?: string; tool_ids?: number[]; project_sha256?: string | null; project_manifest?: Json | null};
+        Relationships: [];
+      };
+
       site_branding: {
         Row: { id: number; logo_path: string | null; revision: string };
         Insert: { id: number; logo_path?: string | null; revision?: string };
@@ -504,6 +512,14 @@ export type Database = {
           items: { id: number; product_id: number; quantity: number; unit_price: number;
             product: { id: number; name: string; slug: string } | null }[];
         }[] };
+      };
+      set_prepared_project_download: {
+        Args: {p_admin_id: string; p_product_id: number; p_expected_path: string | null; p_file_path: string; p_file_name: string; p_sources: Json; p_project_sha256: string; p_manifest: Json | null};
+        Returns: Json;
+      };
+      project_product_details: {
+        Args: {p_product_id: number};
+        Returns: Json;
       };
       set_assembled_project_download: {
         Args: { p_admin_id:string; p_product_id:number; p_expected_path:string|null; p_file_path:string; p_file_name:string; p_sources:{tool_id:number;file_path:string}[]; p_project_sha256:string };

@@ -4,6 +4,37 @@ import { validToolZip } from "./adminDownloadUpload";
 import { crc32, houdiniPackageEntries, makePackageZip, packageConfig, type PackageEntry } from "./houdiniPackage";
 
 export const PROJECT_UPLOAD_LIMIT = 4 * 1024 * 1024 - 8192;
+const manifestName = "qatools-project.json";
+export type ProjectManifest = {
+  schema: 1;
+  label: string;
+  slug: string;
+  scene: string;
+  houdini: string;
+  tools: string[];
+  warnings: {type: string; node: string}[];
+};
+export type ProjectInspection = {manifest: ProjectManifest | null; toolIds: number[]; missing: string[]};
+
+function readManifest(bytes: Buffer, scenes: Set<string>): ProjectManifest {
+  const invalid = () => new Error("Invalid project manifest. Export the project again with QA Project auth.");
+  let value;
+  try { value = JSON.parse(bytes.toString("utf8")); } catch { throw invalid(); }
+  const text = (input: unknown, max: number): input is string =>
+    typeof input === "string" && input.length > 0 && input.length <= max && !/[\u0000-\u001f\ufffd]/.test(input);
+  if (!value || value.schema !== 1 ||
+      !text(value.label, 80) || !/^[A-Z0-9][a-z0-9]*(?: [A-Z0-9][a-z0-9]*)*$/.test(value.label) ||
+      value.slug !== value.label.toLowerCase().replaceAll(" ", "_") ||
+      !text(value.scene, 255) || value.scene.includes("/") || !scenes.has(value.scene) ||
+      !text(value.houdini, 24) || !/^\d+\.\d+\.\d+$/.test(value.houdini) ||
+      !Array.isArray(value.tools) || value.tools.length > 100 || new Set(value.tools).size !== value.tools.length ||
+      !value.tools.every((slug: unknown) => text(slug, 80) && /^[a-z0-9][a-z0-9_-]*$/.test(slug)) ||
+      !Array.isArray(value.warnings) || value.warnings.length > 200 ||
+      !value.warnings.every((warning: ProjectManifest["warnings"][number]) =>
+        warning && text(warning.type, 256) && text(warning.node, 512) && warning.node.startsWith("/"))) throw invalid();
+  return value;
+}
+
 export async function buildProjectPackage(slug: string, archive: Buffer, tools: PackageEntry[]): Promise<Buffer> {
   if (!/^[a-z0-9][a-z0-9_-]{0,79}$/.test(slug)) throw new Error("Invalid project identifier.");
   validateProjectArchive(archive);
@@ -13,13 +44,14 @@ export async function buildProjectPackage(slug: string, archive: Buffer, tools: 
 }
 // Keep the original ZIP intact inside the release. Inspect and verify its contents
 // without extracting to disk or allowing it to replace the shared tool runtime.
-export function validateProjectArchive(bytes: Buffer): void {
+export function validateProjectArchive(bytes: Buffer): ProjectManifest | null {
   if (bytes.length > PROJECT_UPLOAD_LIMIT || !validToolZip(bytes)) throw new Error("Choose a valid project ZIP smaller than 4 MB.");
   let end = bytes.length - 22;
   while (end >= 0 && (bytes.readUInt32LE(end) !== 0x06054b50 || end + 22 + bytes.readUInt16LE(end + 20) !== bytes.length)) end--;
   const offset = bytes.readUInt32LE(end + 16), count = bytes.readUInt16LE(end + 10);
   const seen = new Set<string>(), ranges: {start:number;end:number}[] = [];
-  let cursor = offset, total = 0, scene = false;
+  const scenes = new Set<string>();
+  let cursor = offset, total = 0, manifest: Buffer | null = null;
   for (let i = 0; i < count; i++) {
     const flags = bytes.readUInt16LE(cursor + 8), method = bytes.readUInt16LE(cursor + 10);
     const compressed = bytes.readUInt32LE(cursor + 20), length = bytes.readUInt32LE(cursor + 24), local = bytes.readUInt32LE(cursor + 42);
@@ -27,10 +59,11 @@ export function validateProjectArchive(bytes: Buffer): void {
     const name = bytes.subarray(cursor + 46, cursor + 46 + nameLength).toString("utf8").replaceAll("\\", "/");
     const parts = name.replace(/\/$/, "").split("/");
     if (seen.has(name.toLowerCase()) || parts.some(p => !p || /[<>:"|?*\x00-\x1f\ufffd]/.test(p) || /[. ]$/.test(p) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(p))
-      || parts.some(p => /^qatools(?:\.json)?$/i.test(p) || /^qatools_licensing$/i.test(p)) || /\.hda(?:lc|nc)?$/i.test(name)
+      || parts.some(p => /^qatools(?:\.json)?$/i.test(p) || /^qatools_licensing$/i.test(p)) || /\.(?:hda(?:lc|nc)?|shelf)$/i.test(name)
       || (flags & ~0x80e) !== 0 || (method === 0 && (flags & 6) !== 0) || ![0,8].includes(method) || bytes.readUInt16LE(cursor + 34) !== 0
       || length > 20 * 1024 * 1024 || (total += length) > 20 * 1024 * 1024)
       throw new Error("Project ZIP contains duplicate, unsafe, installer or oversized entries. Upload project files separately from tools.");
+    if (name.toLowerCase() === manifestName && (name !== manifestName || length > 65536)) throw new Error("Invalid project manifest entry.");
     seen.add(name.toLowerCase());
     const start = local + 30 + bytes.readUInt16LE(local + 26) + bytes.readUInt16LE(local + 28), finish = start + compressed;
     if (finish > offset || bytes.readUInt16LE(local + 6) !== flags || bytes.readUInt16LE(local + 8) !== method || ranges.some(r => local < r.end && finish > r.start)) throw new Error("Invalid project ZIP entry bounds.");
@@ -45,12 +78,14 @@ export function validateProjectArchive(bytes: Buffer): void {
     if (!(flags & 8) && (bytes.readUInt32LE(local + 14) !== bytes.readUInt32LE(cursor + 16) || bytes.readUInt32LE(local + 18) !== compressed || bytes.readUInt32LE(local + 22) !== length)) throw new Error("Inconsistent project ZIP entry.");
     const payload = bytes.subarray(start, finish), data = method === 0 ? payload : inflateRawSync(payload, {maxOutputLength:Math.max(1,length)});
     if (data.length !== length || crc32(data) !== bytes.readUInt32LE(cursor + 16) || (name.endsWith("/") && length !== 0)) throw new Error("Corrupt project ZIP entry.");
-    if (/\.hip(?:lc|nc)?$/i.test(name) && length > 0) scene = true;
+    if (/\.hip(?:lc|nc)?$/i.test(name) && length > 0) scenes.add(name);
+    if (name === manifestName) manifest = data;
     cursor += 46 + nameLength + bytes.readUInt16LE(cursor + 30) + bytes.readUInt16LE(cursor + 32);
   }
   for (const name of seen) {
     const parts = name.replace(/\/$/, "").split("/");
     for (let i = 1; i < parts.length; i++) if (seen.has(parts.slice(0,i).join("/"))) throw new Error("Project ZIP has conflicting file and folder paths.");
   }
-  if (!scene) throw new Error("Include a Houdini HIP, HIPLC or HIPNC scene in the project ZIP.");
+  if (!scenes.size) throw new Error("Include a Houdini HIP, HIPLC or HIPNC scene in the project ZIP.");
+  return manifest ? readManifest(manifest, scenes) : null;
 }

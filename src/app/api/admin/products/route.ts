@@ -52,7 +52,7 @@ export async function POST(request: Request) {
         return json({error:"Unable to save draft. No product name conflict was found. Please retry or contact support."},503);
       }
       if (error.code === "40001") return json({ error: "This draft changed or is already published. Reload before editing." }, 409);
-      if (["22023", "22P02", "22003", "22007"].includes(error.code ?? "")) return json({ error: "Check the entered values and selected tools." }, 400);
+      if (["22023", "22P02", "22003", "22007", "23514"].includes(error.code ?? "")) return json({ error: "Check the entered values and selected tools." }, 400);
       return json({ error: "Unable to save draft." }, 503);
     }
     return json({ draft: data, message: "Draft saved. This product is unpublished." });

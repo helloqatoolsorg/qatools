@@ -2,7 +2,7 @@ function paymentLibrary(name){const exports={};vm.runInNewContext(ts.transpileMo
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript');
 const admin='00000000-0000-0000-0000-000000000001',other='00000000-0000-0000-0000-000000000002';
-const valid={name:'qatest01',product_type:'tool',subtitle:'A tool',description:'Tool description',price_eur:5,compatibility:'Houdini 22',current_version:'1.0',release_date:null,category_id:1,complexity_id:1,tool_ids:[]};
+const valid={name:'qatest01',product_type:'tool',subtitle:'A tool',description:'Tool description',price_eur:5,compatibility:'Houdini 22 and newer',current_version:'1.0',release_date:null,category_id:1,complexity_id:1,tool_ids:[]};
 function load(file,mocks={}) {const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;const exports={};vm.runInNewContext(code,{exports,require:n=>n in mocks?mocks[n]:require(n),Buffer,Uint8Array,URL,Request,Response,Set,Date,Number,JSON});return exports;}
 const lib=load('src/lib/productDraft.ts');
 const mediaLib=load('src/lib/productMedia.ts',{'server-only':{}});
@@ -16,7 +16,7 @@ function setup(options={}) {
 }
 test('draft validation rejects browser publication, bad money, unsafe names and invalid composition',()=>{
  assert.equal(lib.validDraft(valid),true);
- for(const patch of [{published:true},{price_eur:1.001},{name:'../tool'},{name:'Tool'},{category_id:1.5},{product_type:'other'},{tool_ids:[1]},{product_type:'project',tool_ids:[1,1]},{tool_ids:'bad'}])assert.equal(lib.validDraft({...valid,...patch}),false);
+ for(const patch of [{published:true},{price_eur:1.001},{name:'../tool'},{name:'Tool'},{category_id:1.5},{compatibility:'Houdini 22'},{compatibility:'Houdini 31 and newer'},{product_type:'other'},{tool_ids:[1]},{product_type:'project',tool_ids:[1,1]},{tool_ids:'bad'}])assert.equal(lib.validDraft({...valid,...patch}),false);
  assert.equal(lib.validDraft({...valid,product_type:'bundle',tool_ids:[1,2]}),true);
 });
 test('both product methods and media deny non-admins before any privileged work',async()=>{

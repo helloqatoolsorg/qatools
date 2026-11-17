@@ -291,6 +291,56 @@ def purchase_state(product_slug):
         return "Free tool"
     return "Purchase tool"
 
+def _show_shelf_license(product_slug, title, detail=""):
+    import hou
+
+    actions = [("Activate or refresh", show_account_dialog)]
+    if not default_client().status().get("valid"):
+        actions.insert(0, ("Get license key", get_license_key))
+    if purchase_state(product_slug) == "Purchase tool":
+        actions.append(("Purchase tool", lambda: purchase_tool(product_slug)))
+    lines = [license_field("state", product_slug), license_field("trial", product_slug), detail]
+    index = hou.ui.displayMessage(
+        "\n".join(dict.fromkeys(line for line in lines if line)),
+        buttons=tuple(label for label, _ in actions) + ("Close",),
+        default_choice=len(actions), close_choice=len(actions), title=title + " — License",
+    )
+    if 0 <= index < len(actions):
+        actions[index][1]()
+
+
+def run_shelf_tool(product_slug, title, script, tool_context):
+    """Use the shared license before running a shelf action in its original context."""
+    if tool_context.get("kwargs", {}).get("shiftclick"):
+        _show_shelf_license(product_slug, title)
+        return
+
+    client = default_client()
+    try:
+        try:
+            client.require_product(product_slug)
+        except LicenseError:
+            status = client.status(include_expired=True)
+            if not status.get("valid"):
+                if status.get("expired"):
+                    raise
+                show_account_dialog()
+                if not client.status().get("valid"):
+                    return
+            try:
+                client.require_product(product_slug)
+            except LicenseError:
+                client.start_tool_trial(product_slug)
+                client.require_product(product_slug)
+    except (LicenseError, OSError) as error:
+        _show_shelf_license(product_slug, title, str(error))
+        return
+
+    scope = dict(tool_context)
+    scope.pop("run_shelf_tool", None)
+    exec(compile(script, title + ".shelf", "exec"), scope, scope)
+
+
 def purchase_tool(product_slug):
     if not isinstance(product_slug, str) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,127}", product_slug):
         raise LicenseError("Invalid tool identity.")
@@ -323,7 +373,7 @@ def show_account_dialog():
             with _trial_lock:
                 _trial_attempts.clear()
                 _trial_errors.clear()
-            hou.ui.displayMessage("QATools account connected. Unpurchased paid tools start their own seven-day trial when first placed.", title="QATools")
+            hou.ui.displayMessage("QATools account connected. Unpurchased paid tools start their own seven-day trial on first use.", title="QATools")
         elif action == 1:
             result = client.refresh(force=True)
             with _trial_lock:

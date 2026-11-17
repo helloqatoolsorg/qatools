@@ -6,7 +6,8 @@ import ProductPublication from "@/components/ProductPublication";
 import AdminProductCatalog from "./AdminProductCatalog";
 import { readDraftRecovery, writeDraftRecovery, clearDraftRecovery, type DraftRecovery } from "@/lib/adminDraftRecovery";
 import AdminGallery, {saveArtwork, type PendingMedia} from "@/components/AdminGallery";
-import AdminToolPackage, {savePendingInstaller} from "@/components/AdminToolPackage";
+import AdminToolPackage, {savePendingInstaller, inspectProjectFile} from "@/components/AdminToolPackage";
+import type { ProjectInspection } from "@/lib/projectArchive";
 import PublicationState from "@/components/PublicationState";
 import ProductMediaPreview from "@/components/ProductMediaPreview";
 import { productMediaAccept, productMediaFileHelp, validProductMediaFile } from "@/lib/productMediaInput";
@@ -14,7 +15,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { houdiniCompatibilityOptions, productSlug, validProductTitle, productTypes, type DraftInput, type ProductType } from "@/lib/productDraft";
+import { compatibilitySelection, houdiniCompatibilityOptions, productSlug, validProductTitle, productTypes, type DraftInput, type ProductType } from "@/lib/productDraft";
 import "./AdminProducts.css";
 type Media = { id: number; file_path: string | null; role: string; sort_order: number };
 type Product = DraftInput & { id: number; slug: string; published: boolean; updated_at: string; prepared_identity?: object | null; has_installer?:boolean; draft_request_id?:string; product_media: Media[] };
@@ -44,6 +45,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
   const [importFile,setImportFile]=useState<File|null>(null);
   const [importPending,setImportPending]=useState(false);
   const [pendingTool,setPendingTool]=useState<File|null>(null);
+  const [projectInspection, setProjectInspection] = useState<ProjectInspection | null>(null);
   const restored=useRef(false);
   const loadedOwner=useRef<string|null>(null);
   const saving=useRef(false);
@@ -108,7 +110,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
             const product = body.products.find((p: Product) => String(p.id) === rawId);
             if (!product) throw new Error("Product not found.");
             if(product.prepared_identity && !product.has_installer)requestId.current=product.draft_request_id ?? null;
-            setId(product.id); setUpdatedAt(product.updated_at); setDraft({ name: product.name, slug:product.slug, product_type: product.product_type, subtitle: product.subtitle, description: product.description, price_eur: product.price_eur === null ? null : Number(product.price_eur), compatibility: product.compatibility, current_version: product.current_version, release_date: product.release_date, category_id: product.category_id ?? 0, complexity_id: product.complexity_id ?? 0, tool_ids: product.tool_ids });
+            setId(product.id); setUpdatedAt(product.updated_at); setDraft({ name: product.name, slug:product.slug, product_type: product.product_type, subtitle: product.subtitle, description: product.description, price_eur: product.price_eur === null ? null : Number(product.price_eur), compatibility: compatibilitySelection(product.compatibility), current_version: product.current_version, release_date: product.release_date, category_id: product.category_id ?? 0, complexity_id: product.complexity_id ?? 0, tool_ids: product.tool_ids });
             setPriceText(product.price_eur === null ? "" : String(product.price_eur)); setPendingTools(product.tool_ids); setDirty(false);
           }
         }
@@ -153,7 +155,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
     }catch(reason){setError(reason instanceof Error?reason.message:"Unable to import tool.");}finally{setBusy(false);}
   }
   function choose(kind: ProductType) {
-    requestId.current=crypto.randomUUID();setPendingTools([]);setImportFile(null);setImportPending(false);
+    requestId.current=crypto.randomUUID();setProjectInspection(null);setPendingTools([]);setImportFile(null);setImportPending(false);
     setPriceText("0");
     const empty: DraftInput = { name: "", product_type: kind, subtitle: "", description: "", price_eur: 0, compatibility: "", current_version: "", release_date: null, category_id: 0, complexity_id: 0, tool_ids: [] };
     setDraft(useTestData ? testDefaults(empty) : empty); setDirty(true);
@@ -188,6 +190,11 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
     uploading.current=true;
     setBusy(true);setError(null);setMessage(null);setExistingProductId(null);
     try {
+      if (draft?.product_type === "project" && pendingTool) {
+        const {manifest, toolIds} = await inspectProjectFile(pendingTool);
+        if (manifest && manifest.slug !== (draft.slug ?? productSlug(draft.name))) throw new Error("The project title must match the uploaded project ZIP.");
+        if (toolIds.some(toolId => !draft.tool_ids.includes(toolId))) throw new Error("Include every tool required by this project before updating.");
+      }
       if(readOnly && (!draft || !validProductContent({subtitle:draft.subtitle,description:draft.description,category_id:draft.category_id,complexity_id:draft.complexity_id})))throw new Error("Enter a subtitle, description, category and complexity before updating.");
       const target=id&&(!dirty || readOnly)?{id,updatedAt:updatedAt!,mediaId:selected?.product_media.find(m=>m.role==="card")?.id ?? null}:await saveMetadata();
       const imagesChanged=Boolean(pendingArtwork || pendingGallery.length || editedMedia);
@@ -226,6 +233,23 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
     } catch(reason) { setError(reason instanceof Error ? reason.message : "Unable to delete draft."); }
     finally {setBusy(false);}
   }
+  function inspectProject(inspection: ProjectInspection) {
+    const {manifest, toolIds} = inspection;
+    if (!manifest || draft?.product_type !== "project") return;
+    if (id && draft.slug !== manifest.slug) throw new Error("This ZIP belongs to " + manifest.label + ". Open its product or create a new project.");
+    if (readOnly) {
+      if (toolIds.some(toolId => !draft.tool_ids.includes(toolId))) throw new Error("This ZIP requires tools outside the published project.");
+      setProjectInspection(inspection);
+      return;
+    }
+    setProjectInspection(inspection);
+    const major = Number(manifest.houdini.split(".")[0]);
+    setDraft({...draft, name: manifest.label, tool_ids: toolIds,
+      compatibility: draft.compatibility || (major >= 21 && major <= 30 ? "Houdini " + major + " and newer" : "")});
+    setPendingTools(toolIds);
+    setDirty(true);
+    setMessage(null);
+  }
   function chooseArtwork(file: File | undefined) {
     if (!file) return;
     if (!validProductMediaFile(file)) { setError(productMediaFileHelp); return; }
@@ -242,7 +266,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
     {dirty && readOnly && <p role="status">Pending product changes. Click Update product to apply them. Leaving this editor discards them.</p>}{dirty && !readOnly && <p>Unsaved changes are kept in this browser. Use Continue editing to return to this product.</p>}
     {!readOnly && <div style={{margin:"16px 0"}}><label><input type="checkbox" checked={useTestData} disabled={busy || packageBusy} onChange={event => { const checked=event.target.checked;setUseTestData(checked);if(checked && draft){setDraft(testDefaults(draft));setDirty(true);} }}/> Use test data</label>{useTestData && <p>Fills empty text fields and chooses random active tags. Review placeholders before publishing. Price, files and included tools stay manual.</p>}</div>}
     {recoveryWarning && <p role="alert" className="admin-product-error">{recoveryWarning}</p>}{error && <p role="alert" className="admin-product-error">{error} {id && <button type="button" disabled={busy || packageBusy} onClick={()=>setRevision(v=>v+1)}>Reload saved product</button>}</p>}{existingProductId && <p><a href={"/admin/products/edit?id="+existingProductId}>Open existing product</a></p>}{message && <p role="status">{message}</p>}
-    {!draft ? <div className="admin-type-choice" role="dialog" aria-modal="false" aria-labelledby="product-type-title"><h2 id="product-type-title">Choose product type</h2>{productTypes.map(t => <button key={t} type="button" onClick={() => choose(t)}>{t.toUpperCase()}</button>)}</div> : draft.product_type==="tool" && (!id || importPending || (selected?.prepared_identity && selected.has_installer===false)) ? <section className="admin-type-choice"><h2>Upload prepared tool</h2><p>Choose the ZIP exported by Prepare QATools tool. Its Asset Label and Internal Name set the title and locked slug.</p><input type="file" accept=".zip" disabled={busy} onChange={e=>{const file=e.target.files?.[0];e.target.value="";if(file)void importTool(file);}} />{importFile && <button type="button" disabled={busy} onClick={()=>void importTool(importFile)}>Retry import</button>}</section> : <>
+    {!draft ? <div className="admin-type-choice" role="dialog" aria-modal="false" aria-labelledby="product-type-title"><h2 id="product-type-title">Choose product type</h2>{productTypes.map(t => <button key={t} type="button" onClick={() => choose(t)}>{t.toUpperCase()}</button>)}</div> : draft.product_type==="tool" && (!id || importPending || (selected?.prepared_identity && selected.has_installer===false)) ? <section className="admin-type-choice"><h2>Upload prepared tool</h2><p>Choose the ZIP exported by QA HDA auth or QA Shelf Tool auth. Its label and internal name set the title and locked slug.</p><input type="file" accept=".zip" disabled={busy} onChange={e=>{const file=e.target.files?.[0];e.target.value="";if(file)void importTool(file);}} />{importFile && <button type="button" disabled={busy} onClick={()=>void importTool(importFile)}>Retry import</button>}</section> : draft.product_type === "project" && !id && !pendingTool ? <AdminToolPackage kind="project" productId={null} disabled={busy} tool={pendingTool} onToolChange={setPendingTool} ensureDraft={ensureToolDraft} onBusyChange={setPackageBusy} onProjectInspection={inspectProject} projectInspection={projectInspection} /> : <>
       {readOnly && <p>This product is published. Edit subtitle, description, category, complexity and media, then click Update product. Identity, price, version and included tools stay protected. <a href={"/product?slug=" + selected?.slug}>View product</a></p>}
       <div className="product-hero admin-product-hero"><div className="admin-product-media-column">      <section className="admin-product-media"><input ref={artworkInput} className="admin-artwork-input" type="file" accept={productMediaAccept} disabled={busy || packageBusy} onChange={e => { chooseArtwork(e.target.files?.[0]); e.target.value=""; }} />
           <button type="button" className="product-media admin-main-artwork" disabled={busy || packageBusy} onClick={() => artworkInput.current?.click()} aria-label={pendingArtwork || (selected && artwork(selected)) ? "Change cover media" : "Upload cover media"}>
@@ -250,8 +274,8 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
             <span className="admin-artwork-overlay">{busy ? "Uploading..." : pendingArtwork || (selected && artwork(selected)) ? "Click to change media" : "WebM · PNG · JPG · WebP · GIF"}</span>
           </button>
           {pendingArtwork && <p>Media selected. Click Update product to apply it.</p>}
-          <h2>Gallery</h2><AdminGallery media={[...(editedMedia ?? selected?.product_media ?? []),...pendingGallery.map((file,index)=>({id:-1000-index,file,file_path:null,role:"gallery",sort_order:1000+index}))]} disabled={busy || packageBusy} onChange={media=>{setEditedMedia(media);setPendingGallery([]);}} /></section><AdminToolPackage key={String(id)+":"+revision} prepared={!!selected?.prepared_identity} kind={draft.product_type} productId={id} disabled={busy} tool={pendingTool} onToolChange={setPendingTool} ensureDraft={ensureToolDraft} onBusyChange={setPackageBusy} /></div><div className="product-info admin-product-info"><form onSubmit={save} onKeyDown={event => { if(event.key === "Enter" && !event.nativeEvent.isComposing && event.target instanceof HTMLInputElement && ["text","search","email","url","tel","password","number"].includes(event.target.type)){event.preventDefault();event.target.blur();} }}><fieldset disabled={busy || packageBusy}><div className="admin-product-fields">
-        <label>Title<input required readOnly={readOnly || draft.product_type==="tool"} maxLength={80} value={draft.name} onChange={e => change("name",e.target.value)} placeholder="qatool01" /><small>{draft.product_type==="tool" ? "From the Houdini Asset Label. Tool identity is locked." : "Letters, numbers, spaces, underscores or hyphens. The slug is generated automatically."}</small></label>
+          <h2>Gallery</h2><AdminGallery media={[...(editedMedia ?? selected?.product_media ?? []),...pendingGallery.map((file,index)=>({id:-1000-index,file,file_path:null,role:"gallery",sort_order:1000+index}))]} disabled={busy || packageBusy} onChange={media=>{setEditedMedia(media);setPendingGallery([]);}} /></section><AdminToolPackage key={String(id)+":"+revision} prepared={!!selected?.prepared_identity} kind={draft.product_type} productId={id} disabled={busy} tool={pendingTool} onToolChange={setPendingTool} ensureDraft={ensureToolDraft} onBusyChange={setPackageBusy} onProjectInspection={inspectProject} projectInspection={projectInspection} /></div><div className="product-info admin-product-info"><form onSubmit={save} onKeyDown={event => { if(event.key === "Enter" && !event.nativeEvent.isComposing && event.target instanceof HTMLInputElement && ["text","search","email","url","tel","password","number"].includes(event.target.type)){event.preventDefault();event.target.blur();} }}><fieldset disabled={busy || packageBusy}><div className="admin-product-fields">
+        <label>Title<input required readOnly={readOnly || draft.product_type==="tool" || draft.product_type==="project" && !!pendingTool} maxLength={80} value={draft.name} onChange={e => change("name",e.target.value)} placeholder="qatool01" /><small>{draft.product_type==="tool" ? "From the Houdini Asset Label. Tool identity is locked." : "Letters, numbers, spaces, underscores or hyphens. The slug is generated automatically."}</small></label>
         <label>Slug<input value={draft.slug ?? productSlug(draft.name)} readOnly /></label><label>Type<input value={draft.product_type} readOnly /></label>
         <label className="admin-product-wide">Subtitle<input maxLength={200} value={draft.subtitle} onChange={e => change("subtitle",e.target.value)} /></label>
         <label className="admin-product-wide">Description<textarea maxLength={20000} rows={10} value={draft.description} onChange={e => change("description",e.target.value)} /></label>
@@ -269,9 +293,6 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
           Compatibility
           <select disabled={readOnly} value={draft.compatibility} onChange={event => change("compatibility", event.target.value)}>
             <option value="">Choose compatibility</option>
-            {draft.compatibility && !houdiniCompatibilityOptions.includes(draft.compatibility) && (
-              <option value={draft.compatibility}>{draft.compatibility} (current value)</option>
-            )}
             {houdiniCompatibilityOptions.map(option => <option key={option} value={option}>{option}</option>)}
           </select>
         </label>

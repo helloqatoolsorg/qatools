@@ -1,48 +1,98 @@
 "use client";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-async function token() { const result = await supabase.auth.getSession(); if (!result.data.session || result.error) throw new Error("Please log in again."); return result.data.session.access_token; }
-type Download = { file_path: string; file_name: string; enabled: boolean };
-export default function AdminToolPackage({ productId, disabled, onBusyChange, tool, onToolChange, ensureDraft, kind="tool", prepared=false }: { prepared?:boolean; kind?:"tool"|"bundle"|"project"; productId:number|null; disabled:boolean; onBusyChange:(busy:boolean)=>void; tool:File|null; onToolChange:(file:File|null)=>void; ensureDraft:()=>Promise<number> }) {
-  const [download, setDownload] = useState<Download | null>(null), [loaded,setLoaded] = useState(false);
-  const [busy,setBusy] = useState(false), [error,setError] = useState<string | null>(null), [message,setMessage] = useState<string | null>(null);
-  const [revision,setRevision] = useState(0);
+import type { ProjectInspection, ProjectManifest } from "@/lib/projectArchive";
+import {inspectProjectFile} from "@/lib/projectUpload";
+
+async function token() {
+  const { data, error } = await supabase.auth.getSession();
+  if (!data.session || error) throw new Error("Please log in again.");
+  return data.session.access_token;
+}
+
+type Download = { file_path: string; file_name: string };
+export type ProjectPackageProps = {
+  productId: number | null;
+  disabled: boolean;
+  onBusyChange: (busy: boolean) => void;
+  tool: File | null;
+  onToolChange: (file: File | null) => void;
+  ensureDraft: () => Promise<number>;
+  projectInspection?: ProjectInspection | null;
+  onProjectInspection?: (inspection: ProjectInspection) => void;
+};
+
+export default function AdminProjectPackage({
+  productId, disabled, onBusyChange, tool, onToolChange, onProjectInspection, projectInspection,
+}: ProjectPackageProps) {
+  const [download, setDownload] = useState<Download | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [storedManifest, setStoredManifest] = useState<ProjectManifest | null>(null);
+  const manifest = tool ? projectInspection?.manifest : storedManifest;
+  const [revision, setRevision] = useState(0);
+
   useEffect(() => {
-    let cancelled = false;
     if (!productId) return;
-    (async () => { try {
-      const response = await fetch("/api/admin/downloads?productId=" + productId,{cache:"no-store",headers:{Authorization:"Bearer " + await token()}});
-      const body = await response.json(); if (!response.ok) throw new Error(body.error ?? "Unable to load installer.");
-      if (!cancelled) { setDownload(body.download); setLoaded(true); setError(null); }
-    } catch (reason) { if (!cancelled) setError(reason instanceof Error ? reason.message : "Unable to load installer."); } })();
-    return () => { cancelled = true; };
-  },[productId,revision]);
-  async function upload() {
-    if ((kind!=="bundle" && !tool) || busy || disabled || (productId && !loaded)) return;
-    setBusy(true); onBusyChange(true); setError(null); setMessage(null);
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const response = await fetch("/api/admin/downloads?productId=" + productId, {
+          cache: "no-store", headers: { Authorization: "Bearer " + await token() }, signal: controller.signal,
+        });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error ?? "Unable to load installer.");
+        const details = await fetch("/api/admin/products/project-inspect?productId=" + productId, {
+          cache: "no-store", headers: {Authorization: "Bearer " + await token()}, signal: controller.signal,
+        });
+        const saved = await details.json();
+        if (!details.ok) throw new Error(saved.error ?? "Unable to load project details.");
+        if (!controller.signal.aborted) {setDownload(body.download); setStoredManifest(saved.manifest); setLoaded(true);}
+      } catch (reason) {
+        if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Unable to load installer.");
+      }
+    })();
+    return () => controller.abort();
+  }, [productId, revision]);
+
+  async function choose(file: File) {
+    setBusy(true);
+    onBusyChange(true);
+    onToolChange(null);
+    setError(null);
     try {
-      if (tool && tool.size > 4 * 1024 * 1024 - 8192) throw new Error("Choose installer files totaling less than 4 MB.");
-      if(tool && ((prepared || kind==="project") ? !/\.zip$/i.test(tool.name) : !/\.hda(lc|nc)?$/i.test(tool.name)))throw new Error(kind==="project" ? "Choose a project ZIP containing a Houdini scene." : prepared ? "Choose a prepared tool ZIP." : kind==="bundle" ? "Choose a bundle ZIP." : "Choose a Houdini HDA, HDALC or HDANC file.");
-      const targetId=await ensureDraft();
-      let expectedPath=download?.file_path ?? "";
-      if(!productId){const current=await fetch("/api/admin/downloads?productId="+targetId,{cache:"no-store",headers:{Authorization:"Bearer "+await token()}});const result=await current.json();if(!current.ok)throw new Error(result.error ?? "Unable to verify installer.");expectedPath=result.download?.file_path ?? "";}
-      const body = new FormData(); if(tool)body.set("tool",tool);
-      const params = new URLSearchParams({productId:String(targetId),expectedPath});
-      const response = await fetch("/api/admin/products/"+(kind!=="tool" ? "assemble" : "package")+"?" + params,{method:"POST",headers:{Authorization:"Bearer " + await token()},...(kind==="bundle" ? {} : {body})});
-      const result = await response.json(); if (!response.ok) throw new Error(result.error ?? "Unable to save installer.");
-      setDownload(result.download); onToolChange(null); setMessage(result.message); setRevision(v=>v+1);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save installer."); }
-    finally { setBusy(false); onBusyChange(false); }
+      const result = await inspectProjectFile(file);
+      onProjectInspection?.(result);
+      onToolChange(file);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to inspect project ZIP.");
+    } finally {
+      setBusy(false);
+      onBusyChange(false);
+    }
   }
-  return <section className="admin-tool-package"><h2>{kind==="project" ? "Project files" : "Tool files"}</h2><p>{!productId && kind!=="bundle" && "Choose a file now; save the unpublished draft before uploading. "}{kind==="project" ? "Upload a project ZIP containing your Houdini scene and its resources (smaller than 4 MB, up to 20 MB uncompressed). Do not include tool HDAs or the QATools runtime: the selected published tools are added automatically. The download keeps your project ZIP under project/, alongside the shared installer. Re-upload the ZIP to rebuild." : kind==="bundle" ? "Select the included tools, then build the installer from their uploaded files. Click Update product to save changes before building. Each tool must be published with an enabled installer. Rebuild explicitly to include later tool updates." : "The installer includes one QATools.json, your HDA and the shared QATools licensing files."}</p>
+
+  return <section className="admin-tool-package">
+    <h2>Project files</h2>
+    <p>Choose a ZIP from QA Project auth. Its title and included tools are filled automatically. Click Update product to save and build the download.</p>
     <fieldset disabled={disabled || busy}>
-      {kind!=="bundle" && <label>{kind==="project" ? "Upload project ZIP" : prepared ? "Replace prepared tool ZIP" : "Upload Houdini tool"}<input key={revision} type="file" accept={prepared || kind==="project" ? ".zip" : ".hda,.hdalc,.hdanc"} onChange={e => { onToolChange(e.target.files?.[0] ?? null); setMessage(null); }} /></label>}
-      {tool && <p>Selected: {tool.name} <button type="button" onClick={()=>onToolChange(null)}>Remove</button></p>}
-      <p>QATools.json · included automatically</p>
-      <p><a href="/QATools.json" download="QATools.json">Download standard QATools.json</a> · Use the portable package configuration.</p>
-      <button type="button" disabled={(kind!=="bundle" && !tool) || (!!productId && !loaded)} onClick={upload}>{busy ? "Preparing installer..." : kind==="project" ? download ? "Rebuild project download" : "Build project download" : kind==="bundle" ? download ? "Rebuild bundle installer" : "Build bundle installer" : download ? "Replace installer" : "Upload & prepare installer"}</button>
+      <label>Upload project ZIP<input type="file" accept=".zip" onChange={event => {
+        const file = event.target.files?.[0];
+        event.target.value = "";
+        if (file) void choose(file);
+      }} /></label>
+      {tool && <p>Selected: {tool.name} <button type="button" onClick={() => { onToolChange(null); setError(null); }}>Remove</button></p>}
+
     </fieldset>
-    {download && <p>Current installer: {download.file_name} · {download.enabled ? "enabled" : "disabled"}</p>}
-    {error && <p role="alert" className="admin-product-error">{error} <button type="button" disabled={busy} onClick={() => { setLoaded(false); setRevision(v => v+1); }}>Reload</button></p>}{message && <p role="status">{message}</p>}
+    {busy && <p role="status">Preparing project files…</p>}
+    {download && <p>Current installer: {download.file_name}</p>}
+    {manifest?.warnings.length ? <div role="status">
+      <p>These dependencies may need a separate installation.</p>
+      <ul>{manifest.warnings.map(warning => <li key={warning.type + ":" + warning.node}>{warning.type} ({warning.node})</li>)}</ul>
+    </div> : null}
+    {error && <p role="alert" className="admin-product-error">{error} {productId && !loaded &&
+      <button type="button" disabled={busy} onClick={() => { setError(null); setRevision(value => value + 1); }}>Retry loading installer</button>}</p>}
+
   </section>;
 }

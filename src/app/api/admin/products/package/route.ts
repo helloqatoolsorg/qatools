@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     if(product.data.prepared_identity){
       try{const prepared=preparedTool(toolBytes);identity=prepared.identity;tools=[prepared.tool];}catch(reason){return privateJson({error:reason instanceof Error?reason.message:"Choose a prepared tool ZIP."},400);}
       const original=product.data.prepared_identity;
-      if(identity.label!==original.label || identity.slug!==original.slug || identity.internal_name!==original.internal_name || identity.file.toLowerCase()!==original.file.toLowerCase())return privateJson({error:"Replacement must preserve the tool Asset Label, Internal Name and HDA filename."},409);
+      if(identity.label!==original.label || identity.slug!==original.slug || identity.internal_name!==original.internal_name || identity.file.toLowerCase()!==original.file.toLowerCase())return privateJson({error:"Replacement must preserve the tool label, internal name and filename."},409);
     }
     let included:BundleTool[]=[];
     if(isBundle){

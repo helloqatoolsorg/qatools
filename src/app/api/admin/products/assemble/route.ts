@@ -4,7 +4,7 @@ import { privateJson } from "@/lib/activationHttp";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildHoudiniPackage, packageConfig } from "@/lib/houdiniPackage";
 import { bundleTools } from "@/lib/bundlePackage";
-import { buildProjectPackage, PROJECT_UPLOAD_LIMIT, validateProjectArchive } from "@/lib/projectArchive";
+import { buildProjectPackage, PROJECT_UPLOAD_LIMIT, validateProjectArchive, type ProjectManifest } from "@/lib/projectArchive";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
  try {
@@ -16,6 +16,7 @@ export async function POST(request: Request) {
   if(!product.data || !["bundle","project"].includes(product.data.product_type))return privateJson({error:"Choose a bundle or project."},409);
   const isProject = product.data.product_type === "project";
   let projectBytes: Buffer | null = null;
+  let manifest: ProjectManifest | null = null;
   if (isProject) {
    const contentType = request.headers.get("content-type");
    if (!contentType?.startsWith("multipart/form-data;")) return privateJson({error:"Upload a project ZIP."},400);
@@ -27,7 +28,8 @@ export async function POST(request: Request) {
    const file=form.get("tool");
    if(!(file instanceof File) || !/\.zip$/i.test(file.name) || form.getAll("tool").length!==1 || [...form.keys()].some(k=>k!=="tool"))return privateJson({error:"Upload one project ZIP."},400);
    projectBytes=Buffer.from(await file.arrayBuffer());
-   try{validateProjectArchive(projectBytes);}catch(reason){return privateJson({error:reason instanceof Error ? reason.message:"Invalid project ZIP."},400);}
+   try{manifest=validateProjectArchive(projectBytes);}catch(reason){return privateJson({error:reason instanceof Error ? reason.message:"Invalid project ZIP."},400);}
+   if (manifest && manifest.slug !== product.data.slug) return privateJson({error:"This project ZIP belongs to " + manifest.label + "."},409);
   } else {
   // Servers may represent an empty POST as a non-null stream. Reject bytes,
   // not the presence of a stream; the selection comes only from saved metadata.
@@ -49,6 +51,9 @@ export async function POST(request: Request) {
   const selected=await supabaseAdmin.from("products").select("id,slug,product_type,published,prepared_identity").in("id",ids);
   if(selected.error)return privateJson({error:"Unable to load included tools."},503);
   if(selected.data?.length!==ids.length || selected.data.some(t=>t.product_type!=="tool" || !t.published))return privateJson({error:"Every included tool must be a published individual tool."},409);
+  const includedSlugs = new Set(selected.data.map(tool => tool.slug));
+  const missing = manifest?.tools.filter(slug => !includedSlugs.has(slug)) ?? [];
+  if (missing.length) return privateJson({error:"Save all required tools in Included tools: " + missing.join(", ") + "."},409);
   const mappings=await supabaseAdmin.from("product_downloads").select("product_id,file_path,enabled").in("product_id",ids);
   if(mappings.error)return privateJson({error:"Unable to verify tool installers."},503);
   const tools:{name:string;bytes:Buffer}[]=[], sources:{tool_id:number;file_path:string}[]=[];let total=0;
@@ -68,14 +73,14 @@ export async function POST(request: Request) {
   }
   let bytes:Buffer;
   try{bytes=isProject ? await buildProjectPackage(product.data.slug,projectBytes!,tools) : await buildHoudiniPackage(Buffer.from(JSON.stringify(packageConfig)),tools);}catch{return privateJson({error:"Unable to combine these installers. Check duplicate filenames and the 25 MB package limit."},409);}
-  const fileName=current.data?.file_name ?? product.data.slug+"-houdini22.zip";
+  const fileName=current.data?.file_name ?? product.data.slug+(isProject ? ".zip" : "-houdini22.zip");
   if(!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,149}\.zip$/.test(fileName))return privateJson({error:"Check the product identifier."},400);
   const path=id+"/"+randomUUID()+"/"+fileName;
   const upload=await supabaseAdmin.storage.from("qatools-downloads").upload(path,bytes,{contentType:"application/zip",upsert:false});
   if(upload.error)return privateJson({error:"Unable to save download. Existing installer retained."},503);
   const args={p_admin_id:auth.user.id,p_product_id:id,p_expected_path:expected || null,p_file_path:path,p_file_name:fileName,p_sources:sources};
-  const saved=isProject ? await supabaseAdmin.rpc("set_assembled_project_download",{...args,p_project_sha256:createHash("sha256").update(projectBytes!).digest("hex")}) : await supabaseAdmin.rpc("set_assembled_bundle_download",args);
-  if(saved.error || !saved.data?.ok)return privateJson({error:"The selection or a source installer changed during the build. Existing download retained. Reload and rebuild."},409);
+  const saved=isProject ? await supabaseAdmin.rpc("set_prepared_project_download",{...args,p_project_sha256:createHash("sha256").update(projectBytes!).digest("hex"),p_manifest:manifest}) : await supabaseAdmin.rpc("set_assembled_bundle_download",args);
+  if(saved.error || !saved.data || typeof saved.data !== "object" || !("ok" in saved.data) || saved.data.ok !== true)return privateJson({error:"The selection or a source installer changed during the build. Existing download retained. Reload and rebuild."},409);
   return privateJson({message:isProject ? "Project download built with the selected tools and a separate project ZIP. Install the QATools package, then extract the project ZIP into your working folder. Re-upload the project ZIP when rebuilding." : "Bundle installer built from the selected tools. It includes one QATools.json and shared licensing files. Rebuild to include future tool updates.",download:{file_name:fileName,file_path:path,enabled:true}});
  }catch{return privateJson({error:"Unable to assemble download. Existing installer retained."},503);}
 }
