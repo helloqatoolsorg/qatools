@@ -188,10 +188,10 @@
 .install-guide-back:focus-visible { outline: 1px solid #888; outline-offset: 3px; }
 @media (max-width: 580px) {
   .installation-page > .standalone-page {
-    min-width: 0;
-    padding: 28px max(20px, env(safe-area-inset-right)) 88px max(20px, env(safe-area-inset-left));
+    position: relative; min-width: 0;
+    padding: 28px max(20px, env(safe-area-inset-right)) 108px max(20px, env(safe-area-inset-left));
   }
-  .install-guide { min-width: 0; padding-left: 0; }
+  .install-guide { position: static; min-width: 0; padding-left: 0; }
   .install-guide-instruction { min-width: 0; overflow-wrap: anywhere; }
   .install-guide-instruction button,
   .install-guide-instruction a { box-sizing: border-box; max-width: 100%; white-space: normal; }
@@ -203,9 +203,9 @@
   .install-guide-path button { width: auto; }
   .install-guide-file > span:not([class]) { min-width: 0; overflow-wrap: anywhere; }
   .install-guide-back {
-    position: fixed; z-index: 20;
-    left: max(20px, env(safe-area-inset-left)); top: auto;
-    bottom: max(16px, env(safe-area-inset-bottom)); transform: none;
+    position: absolute; z-index: 1;
+    left: 50%; top: auto;
+    bottom: 32px; transform: translateX(-50%);
     padding: 10px 16px; border-radius: 3px; background: #181818; font-size: 12px;
   }
 }
