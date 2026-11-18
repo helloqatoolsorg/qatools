@@ -7,6 +7,8 @@ import IncludedTools from "@/components/IncludedTools";
 import ProjectDetails from "@/components/ProjectDetails";
 import ProductGallery from "@/components/ProductGallery";
 import ProductDownload from "@/components/ProductDownload";
+import ProductDescription from "@/components/ProductDescription";
+import {productKind, productKindLabel} from "@/lib/productKind";
 import AccountName from "@/components/AccountName";
 import { animateToCart } from "@/lib/cartAnimation";
 
@@ -35,9 +37,12 @@ type Product = {
   description: string;
   price_eur: number | string;
   product_type: string;
+  prepared_identity?: unknown;
   compatibility: string;
   current_version: string;
   release_date: string | null;
+  initial_release_date?: string | null;
+  last_release_update_at?: string | null;
   also_included_in_text:
     | string
     | null;
@@ -138,17 +143,7 @@ export default function ProductPage() {
       } = await supabase
         .from("products")
         .select(`
-          id,
-          name,
-          slug,
-          subtitle,
-          description,
-          price_eur,
-          product_type,
-          compatibility,
-          current_version,
-          release_date,
-          also_included_in_text,
+          *,
           category (
             name
           ),
@@ -389,7 +384,8 @@ export default function ProductPage() {
         </Link>
 
         <section className="product-hero">
-          <ProductGallery key={product.id} images={galleryImages} name={product.name} />
+          <ProductGallery key={product.id} images={galleryImages} name={product.name}
+            releasedAt={product.initial_release_date ?? product.release_date} updatedAt={product.last_release_update_at} />
 
           <aside className="product-info">
             <div className="product-heading">
@@ -444,11 +440,10 @@ export default function ProductPage() {
               </div>
             </div>
 
-            <p className="description">
-              {product.description}
-            </p>
+            <ProductDescription text={product.description} />
 
             <div className="product-meta">
+              <Link className="meta-filter" href={"/?type=" + productKind(product)}>{productKindLabel(product).toUpperCase()}</Link>
               {category && (
                 <a
                   className="meta-filter"

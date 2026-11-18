@@ -18,8 +18,11 @@ export type LikedProduct = {
   slug: string;
   subtitle: string;
   product_type: "tool" | "bundle" | "project";
+  prepared_identity?: unknown;
   price_eur: number | string;
   release_date: string | null;
+  initial_release_date?: string | null;
+  last_release_update_at?: string | null;
 
   category: {
     name: string;
@@ -118,13 +121,7 @@ export function useLikedProducts() {
         await supabase
           .from("products")
           .select(`
-            id,
-            name,
-            slug,
-            subtitle,
-            product_type,
-            price_eur,
-            release_date,
+            *,
             category (
               name
             ),

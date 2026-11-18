@@ -1,0 +1,23 @@
+.product-release-badge {
+  position: absolute; top: 10px; right: 10px; z-index: 2;
+  padding: 5px 9px; border-radius: 3px; background: #3a2915; color: #efb477;
+  font: 11px/1.3 monospace; pointer-events: none;
+}
+.product-release-badge-new {
+  opacity: 0;
+  transform-origin: top right;
+}
+.product-release-badge-new[data-ready="true"] {
+  animation: product-badge-arrive 440ms cubic-bezier(.16, 1, .3, 1) var(--product-badge-delay, 250ms) both;
+}
+@keyframes product-badge-arrive {
+  0% { opacity: 0; transform: translateY(4px) scale(.86); }
+  27% { opacity: 1; transform: translateY(-1px) scale(1.075); }
+  48% { opacity: 1; transform: translateY(0) scale(.965); }
+  72% { opacity: 1; transform: translateY(-1px) scale(1.05); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .product-release-badge-new,
+  .product-release-badge-new[data-ready="true"] { animation: none; opacity: 1; }
+}

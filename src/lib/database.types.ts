@@ -388,6 +388,7 @@ export type Database = {
           current_version: string;
           release_date: string | null;
           initial_release_date: string | null;
+          last_release_update_at: string | null;
           published: boolean;
           also_included_in_text: string | null;
           updated_at: string;
@@ -409,6 +410,7 @@ export type Database = {
           current_version: string;
           release_date?: string | null;
           initial_release_date?: string | null;
+          last_release_update_at?: string | null;
           published?: boolean;
           also_included_in_text?: string | null;
           updated_at?: string;
@@ -430,6 +432,7 @@ export type Database = {
           current_version?: string;
           release_date?: string | null;
           initial_release_date?: string | null;
+          last_release_update_at?: string | null;
           published?: boolean;
           also_included_in_text?: string | null;
           updated_at?: string;

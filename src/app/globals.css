@@ -85,6 +85,25 @@
   color:#777
 }
 
+.trial-banner {
+  position: sticky; top: 76px; z-index: 19;
+  height: 26px; overflow: hidden; background: #101713;
+  border-bottom: 1px solid var(--soft); color: #77a98a;
+  font: 11px/26px monospace;
+}
+.trial-banner-track { display: flex; width: max-content; animation: trial-banner-scroll 44s linear infinite; }
+.trial-banner-group { display: flex; flex-shrink: 0; min-width: 100vw; justify-content: space-around; }
+.trial-banner-group > span { display: block; white-space: nowrap; }
+.trial-banner-dot { display: inline-block; padding: 0 36px; }
+.trial-banner:hover .trial-banner-track { animation-play-state: paused; }
+.products-page .trial-banner + .toolbar { top: 102px; }
+.products-page:has(.trial-banner) .cart-drawer { top: 156px; height: calc(100vh - 156px); }
+.products-page:has(.trial-banner) .cart-overlay { top: 156px; }
+@keyframes trial-banner-scroll { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .trial-banner-track { animation: none; }
+}
+
 .toolbar{
   position:sticky;
   top:76px;

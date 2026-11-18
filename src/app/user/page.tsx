@@ -1,6 +1,8 @@
 "use client";
 import SiteFooter from "@/components/SiteFooter";
 import Link from "next/link";
+import { safeAuthReturnTo } from "@/lib/authReturn";
+import {orderedStaggerDelay} from "@/lib/orderedStagger";
 import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
 import type { AccountOrder, AccountPurchases } from "@/lib/accountPurchases";
@@ -36,10 +38,16 @@ export default function UserPage() {
     sendPasswordReset,
   } = useAuth();
   useEffect(() => {
-    if (!user) return;
-    const slug = new URLSearchParams(window.location.search).get("purchase");
-    if (slug && /^[a-z0-9][a-z0-9_-]{0,127}$/.test(slug)) window.location.replace("/purchase?tool=" + encodeURIComponent(slug));
-  }, [user]);
+    if (!user || loading) return;
+    const params = new URLSearchParams(window.location.search);
+    const slug = params.get("purchase");
+    if (slug && /^[a-z0-9][a-z0-9_-]{0,127}$/.test(slug)) {
+      window.location.replace("/purchase?tool=" + encodeURIComponent(slug));
+      return;
+    }
+    const returnTo = safeAuthReturnTo(params.get("returnTo"), window.location.origin);
+    if (returnTo) window.location.replace(returnTo);
+  }, [user, loading]);
 
   const {
     likedCount,
@@ -175,7 +183,7 @@ export default function UserPage() {
             id, order_number, provider, provider_transaction_id, status, currency,
             total, provider_created_at, created_at,
             order_items (product_id, products (id, name, slug, price_eur, published,
-              current_version, product_type, category (name)))
+              current_version, product_type, prepared_identity, category (name)))
           `).eq("user_id", userId).order("created_at", { ascending: false }).abortSignal(controller.signal),
         ]);
         const account = await response.json() as AccountPurchases & { error?: string };
@@ -222,8 +230,9 @@ export default function UserPage() {
     function afterPageLoad() {
       frame = window.requestAnimationFrame(() => {
         section?.scrollIntoView({ behavior: "instant" });
-        section?.querySelectorAll<HTMLElement>(".account-license-key .license-key-value, .account-license-key button").forEach(element => {
-          element.style.setProperty("--account-key-highlight-delay", (250 + Math.random() * 250) + "ms");
+        const elements = section?.querySelectorAll<HTMLElement>(".account-license-key .license-key-value, .account-license-key button");
+        elements?.forEach((element, index) => {
+          element.style.setProperty("--account-key-highlight-delay", orderedStaggerDelay(index, elements.length));
         });
         section?.classList.add("account-license-highlight");
       });
@@ -244,10 +253,10 @@ export default function UserPage() {
     setError(null);
     setMessage(null);
 
-    const url =
-      mode === "login"
-        ? "/user"
-        : `/user?mode=${mode}`;
+    const params = new URLSearchParams(window.location.search);
+    params.delete("mode");
+    if (mode !== "login") params.set("mode", mode);
+    const url = "/user" + (params.size ? "?" + params.toString() : "");
 
     window.history.replaceState(
       {},

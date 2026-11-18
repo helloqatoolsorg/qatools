@@ -51,11 +51,16 @@ test("dashboard records only valid downloads and isolates history by account",
         INSERT INTO public.account_tool_trials VALUES ('${owner}', 1, '2026-11-14T12:00:00Z');
       `);
       await db.exec(fs.readFileSync("supabase/migrations/20261107120000_account_dashboard_downloads.sql", "utf8"));
+      await db.exec("ALTER TABLE products ADD COLUMN prepared_identity jsonb;");
+      await db.exec(fs.readFileSync("supabase/migrations/20261118120000_shelf_tool_display_kind.sql", "utf8"));
       assert.equal(await record(request, "wrong.zip"), false);
       assert.deepEqual((await snapshot(owner)).downloads, []);
       assert.equal(await record(request, "package.zip"), true);
       const first = await snapshot(owner);
       assert.equal(first.downloads[0].products.id, 1);
+      assert.equal(first.downloads[0].products.tool_kind, "hda");
+      await db.exec("UPDATE products SET prepared_identity='{\"schema\":2}'::jsonb WHERE id=1;");
+      assert.equal((await snapshot(owner)).downloads[0].products.tool_kind, "shelf");
       assert.equal(first.downloads[0].products.price_eur, 30);
       assert.ok(Number.isFinite(Date.parse(first.downloads[0].downloaded_at)));
       assert.deepEqual(first.entitlements, []);
@@ -69,6 +74,9 @@ test("dashboard records only valid downloads and isolates history by account",
       assert.ok(Date.parse(latest[0].downloaded_at) >= Date.parse(first.downloads[0].downloaded_at));
       assert.deepEqual((await snapshot(other)).downloads, []);
       assert.deepEqual((await snapshot(other)).trial_ends, {});
+      await db.query("INSERT INTO entitlements VALUES(1,$1,1,NULL,'active','purchase',now())", [owner]);
+      await db.exec("INSERT INTO entitlement_origins VALUES(1,1,'active')");
+      assert.equal((await snapshot(owner)).entitlements[0].products.tool_kind, "shelf");
       const privileges = await db.query(`
         SELECT has_table_privilege('authenticated','public.account_product_downloads','SELECT') AS can_read,
           has_table_privilege('authenticated','public.account_product_downloads','INSERT') AS can_write,

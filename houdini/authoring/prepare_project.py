@@ -52,7 +52,7 @@ def inspect_nodes(hou, factory):
         path = Path(source)
         internal = source == "Internal" or (path.is_absolute() and path.resolve().is_relative_to(factory))
         if kind.name() == "missing" or (path.is_absolute() and not path.is_file()):
-            errors.append("Missing node definition at " + node.path())
+            errors.append(f"Missing node definition: {node.path()} ({kind.name()})\n  Library: {source or '(unavailable)'}")
         if not internal:
             name = kind.category().name() + "/" + kind.name()
             warnings[name] = min(warnings.get(name, node.path()), node.path())
@@ -110,32 +110,38 @@ def find_resources(hou, root, factory, tool_paths):
                     continue
                 reference = parm.unexpandedString()
             except hou.Error:
-                errors.append("Review the expression at " + location)
+                errors.append("Cannot read file reference at " + location + ". Review this parameter's expression.")
                 continue
         else:
             location = reference
         if not reference or reference.startswith(("op:", "opdef:", "oplib:", "temp:")):
             continue
-        expanded = Path(hou.expandString(reference))
+        try:
+            expanded = Path(hou.expandString(reference))
+        except hou.Error:
+            errors.append(f"Cannot resolve file reference: {location}\n  Reference: {reference}")
+            continue
         if expanded.suffix.lower() in ASSET or (expanded.is_absolute() and expanded.resolve().is_relative_to(factory)):
             continue  # Node libraries and factory resources come from their own installers.
         match = re.fullmatch(r"(?:\$HIP|\$\{HIP\})[/\\](.+)", reference)
         if not match:
-            errors.append(location + ": use a path relative to $HIP")
+            errors.append(f"Path is not relative to $HIP: {location}\n  Reference: {reference}\n  Use $HIP/ followed by the path inside your Project folder.")
             continue
         relative = Path(match[1].replace("\\", "/"))
         try:
             files = resource_files(relative, root)
             if not files:
-                raise ValueError("No matching files found.")
+                raise ValueError("No files match this sequence or UDIM reference.")
             for file in files:
                 name = relative.parent / file.name
                 safe_name(name)
-                if not file.is_file() or not file.resolve().is_relative_to(root):
-                    raise ValueError("Missing file or file outside the project folder.")
+                if not file.is_file():
+                    raise ValueError("Missing file: " + str(file))
+                if not file.resolve().is_relative_to(root):
+                    raise ValueError("File resolves outside the Project folder: " + str(file))
                 resources[name.as_posix()] = file
         except (ValueError, OSError) as error:
-            errors.append(f"{location}: {error}")
+            errors.append(f"Invalid file reference: {location}\n  Reference: {reference}\n  {error}")
     return resources, sorted(set(errors))
 
 
@@ -190,8 +196,10 @@ def shelf_action():
         paths = [path for instances in tools.values() for path in instances]
         resources, unresolved = find_resources(hou, scene.parent, factory, paths)
         if errors or unresolved:
-            hou.ui.displayMessage("Fix the missing or non-portable references before exporting.",
-                details="\n".join(errors + unresolved), severity=hou.severityType.Error, title="QA Project auth")
+            issues = errors + unresolved
+            hou.ui.displayMessage(f"Project export stopped: {len(issues)} reference issue(s). Fix the listed parameters and try again.",
+                details="\n\n".join(issues), details_expanded=True,
+                severity=hou.severityType.Error, title="QA Project auth")
             return
         details = ["QATools:"] + [f"{key}: {', '.join(sorted(locations))}" for key, locations in sorted(tools.items())]
         if warnings:

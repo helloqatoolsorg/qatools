@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { useAuth } from "@/context/AuthContext";
+import { authModeLink } from "@/lib/authReturn";
 
 type MenuPosition = {
   top: number;
@@ -77,8 +78,7 @@ export default function UserMenu() {
   }, [user, loading]);
 
   /*
-    Intercept clicks on the existing
-    user icon anywhere on the site.
+    Plain account/login links use the popup anywhere on the site.
 
     Logged out:
     stop navigation and open this menu.
@@ -96,15 +96,17 @@ export default function UserMenu() {
 
       const userLink =
         target.closest(
-          'a.icon-link[href="/user"]'
+          'a[href="/user"], a[href="/user?mode=login"]'
         ) as HTMLAnchorElement | null;
 
       if (!userLink) {
         return;
       }
 
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ||
+          userLink.target === "_blank" || userLink.hasAttribute("download")) return;
+
       if (
-        loading ||
         user
       ) {
         return;
@@ -112,17 +114,17 @@ export default function UserMenu() {
 
       event.preventDefault();
       event.stopPropagation();
+      if (loading) return;
 
       const rect =
         userLink.getBoundingClientRect();
 
       setPosition({
         top:
-          rect.bottom + 8,
+          Math.min(rect.bottom + 8, Math.max(16, window.innerHeight - 400)),
 
         right:
-          window.innerWidth -
-          rect.right,
+          Math.max(16, Math.min(window.innerWidth - rect.right, window.innerWidth - 280)),
       });
 
       setError(null);
@@ -190,7 +192,7 @@ export default function UserMenu() {
 
       if (
         element.closest(
-          'a.icon-link[href="/user"]'
+          'a[href="/user"], a[href="/user?mode=login"]'
         )
       ) {
         return;
@@ -512,7 +514,7 @@ export default function UserMenu() {
         }}
       >
         <a
-          href="/user?mode=reset"
+          href={authModeLink("reset", window.location.origin, window.location.pathname + window.location.search + window.location.hash)}
           style={{
             color: "#666",
 
@@ -524,7 +526,7 @@ export default function UserMenu() {
         </a>
 
         <a
-          href="/user?mode=signup"
+          href={authModeLink("signup", window.location.origin, window.location.pathname + window.location.search + window.location.hash)}
           style={{
             color: "#999",
 

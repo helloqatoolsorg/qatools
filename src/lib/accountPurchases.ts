@@ -4,6 +4,8 @@ export type AccountProduct = {
   slug: string;
   current_version: string | null;
   product_type: string;
+  tool_kind?: "hda" | "shelf" | null;
+  prepared_identity?: unknown;
   category: { name: string } | null;
   price_eur?: number | null;
   published?: boolean;

@@ -1,6 +1,6 @@
 const {test}=require("node:test");
 const assert=require("node:assert/strict"),fs=require("node:fs"),vm=require("node:vm"),ts=require("typescript");
-const legacy={id:1,name:"QA Tool testE",slug:"qa_tool_teste",subtitle:"Legacy Project",product_type:"project",
+const legacy={id:1,name:"Legacy Scene Project",slug:"legacy_scene_project",subtitle:"Legacy Project",product_type:"project",
   price_eur:25,release_date:"2026-10-08",product_media:[],category:null,complexity:null};
 const products=[legacy,{...legacy,id:2,name:"Tool",slug:"tool",product_type:"tool",price_eur:5,release_date:"2026-11-17"},
   {...legacy,id:3,name:"Bundle",slug:"bundle",product_type:"bundle",price_eur:15,release_date:"2026-11-16"}];
@@ -9,7 +9,7 @@ function nodes(value){
   if(value==null||typeof value==="boolean")return [];
   return typeof value==="object"?[value,...nodes(value.props?.children)]:[value];
 }
-function setup(initial=""){
+function setup(initial="",items=products){
   let search=initial,cursor=0,fiber,pending=[];
   const home={hooks:[]},filter={hooks:[]};
   const react={Suspense:"suspense",useMemo:fn=>fn(),useRef:value=>({current:value}),
@@ -35,12 +35,15 @@ function setup(initial=""){
     compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022},
   }).outputText,{exports,Map,Set,URLSearchParams,window:{location:{get search(){return search;}},scrollTo(){}},
     require(name){
+      if(name==="@/lib/productKind"){
+        const kind={};vm.runInNewContext(ts.transpileModule(fs.readFileSync("src/lib/productKind.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:kind});return kind;
+      }
       if(name==="react")return react;
       if(name==="react/jsx-runtime")return {jsx,jsxs:jsx};
       if(name==="next/navigation")return {useSearchParams:()=>new URLSearchParams(search),useRouter:()=>({push(){}})};
       if(name==="@/lib/supabase")return {supabase:{from:table=>({
         select(){return this;},order(){return this;},
-        then(resolve,reject){return Promise.resolve({data:table==="products"?products:[],error:null}).then(resolve,reject);},
+        then(resolve,reject){return Promise.resolve({data:table==="products"?items:[],error:null}).then(resolve,reject);},
       })}};
       if(name==="@/context/QAToolsState")return {useQAToolsState:()=>({
         likedCount:0,cartCount:0,isLiked:()=>false,isInCart:()=>false,isPurchased:()=>false,toggleLike(){},toggleCart(){},
@@ -76,12 +79,12 @@ function setup(initial=""){
   };
 }
 test("direct Project links show older Project records without prepared-project metadata",async()=>{
-  const page=setup("?type=project");await page.start();assert.deepEqual(page.slugs(),["qa_tool_teste"]);
+  const page=setup("?type=project");await page.start();assert.deepEqual(page.slugs(),["legacy_scene_project"]);
 });
 test("URL navigation updates product types while preserving the selected sorting",async()=>{
-  const page=setup();await page.start();assert.deepEqual(page.slugs(),["tool","bundle","qa_tool_teste"]);
+  const page=setup();await page.start();assert.deepEqual(page.slugs(),["tool","bundle","legacy_scene_project"]);
   page.sort("price");page.sort("price");await page.navigate("?type=project");
-  assert.deepEqual(page.slugs(),["qa_tool_teste"]);
+  assert.deepEqual(page.slugs(),["legacy_scene_project"]);
   const selected=page.render().find(node=>node.type==="button"&&node.props.className==="sort-option selected");
   assert.ok(nodes(selected).includes("price"));assert.ok(nodes(selected).includes("↓"));
   await page.navigate("?type=tool&type=bundle");assert.deepEqual(page.slugs(),["bundle","tool"]);
@@ -97,5 +100,13 @@ test("a catalogue link clears a leftover search that would hide the requested Pr
   const page=setup();await page.start();page.search("missing project text");
   assert.deepEqual(page.slugs(),[]);
   await page.navigate("?type=project");
-  assert.deepEqual(page.slugs(),["qa_tool_teste"]);
+  assert.deepEqual(page.slugs(),["legacy_scene_project"]);
+});
+
+test("Shelf Tool links and filters distinguish HDA tools while allowing combined selections",async()=>{
+ const shelf={...products[1],id:4,name:"Shelf",slug:"shelf",prepared_identity:{schema:2}};
+ const page=setup("?type=shelf_tool",[...products,shelf]);await page.start();assert.deepEqual(page.slugs(),["shelf"]);
+ await page.navigate("?type=tool");assert.deepEqual(page.slugs(),["tool"]);
+ await page.navigate("?type=tool&type=shelf_tool&type=bundle");assert.deepEqual(new Set(page.slugs()),new Set(["tool","shelf","bundle"]));
+ assert.ok(page.render().some(n=>n.type==="button"&&nodes(n.props.children).includes("SHELF TOOL")));
 });

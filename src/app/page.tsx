@@ -1,6 +1,7 @@
 "use client";
 import SiteFooter from "@/components/SiteFooter";
 import ProductDownload from "@/components/ProductDownload";
+import { catalogProductTypes, productKind, productKindLabel, productKindLabels } from "@/lib/productKind";
 import ProductCardMedia from "@/components/ProductCardMedia";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -38,8 +39,11 @@ type Product = {
   slug: string;
   subtitle: string;
   product_type: "tool" | "bundle" | "project";
+  prepared_identity?: unknown;
   price_eur: number | string;
   release_date: string | null;
+  initial_release_date?: string | null;
+  last_release_update_at?: string | null;
 
   category: {
     name: string;
@@ -87,7 +91,7 @@ type ActiveSort = {
 function CatalogTypeFilter({onChange}: {onChange: (filters: ActiveFilter[]) => void}) {
   const searchParams = useSearchParams();
   const types = [...new Set(searchParams.getAll("type"))]
-    .filter(value => value === "tool" || value === "bundle" || value === "project")
+    .filter(value => catalogProductTypes.some(type => type === value))
     .join(",");
   useEffect(() => {
     onChange(types ? types.split(",").map(value => ({type: "type", value})) : []);
@@ -271,13 +275,7 @@ const [loading, setLoading] =
         supabase
           .from("products")
           .select(`
-            id,
-            name,
-            slug,
-            subtitle,
-            product_type,
-            price_eur,
-            release_date,
+            *,
             category (
               name
             ),
@@ -747,7 +745,7 @@ const [loading, setLoading] =
                 .length === 0 ||
               activeFilters.some(
                 (filter) => {
-                  if (filter.type === "type") return filter.value === product.product_type;
+                  if (filter.type === "type") return filter.value === productKind(product);
                   if (
                     filter.type ===
                     "category"
@@ -1001,6 +999,13 @@ const [loading, setLoading] =
       </header>
 
       <main>
+        <div className="trial-banner" role="region" aria-label="All Tools and Bundles free for 7 days">
+          <div className="trial-banner-track" aria-hidden="true">
+            {[0, 1].map(group => <div className="trial-banner-group" key={group}>
+              {[0, 1, 2, 3].map(item => <span key={item}>all Tools and Bundles free for 7 days<span className="trial-banner-dot" aria-hidden="true" /></span>)}
+            </div>)}
+          </div>
+        </div>
         <section
           className="toolbar"
           id="products"
@@ -1182,7 +1187,7 @@ const [loading, setLoading] =
                     event.stopPropagation()
                   }
                 >
-                  <div className="filter-group"><div className="filter-label">TYPE</div>{["tool", "bundle", "project"].map(value => <button key={value} type="button" className={"filter-option " + (isFilterActive("type", value) ? "selected" : "")} onClick={() => toggleFilter("type", value)}>{value.toUpperCase()}</button>)}</div>
+                  <div className="filter-group"><div className="filter-label">TYPE</div>{catalogProductTypes.map(value => <button key={value} type="button" className={"filter-option " + (isFilterActive("type", value) ? "selected" : "")} onClick={() => toggleFilter("type", value)}>{productKindLabels[value].toUpperCase()}</button>)}</div>
                   <div className="filter-group">
                     <div className="filter-label">
                       CATEGORY
@@ -1302,7 +1307,7 @@ const [loading, setLoading] =
                       }}
                     >
                       <span>
-                        {filter.value.toUpperCase()}
+                        {filter.type === "type" ? productKindLabels[filter.value as keyof typeof productKindLabels]?.toUpperCase() ?? filter.value.toUpperCase() : filter.value.toUpperCase()}
                       </span>
 
                       <b>×</b>
@@ -1573,7 +1578,8 @@ const [loading, setLoading] =
                         className="card-open"
                         href={`/product?id=${product.slug}`}
                       >
-                        <ProductCardMedia src={mediaUrl} name={product.name} eager={index < 3} />
+                        <ProductCardMedia src={mediaUrl} name={product.name} eager={index < 3} animationOrder={index} animationCount={visibleProducts.length}
+                          releasedAt={product.initial_release_date ?? product.release_date} updatedAt={product.last_release_update_at} />
                       </a>
 
                       <div className="card-copy">
@@ -1637,6 +1643,7 @@ const [loading, setLoading] =
 
                         <div className="card-footer">
                           <div className="tags">
+                            <button className="card-tag" type="button" onClick={() => setSingleFilter("type", productKind(product))}>{productKindLabel(product).toUpperCase()}</button>
                             {category && (
                               <button
                                 className="card-tag"

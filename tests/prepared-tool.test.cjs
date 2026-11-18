@@ -33,7 +33,8 @@ test('prepared shelf tool imports under toolbar with a runtime for Houdini 21 an
  const altered=Buffer.from(content.toString().replace('</shelfDocument>','<tool name="extra" /></shelfDocument>'));
  assert.throws(()=>lib.preparedTool(archive({...manifest,sha256:crypto.createHash('sha256').update(altered).digest('hex')},altered)));
  const s=setup();
- assert.equal((await s.post(archive(manifest))).status,200);
+ const imported=await s.post(archive(manifest));assert.equal(imported.status,200);
+ assert.equal((await imported.json()).draft.prepared_identity.schema,2);
  const uploaded=s.calls.find(c=>c.upload).bytes;
  assert.ok(uploaded.includes(Buffer.from('QATools/toolbar/QA_Rename.shelf')));
  assert.ok(uploaded.includes(Buffer.from('QATools/scripts/python/qatools_licensing/houdini_ui.py')));

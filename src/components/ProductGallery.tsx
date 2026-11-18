@@ -4,11 +4,12 @@ import { useRef, useState, type PointerEvent } from "react";
 import { gallerySwipeDirection } from "@/lib/galleryGesture";
 import { isWebmSource } from "@/lib/productMediaInput";
 import LoopingProductVideo from "@/components/LoopingProductVideo";
+import ProductReleaseBadge from "@/components/ProductReleaseBadge";
 import "./ProductGallery.css";
 
 type GalleryImage = { id: number; src: string };
 
-export default function ProductGallery({ images, name }: { images: GalleryImage[]; name: string }) {
+export default function ProductGallery({ images, name, releasedAt, updatedAt }: { images: GalleryImage[]; name: string; releasedAt?: string | null; updatedAt?: string | null }) {
   const [selected, setSelected] = useState(0);
   const swipe = useRef<{ x: number; y: number; pointer: number } | null>(null);
   const index = selected < images.length ? selected : 0;
@@ -45,6 +46,7 @@ export default function ProductGallery({ images, name }: { images: GalleryImage[
       }}>
       <div className="product-media product-gallery-stage" onPointerDown={startSwipe} onPointerUp={finishSwipe}
         onPointerCancel={() => { swipe.current = null; }}>
+        <ProductReleaseBadge releasedAt={releasedAt} updatedAt={updatedAt} />
         {/* Keep GIFs mounted. Play the selected WebM in the main view. */}
         {images.map((item, position) => {
           const current = position === index;

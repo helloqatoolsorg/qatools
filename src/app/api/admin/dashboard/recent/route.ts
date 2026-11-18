@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/requireAdmin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { privateJson } from "@/lib/activationHttp";
+import { productKindLabel } from "@/lib/productKind";
 
 export async function GET(request: Request) {
   try {
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
     }
 
     const [products, orders] = await Promise.allSettled([
-      supabaseAdmin.from("products").select("id,name,subtitle,price_eur,published,product_type,product_media(id,file_path,role,sort_order),category(name),complexity(name)")
+      supabaseAdmin.from("products").select("id,name,subtitle,price_eur,published,product_type,prepared_identity,product_media(id,file_path,role,sort_order),category(name),complexity(name)")
         .order("updated_at", { ascending: false, nullsFirst: false })
         .order("id", { ascending: false }).limit(3),
       supabaseAdmin.rpc("read_admin_orders", {
@@ -21,9 +22,9 @@ export async function GET(request: Request) {
 
     return privateJson({
       products: products.status === "fulfilled" && !products.value.error
-        ? products.value.data?.map(({ category, complexity, product_type, ...product }) => ({
+        ? products.value.data?.map(({ category, complexity, product_type, prepared_identity, ...product }) => ({
           ...product,
-          labels: [category?.name, complexity?.name, product_type].filter(Boolean),
+          labels: [category?.name, complexity?.name, productKindLabel({product_type, prepared_identity})].filter(Boolean),
         })) ?? null
         : null,
       orders: orders.status === "fulfilled" && !orders.value.error && Array.isArray(orders.value.data?.orders)

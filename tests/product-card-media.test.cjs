@@ -1,9 +1,10 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
 function load(file,mocks,globals={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,{exports,...globals,require:n=>n in mocks?mocks[n]:require(n)});return exports;}
+const stagger=load('src/lib/orderedStagger.ts',{});
 function walk(node){if(!node)return [];if(Array.isArray(node))return node.flatMap(walk);if(typeof node!=='object')return [];return [node,...walk(node.props?.children)];}
 function setup(){
  let frame;const components=new Map();
- const react={useState(initial){const {slots}=frame,n=frame.cursor++;if(!(n in slots))slots[n]=initial;return [slots[n],value=>{slots[n]=typeof value==='function'?value(slots[n]):value;}];},useCallback:fn=>fn};
+ const react={useRef:value=>({current:value}),useEffect(){},useState(initial){const {slots}=frame,n=frame.cursor++;if(!(n in slots))slots[n]=initial;return [slots[n],value=>{slots[n]=typeof value==='function'?value(slots[n]):value;}];},useCallback:fn=>fn};
  function render(type,props,key){
   if(typeof type!=='function')return {type,props,key};
   if(!components.has(type))components.set(type,new Map());const keys=components.get(type);
@@ -12,8 +13,10 @@ function setup(){
  }
  const jsx = {jsx:render,jsxs:render};
  const input = load('src/lib/productMediaInput.ts',{});
+ const badges = load('src/lib/productReleaseBadge.ts',{});
+ const Badge = load('src/components/ProductReleaseBadge.tsx',{'react':react,'./ProductReleaseBadge.css':{},'@/lib/productReleaseBadge':badges,'@/lib/orderedStagger':stagger,'react/jsx-runtime':jsx});
  const video = load('src/components/LoopingProductVideo.tsx',{'react/jsx-runtime':jsx});
- const Media=load('src/components/ProductCardMedia.tsx',{'react':react,'next/image':{__esModule:true,default:props=>({type:'img',props})},'./ProductCardMedia.css':{},'@/lib/productMediaInput':input,'@/components/LoopingProductVideo':video,'react/jsx-runtime':{jsx:render,jsxs:render}}).default;
+ const Media=load('src/components/ProductCardMedia.tsx',{'react':react,'next/image':{__esModule:true,default:props=>({type:'img',props})},'./ProductCardMedia.css':{},'@/lib/productMediaInput':input,'@/components/ProductReleaseBadge':Badge,'@/components/LoopingProductVideo':video,'react/jsx-runtime':{jsx:render,jsxs:render}}).default;
  return {render:(props={})=>render(Media,{src:'/tool.gif',name:'Test tool',...props},'root')};
 }
 test('card preview reserves its frame and shows loading until the image succeeds',()=>{
@@ -58,4 +61,25 @@ test("WebM cards autoplay muted and inline, loop, and report a failed video", ()
  assert.ok(walk(card.render({src: "/tool.WEBM?revision=1"})).some(node => node.props?.role === "img"));
  const lazy = walk(setup().render({src: "/tool.webm"})).find(node => node.type === "video");
  assert.equal(lazy.props.loading, "lazy");
+});
+
+test('NEW badges wait for page load and paint, then receive an ordered stagger with cleanup',()=>{
+ for(const readyState of ['loading','complete']){
+  const effects=[],frames=[],listeners=new Map(),styles={};
+  const element={dataset:{},style:{setProperty:(name,value)=>{styles[name]=value;}}};
+  const browser={requestAnimationFrame:callback=>{frames.push(callback);return frames.length;},cancelAnimationFrame(){},
+   addEventListener:(name,callback)=>listeners.set(name,callback),removeEventListener:name=>listeners.delete(name)};
+  const Media=load('src/components/ProductReleaseBadge.tsx',{
+   react:{useRef:()=>({current:element}),useEffect:callback=>effects.push(callback)},
+   'next/image':{},'./ProductReleaseBadge.css':{},'@/lib/productMediaInput':{},'@/components/LoopingProductVideo':{},
+   '@/lib/productReleaseBadge':{productReleaseBadge:()=> 'NEW'},'@/lib/orderedStagger':stagger,'react/jsx-runtime':{jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})},
+  },{window:browser,document:{readyState}}).default;
+  const tree=Media({animationOrder:2,animationCount:4});const cleanup=effects[0]();
+  assert.equal(element.dataset.ready,undefined);
+  if(readyState==='loading'){assert.equal(frames.length,0);listeners.get('load')();}
+  frames.shift()();assert.equal(element.dataset.ready,undefined);frames.shift()();
+  assert.equal(element.dataset.ready,'true');
+  assert.equal(tree.props.style['--product-badge-delay'],'370ms');
+  cleanup();assert.equal(element.dataset.ready,undefined);assert.equal(listeners.size,0);
+ }
 });

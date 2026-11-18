@@ -1,6 +1,7 @@
 "use client";
 import SiteFooter from "@/components/SiteFooter";
 import ProductDownload from "@/components/ProductDownload";
+import { catalogProductTypes, productKind, productKindLabel, productKindLabels } from "@/lib/productKind";
 import ProductCardMedia from "@/components/ProductCardMedia";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
@@ -335,7 +336,7 @@ const [
 
             return activeFilters.some(
               (filter) => {
-                if (filter.type === "type") return filter.value === product.product_type;
+                if (filter.type === "type") return filter.value === productKind(product);
                   if (
                   filter.type ===
                   "category"
@@ -490,9 +491,9 @@ const [
           </Link>
 
         <nav className="main-nav">
-          <a href="/">
+          <Link href="/">
             products
-          </a>
+          </Link>
 
           <a href="/install">
             how to install
@@ -728,7 +729,7 @@ const [
                     event.stopPropagation()
                   }
                 >
-                  <div className="filter-group"><div className="filter-label">TYPE</div>{["tool", "bundle", "project"].map(value => <button key={value} type="button" className={"filter-option " + (isFilterActive("type", value) ? "selected" : "")} onClick={() => toggleFilter("type", value)}>{value.toUpperCase()}</button>)}</div>
+                  <div className="filter-group"><div className="filter-label">TYPE</div>{catalogProductTypes.map(value => <button key={value} type="button" className={"filter-option " + (isFilterActive("type", value) ? "selected" : "")} onClick={() => toggleFilter("type", value)}>{productKindLabels[value].toUpperCase()}</button>)}</div>
                   <div className="filter-group">
                     <div className="filter-label">
                       CATEGORY
@@ -843,7 +844,7 @@ const [
                       }}
                     >
                       <span>
-                        {filter.value.toUpperCase()}
+                        {filter.type === "type" ? productKindLabels[filter.value as keyof typeof productKindLabels]?.toUpperCase() ?? filter.value.toUpperCase() : filter.value.toUpperCase()}
                       </span>
 
                       <b>×</b>
@@ -898,9 +899,9 @@ const [
 
               {products.length ===
               0 ? (
-                <a href="/">
+                <Link href="/">
                   browse products
-                </a>
+                </Link>
               ) : (
                 <button
                   type="button"
@@ -967,7 +968,8 @@ const [
                         className="card-open"
                         href={`/product?id=${product.slug}`}
                       >
-                        <ProductCardMedia src={image} name={product.name} eager={index < 3} />
+                        <ProductCardMedia src={image} name={product.name} eager={index < 3} animationOrder={index} animationCount={visibleProducts.length}
+                          releasedAt={product.initial_release_date ?? product.release_date} updatedAt={product.last_release_update_at} />
                       </a>
 
                       <div className="card-copy">
@@ -1027,6 +1029,7 @@ const [
 
                         <div className="card-footer">
                           <div className="tags">
+                            <button className="card-tag" type="button" onClick={() => setSingleFilter("type", productKind(product))}>{productKindLabel(product).toUpperCase()}</button>
                             {category && (
                               <button
                                 className="card-tag"

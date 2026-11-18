@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import {productKindLabel} from "@/lib/productKind";
+import {orderedStaggerDelay} from "@/lib/orderedStagger";
 import { useEffect, useState } from "react";
 import OrderInvoice from "@/components/OrderInvoice";
 import ProductDownload from "@/components/ProductDownload";
@@ -16,7 +18,7 @@ type ProductRow = {
   orders: AccountOrder[];
 };
 
-const productTypeLabels = new Map([["tool", "Tool"], ["bundle", "Bundle"], ["project", "Project"]]);
+
 
 const sortOptions = [
   ["date-desc", "Date · newest first"],
@@ -125,8 +127,9 @@ export default function AccountProductList({ account, orders, loading, error, re
     function afterPageLoad() {
       frame = window.requestAnimationFrame(() => {
         section?.scrollIntoView({ behavior: "instant" });
-        section?.querySelectorAll<HTMLElement>(".account-product-type").forEach(tag => {
-          tag.style.setProperty("--account-product-highlight-delay", (250 + Math.random() * 250) + "ms");
+        const tags = section?.querySelectorAll<HTMLElement>(".account-product-type");
+        tags?.forEach((tag, index) => {
+          tag.style.setProperty("--account-product-highlight-delay", orderedStaggerDelay(index, tags.length));
         });
         section?.classList.add("account-product-types-highlight");
       });
@@ -185,7 +188,7 @@ export default function AccountProductList({ account, orders, loading, error, re
           && Date.parse(trialEnd) > now;
         const invoice = row.orders.find(hasInvoice);
         const downloadable = owned || (product?.published && ["tool", "bundle"].includes(product.product_type));
-        const typeLabel = productTypeLabels.get(product?.product_type ?? "");
+        const typeLabel = product ? productKindLabel(product) : undefined;
         const name = product?.name ?? `Item #${row.id}`;
         const detailsId = `account-product-details-${row.id}`;
         const isExpanded = expanded.has(row.id);

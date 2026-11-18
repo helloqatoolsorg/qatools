@@ -6,7 +6,7 @@ import tempfile
 import zipfile
 import unittest
 
-from houdini.authoring.prepare_project import inspect_nodes, export_project
+from houdini.authoring.prepare_project import inspect_nodes, export_project, find_resources
 
 
 def asset(internal, library="Embedded", marker=None, path="/obj/geo/tool", children=()):
@@ -65,6 +65,46 @@ class ProjectDevelopmentHdaTests(unittest.TestCase):
         _, warnings, errors = inspect(parent)
         self.assertEqual(warnings, {"Sop/Vendor_Tool": "/obj/geo/tool"})
         self.assertIn("/obj/geo/vendor/child", errors[0])
+
+
+class ProjectReferenceTests(unittest.TestCase):
+    def test_missing_and_nonrelative_paths_name_each_parameter_and_reference(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            class Error(Exception):
+                pass
+            references = [('/obj/geo/file/file', '$HIP/missing.bgeo.sc'),
+                          ('/mat/texture/map', str(root / 'texture.png')),
+                          ('/obj/geo/cache/file', '$HIP/cache/missing.$F4.bgeo.sc')]
+            def parm(location, reference):
+                return SimpleNamespace(path=lambda: location, unexpandedString=lambda: reference,
+                    parmTemplate=lambda: SimpleNamespace(tags=lambda: {}))
+            hou = SimpleNamespace(Error=Error,
+                fileReferences=lambda: [(parm(location, reference), reference) for location, reference in references],
+                expandString=lambda value: value.replace('$HIP', str(root)))
+            resources, errors = find_resources(hou, root, root / 'factory', [])
+            self.assertFalse(resources)
+            self.assertEqual(len(errors), 3)
+            for location, reference in references:
+                self.assertTrue(any(location in issue and reference in issue for issue in errors))
+            self.assertTrue(any('Missing file:' in issue for issue in errors))
+            self.assertTrue(any('not relative to $HIP' in issue for issue in errors))
+
+    def test_valid_resources_and_output_paths_are_handled_separately(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / 'texture.png').write_bytes(b'texture')
+            class Error(Exception):
+                pass
+            def parm(location, value, tags):
+                return SimpleNamespace(path=lambda: location, unexpandedString=lambda: value,
+                    parmTemplate=lambda: SimpleNamespace(tags=lambda: tags))
+            hou = SimpleNamespace(Error=Error, expandString=lambda value: value.replace('$HIP', str(root)),
+                fileReferences=lambda: [(parm('/mat/texture/map', '$HIP/texture.png', {}), '$HIP/texture.png'),
+                    (parm('/out/render/picture', '$HIP/output.$F4.exr', {'filechooser_mode': 'write'}), '$HIP/output.$F4.exr')])
+            resources, errors = find_resources(hou, root, root / 'factory', [])
+            self.assertEqual(set(resources), {'texture.png'})
+            self.assertFalse(errors)
 
 
 class ProjectPackagingTests(unittest.TestCase):

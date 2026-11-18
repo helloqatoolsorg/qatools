@@ -4,9 +4,10 @@ import Image from "next/image";
 import { useCallback, useState } from "react";
 import { isWebmSource } from "@/lib/productMediaInput";
 import LoopingProductVideo from "@/components/LoopingProductVideo";
+import ProductReleaseBadge from "@/components/ProductReleaseBadge";
 import "./ProductCardMedia.css";
 
-type Props = { src: string | null; name: string; eager?: boolean };
+type Props = { src: string | null; name: string; eager?: boolean; releasedAt?: string | null; updatedAt?: string | null; animationOrder?: number; animationCount?: number };
 
 function CardPreview({ src, name, eager }: Props) {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -34,5 +35,8 @@ function CardPreview({ src, name, eager }: Props) {
 }
 
 export default function ProductCardMedia(props: Props) {
-  return <div className="media-frame product-card-media"><CardPreview key={props.src ?? "no-preview"} {...props} /></div>;
+  return <div className="media-frame product-card-media">
+    <CardPreview key={props.src ?? "no-preview"} {...props} />
+    <ProductReleaseBadge releasedAt={props.releasedAt} updatedAt={props.updatedAt} animationOrder={props.animationOrder} animationCount={props.animationCount} />
+  </div>;
 }

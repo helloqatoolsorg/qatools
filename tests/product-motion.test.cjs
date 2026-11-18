@@ -9,14 +9,14 @@ test('swiping navigates horizontally, without treating taps or vertical scrollin
  for(const end of [{x:70,y:102},{x:60,y:220},{x:100,y:100},{x:150,y:150}])assert.equal(swipe(start,end),0);
 });
 function walk(node){if(!node)return [];if(Array.isArray(node))return node.flatMap(walk);if(typeof node!=='object')return [];return [node,...walk(node.props?.children)];}
-function gallery(images=[1,2,3].map(id=>({id,src:`/preview-${id}.gif` }))){
+function gallery(images=[1,2,3].map(id=>({id,src:`/preview-${id}.gif` })),release={}){
  const slots=[];let cursor=0;
  const react={useRef:v=>{const n=cursor++;return slots[n]??={current:v};},useState:v=>{const n=cursor++;if(!(n in slots))slots[n]=v;return [slots[n],next=>{slots[n]=typeof next==='function'?next(slots[n]):next;}];}};
  const element=(type,props,key)=>typeof type==='function'?{...type(props),key}:{type,props,key};
  const jsx={jsx:element,jsxs:element};
  const video=load('src/components/LoopingProductVideo.tsx',{'react/jsx-runtime':jsx});
- const component=load('src/components/ProductGallery.tsx',{'react':react,'./ProductGallery.css':{},'@/lib/galleryGesture':gesture,'@/lib/productMediaInput':load('src/lib/productMediaInput.ts',{}),'@/components/LoopingProductVideo':video,'react/jsx-runtime':jsx}).default;
- return {render(){cursor=0;return component({images,name:'Test tool'});},pointer(x,y,options={}){return {pointerType:'touch',isPrimary:true,pointerId:1,clientX:x,clientY:y,target:{closest:()=>null},currentTarget:{setPointerCapture(){}},...options};}};
+ const component=load('src/components/ProductGallery.tsx',{'react':react,'./ProductGallery.css':{},'@/components/ProductReleaseBadge':{default:props=>({type:'release-badge',props})},'@/lib/galleryGesture':gesture,'@/lib/productMediaInput':load('src/lib/productMediaInput.ts',{}),'@/components/LoopingProductVideo':video,'react/jsx-runtime':jsx}).default;
+ return {render(){cursor=0;return component({images,name:'Test tool',...release});},pointer(x,y,options={}){return {pointerType:'touch',isPrimary:true,pointerId:1,clientX:x,clientY:y,target:{closest:()=>null},currentTarget:{setPointerCapture(){}},...options};}};
 }
 function selected(tree){return walk(tree).find(node=>node.props?.id==='productImage').props.src;}
 function stage(tree){return walk(tree).find(node=>node.props?.className==='product-media product-gallery-stage');}
@@ -67,4 +67,10 @@ test('reduced-motion and older browsers keep filters functional without animatio
 test('resizing cancels movement and refreshes measured positions',()=>{
  const s=gridHarness();s.render([s.card(1,0,0),s.card(2,200,0)]);s.render([s.card(2,0,0)]);assert.equal(s.calls.length,1);
  s.listeners.get('resize')();assert.equal(s.calls[0].result.cancelled,true);s.close();
+});
+
+test('the main product gallery passes release dates to the shared badge',()=>{
+ const release={releasedAt:'2026-11-18',updatedAt:'2026-11-18T12:00:00Z'};
+ const badge=walk(gallery(undefined,release).render()).find(node=>node.type==='release-badge');
+ assert.equal(badge.props.releasedAt,release.releasedAt);assert.equal(badge.props.updatedAt,release.updatedAt);
 });
