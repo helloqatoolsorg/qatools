@@ -1,10 +1,10 @@
 import "server-only";
 import { validToolZip } from "./adminDownloadUpload";
 export function installerContents(bytes:Buffer):string[]{
- if(bytes.length>26*1024*1024 || !validToolZip(bytes))throw Error("Invalid installer ZIP.");
+ if(bytes.length>26*1024*1024 || !validToolZip(bytes,1113))throw Error("Invalid installer ZIP.");
  let end=bytes.length-22;while(end>=0 && (bytes.readUInt32LE(end)!==0x06054b50 || end+22+bytes.readUInt16LE(end+20)!==bytes.length))end--;
  if(end<0)throw Error("Invalid ZIP directory.");
- const count=bytes.readUInt16LE(end+10);if(count>1000)throw Error("Too many ZIP entries.");
+ const count=bytes.readUInt16LE(end+10);if(count>1113)throw Error("Too many ZIP entries.");
  let offset=bytes.readUInt32LE(end+16);const names:string[]=[];
  for(let i=0;i<count;i++){
   if(offset+46>end || bytes.readUInt32LE(offset)!==0x02014b50)throw Error("Invalid ZIP directory.");

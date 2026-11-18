@@ -3,12 +3,15 @@ import SiteFooter from "@/components/SiteFooter";
 import ProductDownload from "@/components/ProductDownload";
 import ProductCardMedia from "@/components/ProductCardMedia";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import BrandLogo from "@/components/BrandLogo";
 import OutlineIcon from "@/components/OutlineIcon";
 import AccountName from "@/components/AccountName";
 import { useProductGridMotion } from "@/hooks/useProductGridMotion";
 
 import {
+  Suspense,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -80,6 +83,17 @@ type ActiveSort = {
   key: SortKey;
   dir: SortDirection;
 };
+
+function CatalogTypeFilter({onChange}: {onChange: (filters: ActiveFilter[]) => void}) {
+  const searchParams = useSearchParams();
+  const types = [...new Set(searchParams.getAll("type"))]
+    .filter(value => value === "tool" || value === "bundle" || value === "project")
+    .join(",");
+  useEffect(() => {
+    onChange(types ? types.split(",").map(value => ({type: "type", value})) : []);
+  }, [types, onChange]);
+  return null;
+}
 
 const sortDefaults: Record<
   SortKey,
@@ -162,6 +176,7 @@ function complexityRank(
 }
 
 export default function Home() {
+  const router = useRouter();
   const {
     likedCount,
     cartCount,
@@ -231,6 +246,14 @@ const [loading, setLoading] =
 
   const [error, setError] =
     useState<string | null>(null);
+
+  const applyTypeLink = useCallback((filters: ActiveFilter[]) => {
+    setActiveFilters(filters);
+    setActiveSearch("");
+    setSearchText("");
+    setSearchOpen(false);
+    setHighlightedSuggestion(-1);
+  }, []);
 
   const filterAreaRef =
     useRef<HTMLDivElement>(null);
@@ -612,8 +635,7 @@ const [loading, setLoading] =
   function openSuggestion(
     product: Product
   ) {
-    window.location.href =
-      `/product?id=${product.slug}`;
+    router.push(`/product?id=${product.slug}`);
   }
 
   function handleSearchKeyDown(
@@ -893,6 +915,9 @@ const [loading, setLoading] =
       }}
       onClick={closeMenus}
     >
+      <Suspense fallback={null}>
+        <CatalogTypeFilter onChange={applyTypeLink} />
+      </Suspense>
       <header className="site-header">
         <Link
           className="brand"
@@ -902,12 +927,12 @@ const [loading, setLoading] =
           </Link>
 
         <nav className="main-nav">
-          <a
+          <Link
             className="active"
             href="/"
           >
             products
-          </a>
+          </Link>
 
           <a href="/install">
             how to install

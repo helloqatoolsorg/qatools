@@ -2,9 +2,11 @@
 from pathlib import Path
 from types import SimpleNamespace
 import json
+import tempfile
+import zipfile
 import unittest
 
-from houdini.authoring.prepare_project import inspect_nodes
+from houdini.authoring.prepare_project import inspect_nodes, export_project
 
 
 def asset(internal, library="Embedded", marker=None, path="/obj/geo/tool", children=()):
@@ -63,6 +65,27 @@ class ProjectDevelopmentHdaTests(unittest.TestCase):
         _, warnings, errors = inspect(parent)
         self.assertEqual(warnings, {"Sop/Vendor_Tool": "/obj/geo/tool"})
         self.assertIn("/obj/geo/vendor/child", errors[0])
+
+
+class ProjectPackagingTests(unittest.TestCase):
+    def test_export_keeps_original_scene_and_documents_named_customer_folder(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "088_PROJECT_NAME"
+            source.mkdir()
+            scene = source / "scene.hiplc"
+            scene.write_bytes(b"original scene")
+            resource = source / "texture.png"
+            resource.write_bytes(b"original resource")
+            target = export_project(scene, {"texture.png": resource}, {"qa_tool": []}, {}, "21.0.512", root)
+            with zipfile.ZipFile(target) as archive:
+                self.assertIsNone(archive.testzip())
+                self.assertEqual(archive.read("scene.hiplc"), b"original scene")
+                self.assertEqual(archive.read("texture.png"), b"original resource")
+                self.assertIn("Project/Project Name/", archive.read("QATools Project README.txt").decode())
+                self.assertEqual(json.loads(archive.read("qatools-project.json"))["label"], "Project Name")
+            self.assertEqual(scene.read_bytes(), b"original scene")
+            self.assertEqual(resource.read_bytes(), b"original resource")
 
 
 if __name__ == "__main__":

@@ -222,6 +222,9 @@ export default function UserPage() {
     function afterPageLoad() {
       frame = window.requestAnimationFrame(() => {
         section?.scrollIntoView({ behavior: "instant" });
+        section?.querySelectorAll<HTMLElement>(".account-license-key .license-key-value, .account-license-key button").forEach(element => {
+          element.style.setProperty("--account-key-highlight-delay", (250 + Math.random() * 250) + "ms");
+        });
         section?.classList.add("account-license-highlight");
       });
     }

@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const auth = await requireAdmin(request); if (auth.response) { auth.response.headers.set("Cache-Control","no-store"); return auth.response; }
   const params=new URL(request.url).searchParams, raw=params.get("productId") ?? "", expected=params.get("expectedPath");
   if(!/^[1-9][0-9]*$/.test(raw) || !Number.isSafeInteger(Number(raw)) || expected===null || expected.length>512)return privateJson({error:"Choose a saved bundle or project."},400);
-  const id=Number(raw), product=await supabaseAdmin.from("products").select("id,slug,product_type,published").eq("id",id).maybeSingle();
+  const id=Number(raw), product=await supabaseAdmin.from("products").select("id,name,slug,product_type,published").eq("id",id).maybeSingle();
   if(product.error)return privateJson({error:"Unable to load product."},503);
   if(!product.data || !["bundle","project"].includes(product.data.product_type))return privateJson({error:"Choose a bundle or project."},409);
   const isProject = product.data.product_type === "project";
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
    sources.push({tool_id:tool.id,file_path:mapping.file_path});
   }
   let bytes:Buffer;
-  try{bytes=isProject ? await buildProjectPackage(product.data.slug,projectBytes!,tools) : await buildHoudiniPackage(Buffer.from(JSON.stringify(packageConfig)),tools);}catch{return privateJson({error:"Unable to combine these installers. Check duplicate filenames and the 25 MB package limit."},409);}
+  try{bytes=isProject ? await buildProjectPackage(product.data.slug,projectBytes!,tools,product.data.name) : await buildHoudiniPackage(Buffer.from(JSON.stringify(packageConfig)),tools);}catch{return privateJson({error:"Unable to combine these installers. Check the Project name, duplicate filenames and the 25 MB package limit."},409);}
   const fileName=current.data?.file_name ?? product.data.slug+(isProject ? ".zip" : "-houdini22.zip");
   if(!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,149}\.zip$/.test(fileName))return privateJson({error:"Check the product identifier."},400);
   const path=id+"/"+randomUUID()+"/"+fileName;
@@ -81,6 +81,6 @@ export async function POST(request: Request) {
   const args={p_admin_id:auth.user.id,p_product_id:id,p_expected_path:expected || null,p_file_path:path,p_file_name:fileName,p_sources:sources};
   const saved=isProject ? await supabaseAdmin.rpc("set_prepared_project_download",{...args,p_project_sha256:createHash("sha256").update(projectBytes!).digest("hex"),p_manifest:manifest}) : await supabaseAdmin.rpc("set_assembled_bundle_download",args);
   if(saved.error || !saved.data || typeof saved.data !== "object" || !("ok" in saved.data) || saved.data.ok !== true)return privateJson({error:"The selection or a source installer changed during the build. Existing download retained. Reload and rebuild."},409);
-  return privateJson({message:isProject ? "Project download built with the selected tools and a separate project ZIP. Install the QATools package, then extract the project ZIP into your working folder. Re-upload the project ZIP when rebuilding." : "Bundle installer built from the selected tools. It includes one QATools.json and shared licensing files. Rebuild to include future tool updates.",download:{file_name:fileName,file_path:path,enabled:true}});
+  return privateJson({message:isProject ? "Project download built. Extract it once, install QATools.json and the QATools folder, then move the named folder inside Project to your working location. Re-upload your source ZIP when rebuilding." : "Bundle installer built from the selected tools. It includes one QATools.json and shared licensing files. Rebuild to include future tool updates.",download:{file_name:fileName,file_path:path,enabled:true}});
  }catch{return privateJson({error:"Unable to assemble download. Existing installer retained."},503);}
 }

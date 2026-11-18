@@ -142,6 +142,7 @@ def find_resources(hou, root, factory, tool_paths):
 def export_project(scene, resources, tools, warnings, version, folder):
     title, slug = project_identity(scene.parent.name)
     safe_name(Path(scene.name))
+    safe_name(Path(title))
     manifest = {
         "schema": 1, "label": title, "slug": slug, "scene": scene.name,
         "houdini": version, "tools": sorted(tools),
@@ -149,11 +150,14 @@ def export_project(scene, resources, tools, warnings, version, folder):
     }
     data = json.dumps(manifest, ensure_ascii=True).encode()
     readme = "\n".join([title, f"Open {scene.name} in Houdini {version}. Keep the project files together.",
+        f"The website download places these files in Project/{title}/.",
         *(["", "Additional tools may require a separate installation:", *sorted(warnings)] if warnings else [])]).encode()
     files = {**resources, scene.name: scene}
     if len(scene.name) > 255 or any(len(name) > 256 or len(path) > 512 for name, path in warnings.items()):
         raise ValueError("A scene or dependency name is too long for the website.")
     names = [*files, "qatools-project.json", "QATools Project README.txt"]
+    if any(len(("Project/" + title + "/" + name).encode("utf-8")) > 512 for name in names):
+        raise ValueError("Shorten the project file paths to fit the downloadable package.")
     if len(names) > 1000 or len({name.casefold() for name in names}) != len(names):
         raise ValueError("Too many files or a duplicate project filename.")
     if len(tools) > 100 or len(warnings) > 200 or len(data) > 65536:
@@ -222,6 +226,6 @@ def shelf_action():
             return
         export_project(scene, resources, tools, warnings, version, folder)
         settings.setValue("folder", folder)
-        hou.ui.displayMessage(f"Created {target}\nUpload through New product > Project.", title="QA Project auth")
+        hou.ui.displayMessage(f"Created {target}\nUpload through New product > Project.\nThe customer download contains Project/{title}/.", title="QA Project auth")
     except (ValueError, OSError, hou.Error, zipfile.LargeZipFile) as error:
         hou.ui.displayMessage(str(error), title="QA Project auth", severity=hou.severityType.Error)

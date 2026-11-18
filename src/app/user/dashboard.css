@@ -46,14 +46,16 @@ body .account-dashboard-license .account-license-key button { padding: 6px 9px; 
 .account-dashboard-license .account-license-key > :is(p, [role="alert"]) { grid-column: 1 / -1; margin: 0; }
 
 body .account-license-highlight .account-license-key :is(.license-key-value, button) {
-  animation: account-license-key-highlight 2.4s ease-out 250ms;
+  animation:
+    account-license-key-highlight 2.4s ease-out var(--account-key-highlight-delay, 250ms),
+    account-license-key-highlight 2.4s ease-out calc(var(--account-key-highlight-delay, 250ms) + 1.2s);
 }
 @keyframes account-license-key-highlight {
   0%, 18% { background-color: #1a3f2a; border-color: #65b080; }
 }
 @media (prefers-reduced-motion: reduce) {
   body .account-license-highlight .account-license-key :is(.license-key-value, button) {
-    border-color: #65b080;
+    animation: none; background-color: #1a3f2a; border-color: #65b080;
   }
 }
 .account-action {
@@ -95,6 +97,22 @@ body .account-license-highlight .account-license-key :is(.license-key-value, but
 .account-product-date-label { display: block; color: #a0a09b; font-size: 10px; }
 .account-product { border-top: 1px solid #292929; }
 .account-product-name { font-weight: 500; color: #e7e7e2; overflow-wrap: anywhere; }
+.account-product-name { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.account-product-name > strong { font-weight: inherit; }
+body .account-product-type {
+  display: inline-block; flex-shrink: 0; padding: 2px 6px;
+  font: 11px/1.5 monospace; color: #aaa; cursor: default;
+}
+body .account-product-types-highlight .account-product-type {
+  animation:
+    account-license-key-highlight 2.4s ease-out var(--account-product-highlight-delay, 250ms),
+    account-license-key-highlight 2.4s ease-out calc(var(--account-product-highlight-delay, 250ms) + 1.2s);
+}
+@media (prefers-reduced-motion: reduce) {
+  body .account-product-types-highlight .account-product-type {
+    animation: none; background-color: #1a3f2a; border-color: #65b080;
+  }
+}
 .account-license-active { color: #83ce98; }
 .account-license-inactive { color: #ee8888; }
 .account-mobile-label { display: none; }

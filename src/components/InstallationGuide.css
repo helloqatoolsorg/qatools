@@ -4,7 +4,7 @@
   flex: 1; min-height: 0; padding: 40px 26px;
   display: grid; place-items: center;
 }
-.install-guide { width: 100%; max-width: 495px; font: 14px/1.8 monospace; }
+.install-guide { position: relative; --install-guide-box-width: 350px; width: 100%; max-width: 559px; padding-left: 64px; box-sizing: border-box; font: 14px/1.8 monospace; }
 .install-guide-instruction { animation: install-instruction-in 300ms ease both; }
 .install-guide-instruction > p { margin: 0 0 26px; color: #ccc; }
 .install-guide-instructions { margin: 0 0 26px; padding-left: 24px; color: #ccc; }
@@ -19,19 +19,36 @@
   background: transparent; box-shadow: inset 0 0 0 1px #444; color: #aaa;
 }
 .install-guide-instruction button:hover, .install-guide-instruction a:hover { background: #2a2a2a; color: #fff; }
-.install-guide-instruction > button, .install-guide-buttons > button { background: #d5d5d2; color: #111; font-weight: 400; }
-.install-guide-instruction > button:hover, .install-guide-buttons > button:hover { background: #e5e5e2; color: #000; }
+.install-guide-instruction > button,
+.install-guide-buttons > button:not(.install-guide-secondary):not(.install-guide-answer-yes):not(.install-guide-answer-no) {
+  background: #d5d5d2; color: #111; font-weight: 400;
+}
+.install-guide-instruction > button:hover,
+.install-guide-buttons > button:not(.install-guide-secondary):not(.install-guide-answer-yes):not(.install-guide-answer-no):hover {
+  background: #e5e5e2; color: #000;
+}
 .install-guide-buttons > .install-guide-answer-yes { background: #153a28; color: #9be3b5; }
 .install-guide-buttons > .install-guide-answer-yes:hover { background: #204c36; color: #b5edca; }
 .install-guide-buttons > .install-guide-answer-no { background: #3a1c1c; color: #efa3a3; }
 .install-guide-buttons > .install-guide-answer-no:hover { background: #4d2626; color: #ffc1c1; }
-.install-guide-path { display: flex; align-items: center; flex-wrap: wrap; width: fit-content; max-width: 100%; gap: 10px; margin-top: 12px; padding: 6px 8px; background: #181818; border-radius: 3px; }
-.install-guide-path code { min-width: 0; color: #eee; font: inherit; overflow-wrap: anywhere; }
-.install-guide-path button { flex-shrink: 0; padding: 6px 8px; color: #80d5a0; font-size: 12px; }
+.install-guide-path {
+  display: flex; align-items: stretch; width: var(--install-guide-box-width);
+  max-width: calc(100% + 24px); box-sizing: border-box; gap: 6px;
+  margin-top: 12px; padding: 4px; background: #181818; border-radius: 3px;
+}
+.install-guide-path code {
+  display: flex; flex: 1; min-width: 0; align-items: center; justify-content: center;
+  padding: 3px; color: #eee; font: inherit; text-align: center; overflow-wrap: anywhere;
+}
+.install-guide-path button {
+  flex-shrink: 0; align-self: stretch; padding: 6px 8px;
+  color: #80d5a0; font-size: 12px; text-align: center;
+}
 .install-guide-feedback { display: block; margin-top: 8px; color: #80d5a0; font-size: 11px; }
 .install-guide-feedback:empty { display: none; }
 .install-guide-inline-link { margin-top: 12px; }
 .install-guide-instructions li > .install-guide-path,
+.install-guide-instructions li > .install-guide-files,
 .install-guide-instructions li > .install-guide-inline-link { margin-left: -24px; }
 .install-guide-instruction .install-guide-complete { color: #80d5a0; }
 .install-guide-activation-help { margin-top: 48px; }
@@ -46,3 +63,130 @@
   .install-guide-buttons { align-items: stretch; flex-direction: column; }
 }
 @media (prefers-reduced-motion: reduce) { .install-guide-instruction { animation: none; } }
+
+
+.install-guide-files {
+  width: var(--install-guide-box-width); max-width: calc(100% + 24px); box-sizing: border-box;
+  margin-top: 12px; padding: 6px 8px; border-radius: 3px; background: #161616; font: inherit;
+}
+.install-guide-file {
+  display: flex; align-items: center; gap: 12px; min-width: 0;
+  padding: 5px 8px; border-radius: 3px; color: #777; font: inherit; line-height: 1.5;
+}
+.install-guide-file + .install-guide-file { margin-top: 3px; }
+.install-guide-file.selected { background: #193326; color: #d5e9dc; }
+.install-guide-file-check { margin-left: auto; white-space: nowrap; color: #80d5a0; }
+.install-guide-folder-icon, .install-guide-document-icon { position: relative; display: block; flex-shrink: 0; color: #a1b7a9; }
+.install-guide-folder-icon { width: 17px; height: 12px; margin-top: 3px; border: 1px solid currentColor; border-radius: 1px; }
+.install-guide-folder-icon::before { content: ""; position: absolute; top: -4px; left: -1px; width: 7px; height: 3px; border: 1px solid currentColor; border-bottom: 0; border-radius: 1px 1px 0 0; }
+.install-guide-document-icon { width: 12px; height: 16px; margin: 0 3px 0 2px; border: 1px solid currentColor; border-radius: 1px; }
+.install-guide-document-icon::after { content: ""; position: absolute; top: 4px; left: 3px; width: 5px; height: 1px; background: currentColor; box-shadow: 0 3px currentColor, 0 6px currentColor; }
+.install-guide-file:not(.selected) .install-guide-folder-icon { color: #777; }
+
+.install-guide-files-header { margin-bottom: 8px; color: #888; font-size: 11px; }
+
+.install-guide-files { overflow: hidden; }
+.install-guide-copy-group { position: relative; isolation: isolate; }
+.install-guide-copy-group > .install-guide-file {
+  animation: install-files-select 4s ease-in-out infinite;
+}
+.install-guide-copy-group > .install-guide-file .install-guide-file-check {
+  animation: install-files-confirm 4s ease-in-out infinite;
+}
+.install-guide-copy-ghost {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0;
+  animation: install-files-copy 4s ease-in-out infinite;
+}
+.install-guide-copy-ghost .install-guide-file {
+  box-shadow: inset 0 0 0 1px #5f9c75;
+}
+.install-guide-project-parent { gap: 10px; color: #ccc; }
+.install-guide-folder-chevron {
+  width: 5px; height: 5px; flex-shrink: 0;
+  border-right: 1px solid #999; border-bottom: 1px solid #999;
+  transform: rotate(45deg); animation: install-folder-open 4s ease-in-out infinite;
+}
+.install-guide-project-children {
+  margin: 4px 0 2px 22px; padding-left: 10px; border-left: 1px solid #333;
+  animation: install-folder-reveal 4s ease-in-out infinite;
+}
+.install-guide-project-preview .install-guide-copy-group > .install-guide-file,
+.install-guide-project-preview .install-guide-copy-group > .install-guide-file .install-guide-file-check,
+.install-guide-project-preview .install-guide-copy-ghost { animation-delay: 450ms; }
+
+@keyframes install-files-select {
+  0%, 10%, 96%, 100% { background-color: transparent; color: #999; }
+  22%, 80% { background-color: #193326; color: #d5e9dc; }
+}
+@keyframes install-files-copy {
+  0%, 30% { opacity: 0; transform: translate(0, 0); }
+  38% { opacity: .9; transform: translate(0, 0); }
+  58% { opacity: 0; transform: translate(16px, -8px); }
+  100% { opacity: 0; transform: translate(16px, -8px); }
+}
+@keyframes install-files-confirm {
+  0%, 48%, 96%, 100% { opacity: 0; }
+  60%, 80% { opacity: 1; }
+}
+@keyframes install-folder-open {
+  0%, 8%, 96%, 100% { transform: rotate(-45deg); }
+  20%, 82% { transform: rotate(45deg); }
+}
+@keyframes install-folder-reveal {
+  0%, 12%, 96%, 100% { opacity: 0; transform: translateY(-4px); }
+  24%, 82% { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .install-guide-copy-group > .install-guide-file,
+  .install-guide-copy-group > .install-guide-file .install-guide-file-check,
+  .install-guide-copy-ghost,
+  .install-guide-folder-chevron,
+  .install-guide-project-children { animation: none; }
+}
+
+.install-guide-package-preview .install-guide-copy-group > .install-guide-file {
+  animation: install-package-row-press 4s linear infinite;
+}
+.install-guide-package-preview .install-guide-copy-group > .install-guide-file .install-guide-file-check {
+  animation: install-package-row-check 4s linear infinite;
+}
+@keyframes install-package-row-press {
+  0%, 12%, 90%, 100% {
+    transform: translateY(0) scale(1); background-color: transparent; color: #999;
+    box-shadow: inset 0 0 0 1px transparent;
+  }
+  15%, 31% {
+    transform: translateY(0) scale(1); background-color: #193326; color: #d5e9dc;
+    box-shadow: inset 0 0 0 1px transparent;
+  }
+  33%, 35% {
+    transform: translateY(1px) scale(.985); background-color: #285039; color: #effff4;
+    box-shadow: inset 0 0 0 1px #65b080;
+  }
+  38%, 87% {
+    transform: translateY(0) scale(1); background-color: #193326; color: #d5e9dc;
+    box-shadow: inset 0 0 0 1px transparent;
+  }
+}
+@keyframes install-package-row-check {
+  0%, 36%, 90%, 100% { opacity: 0; transform: scale(.85); }
+  38%, 87% { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .install-guide-package-preview .install-guide-copy-group > .install-guide-file,
+  .install-guide-package-preview .install-guide-copy-group > .install-guide-file .install-guide-file-check {
+    animation: none;
+  }
+}
+
+.install-guide-back {
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  min-height: 44px; padding: 8px 0; border: 0; background: transparent;
+  color: #888; font: 12px/1.5 monospace; cursor: pointer; white-space: nowrap;
+}
+.install-guide-back:hover { color: #ddd; }
+.install-guide-back:focus-visible { outline: 1px solid #888; outline-offset: 3px; }
+@media (max-width: 580px) {
+  .install-guide { padding-left: 52px; }
+  .install-guide-back { font-size: 11px; }
+}

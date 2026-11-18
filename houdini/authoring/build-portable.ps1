@@ -37,6 +37,9 @@ Upload the prepared ZIP through New product > Tool.
 
 For projects, save the scene in the project folder and click 'QA Project auth'.
 Review detected dependencies and upload the ZIP through New product > Project.
+The website builds one customer ZIP containing QATools.json, QATools/ and
+Project/Project Name/. Extract it once, install the QATools package and move
+the named Project folder to your working location.
 
 Install uses your Documents/houdini$portableVersion/packages preferences, no admin rights.
 For custom preferences, run install-authoring.ps1 -HoudiniVersion $portableVersion

@@ -20,12 +20,12 @@ export async function readUpload(request: Request, limit = MAX_UPLOAD_BYTES): Pr
 // Inspect the ZIP directory without extracting/running content or decompressing it.
 // This catches broken archives, unsafe paths and obvious private runtime/config files;
 // it is not a malware scan or a complete release review.
-export function validToolZip(bytes: Buffer): boolean {
+export function validToolZip(bytes: Buffer, maxEntries = 1000): boolean {
   if (bytes.length < 22 || bytes.readUInt32LE(0) !== 0x04034b50) return false;
   for (let end = bytes.length - 22; end >= Math.max(0, bytes.length - 65557); end--) {
     if (bytes.readUInt32LE(end) !== 0x06054b50 || end + 22 + bytes.readUInt16LE(end + 20) !== bytes.length) continue;
     const count = bytes.readUInt16LE(end + 10), offset = bytes.readUInt32LE(end + 16), size = bytes.readUInt32LE(end + 12);
-    if (bytes.readUInt16LE(end + 4) || bytes.readUInt16LE(end + 6) || count < 1 || count > 1000 || bytes.readUInt16LE(end + 8) !== count || offset + size !== end) return false;
+    if (bytes.readUInt16LE(end + 4) || bytes.readUInt16LE(end + 6) || count < 1 || count > maxEntries || bytes.readUInt16LE(end + 8) !== count || offset + size !== end) return false;
     let cursor = offset;
     for (let i = 0; i < count; i++) {
       if (cursor + 46 > end || bytes.readUInt32LE(cursor) !== 0x02014b50 || (bytes.readUInt16LE(cursor + 8) & 1)) return false;

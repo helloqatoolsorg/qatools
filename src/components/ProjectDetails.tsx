@@ -31,7 +31,7 @@ export default function ProjectDetails({productId}: {productId: number}) {
     <details><summary className="menu-trigger">Project installation</summary>
       <ol>
         <li>Extract the download and copy QATools.json and the QATools folder into your Houdini packages folder.</li>
-        <li>Extract the ZIP inside the project folder into your chosen working folder.</li>
+        <li>Open Project and move the folder named after your Project to your chosen working location.</li>
         <li>Restart Houdini and open the project scene. Activate your account if needed.</li>
       </ol>
     </details>

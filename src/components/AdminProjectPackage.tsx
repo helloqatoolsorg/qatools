@@ -75,7 +75,7 @@ export default function AdminProjectPackage({
 
   return <section className="admin-tool-package">
     <h2>Project files</h2>
-    <p>Choose a ZIP from QA Project auth. Its title and included tools are filled automatically. Click Update product to save and build the download.</p>
+    <p>Choose a ZIP from QA Project auth. Its title and included tools are filled automatically. Click Update product to save and build the download with its files under Project / Project Name.</p>
     <fieldset disabled={disabled || busy}>
       <label>Upload project ZIP<input type="file" accept=".zip" onChange={event => {
         const file = event.target.files?.[0];

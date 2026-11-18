@@ -16,6 +16,8 @@ type ProductRow = {
   orders: AccountOrder[];
 };
 
+const productTypeLabels = new Map([["tool", "Tool"], ["bundle", "Bundle"], ["project", "Project"]]);
+
 const sortOptions = [
   ["date-desc", "Date · newest first"],
   ["date-asc", "Date · oldest first"],
@@ -112,6 +114,31 @@ export default function AccountProductList({ account, orders, loading, error, re
     return (sort === "price-asc" ? aPrice - bPrice : bPrice - aPrice) || date || a.id - b.id;
   });
 
+  useEffect(() => {
+    if (loading || error || !rows.length) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("section") !== "purchased" || params.get("highlight") !== "types") return;
+    const section = document.getElementById("account-products");
+    if (!section || section.classList.contains("account-product-types-highlight")) return;
+
+    let frame = 0;
+    function afterPageLoad() {
+      frame = window.requestAnimationFrame(() => {
+        section?.scrollIntoView({ behavior: "instant" });
+        section?.querySelectorAll<HTMLElement>(".account-product-type").forEach(tag => {
+          tag.style.setProperty("--account-product-highlight-delay", (250 + Math.random() * 250) + "ms");
+        });
+        section?.classList.add("account-product-types-highlight");
+      });
+    }
+    if (document.readyState === "complete") afterPageLoad();
+    else window.addEventListener("load", afterPageLoad, { once: true });
+    return () => {
+      window.removeEventListener("load", afterPageLoad);
+      window.cancelAnimationFrame(frame);
+    };
+  }, [loading, error, rows.length]);
+
   function toggleDetails(id: number) {
     setExpanded(current => {
       const next = new Set(current);
@@ -158,6 +185,7 @@ export default function AccountProductList({ account, orders, loading, error, re
           && Date.parse(trialEnd) > now;
         const invoice = row.orders.find(hasInvoice);
         const downloadable = owned || (product?.published && ["tool", "bundle"].includes(product.product_type));
+        const typeLabel = productTypeLabels.get(product?.product_type ?? "");
         const name = product?.name ?? `Item #${row.id}`;
         const detailsId = `account-product-details-${row.id}`;
         const isExpanded = expanded.has(row.id);
@@ -171,7 +199,10 @@ export default function AccountProductList({ account, orders, loading, error, re
               ? <ProductDownload productId={row.id} label="Download" buttonClassName="account-action" onDownloaded={refresh} />
               : <button type="button" className="account-action" disabled>Download</button>}
             </div>
-            <strong className="account-product-name">{name}</strong>
+            <div className="account-product-name">
+              <strong>{name}</strong>
+              {typeLabel && <span className="card-tag account-product-type">{typeLabel}</span>}
+            </div>
             <span className={active || trial ? "account-license-active" : "account-license-inactive"}>
               <span className="account-mobile-label">License: </span>{active ? "Active" : trial ? "Free trial" : "Inactive"}
             </span>

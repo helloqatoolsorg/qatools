@@ -20,7 +20,7 @@ export async function POST(request:Request){
   const old=await supabaseAdmin.storage.from("qatools-downloads").download(expected);
   if(old.error||!old.data||old.data.size>5*1024*1024)return privateJson({error:"Unable to read current ZIP. Existing download retained."},503);
   const oldBytes=Buffer.from(await old.data.arrayBuffer()),tools=bundleTools(oldBytes,[{id,slug:product.data.slug}]),identity=product.data.prepared_identity;
-  if(identity && (tools[0].name.toLowerCase()!==identity.file.toLowerCase()||createHash("sha256").update(tools[0].bytes).digest("hex")!==identity.sha256))return privateJson({error:"Stored HDA does not match this tool's identity."},409);
+  if(identity && (tools[0].name.toLowerCase()!==identity.file.toLowerCase()||createHash("sha256").update(tools[0].bytes).digest("hex")!==identity.sha256))return privateJson({error:"Stored file does not match this tool's identity."},409);
   const bytes=await buildHoudiniPackage(Buffer.from(JSON.stringify(packageConfig)),tools);
   if(bytes.equals(oldBytes)&&current.data.enabled)return privateJson({download:current.data,unchanged:true});
   const path=id+"/"+randomUUID()+"/"+current.data.file_name;

@@ -1,5 +1,6 @@
 import "server-only";
 import { readFile } from "node:fs/promises";
+import { deflateRawSync } from "node:zlib";
 import { join } from "node:path";
 import config from "../../public/QATools.json";
 export const packageConfig = config;
@@ -37,18 +38,69 @@ export function crc32(bytes: Buffer) {
   for (const byte of bytes) { crc ^= byte; for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0); }
   return (crc ^ 0xffffffff) >>> 0;
 }
-// Stored ZIP entries: no extraction, uploaded paths or compression-ratio hazards.
-export function makePackageZip(entries: PackageEntry[]): Buffer {
-  if (!entries.length || entries.length > 113 || entries.reduce((n,e) => n + e.bytes.length,0) > 25 * 1024 * 1024) throw new Error("Package exceeds limits.");
-  const names = new Set<string>(), files: Buffer[] = [], directory: Buffer[] = []; let offset = 0;
-  for (const entry of entries) {
-    if (!/^[A-Za-z0-9_.\/-]+$/.test(entry.name) || entry.name.startsWith("/") || entry.name.split("/").some(p => !p || p === "." || p === "..") || names.has(entry.name.toLowerCase())) throw new Error("Invalid or duplicate package path.");
-    names.add(entry.name.toLowerCase()); const name = Buffer.from(entry.name); const crc = crc32(entry.bytes);
-    const local = Buffer.alloc(30); local.writeUInt32LE(0x04034b50,0); local.writeUInt16LE(20,4); local.writeUInt16LE(0x800,6); local.writeUInt16LE(0x21,12); local.writeUInt32LE(crc,14); local.writeUInt32LE(entry.bytes.length,18); local.writeUInt32LE(entry.bytes.length,22); local.writeUInt16LE(name.length,26);
-    const central = Buffer.alloc(46); central.writeUInt32LE(0x02014b50,0); central.writeUInt16LE(20,4); central.writeUInt16LE(20,6); central.writeUInt16LE(0x800,8); central.writeUInt16LE(0x21,14); central.writeUInt32LE(crc,16); central.writeUInt32LE(entry.bytes.length,20); central.writeUInt32LE(entry.bytes.length,24); central.writeUInt16LE(name.length,28); central.writeUInt32LE(offset,42);
-    files.push(local,name,entry.bytes); directory.push(central,name); offset += local.length + name.length + entry.bytes.length;
+export function validProjectPath(name: string): boolean {
+  return Buffer.byteLength(name, "utf8") <= 512 && name.split("/").every(part =>
+    part.length > 0 && part !== "." && part !== ".." &&
+    !/[<>:"|?*\\\x00-\x1f\ufffd]/.test(part) && !/[. ]$/.test(part) &&
+    !/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part));
+}
+
+// Tool/runtime entries stay stored. Validated project files are compressed under
+// their own root so spaces and resource filenames cannot affect installer paths.
+export function makePackageZip(entries: PackageEntry[], projectRoot?: string): Buffer {
+  if (projectRoot && (!projectRoot.startsWith("Project/") || !projectRoot.endsWith("/") ||
+      projectRoot.split("/").length !== 3 || !validProjectPath(projectRoot.slice(0, -1)))) {
+    throw new Error("Invalid project folder.");
   }
-  const end = Buffer.alloc(22), central = Buffer.concat(directory); end.writeUInt32LE(0x06054b50,0); end.writeUInt16LE(entries.length,8); end.writeUInt16LE(entries.length,10); end.writeUInt32LE(central.length,12); end.writeUInt32LE(offset,16);
+  const limit = projectRoot ? 1113 : 113;
+  if (!entries.length || entries.length > limit || entries.reduce((n,e) => n + e.bytes.length,0) > 25 * 1024 * 1024) throw new Error("Package exceeds limits.");
+  const names = new Set<string>(), files: Buffer[] = [], directory: Buffer[] = [];
+  let offset = 0;
+  for (const entry of entries) {
+    const projectEntry = Boolean(projectRoot && entry.name.startsWith(projectRoot));
+    const isDirectory = entry.name.endsWith("/");
+    const validName = projectEntry
+      ? validProjectPath(isDirectory ? entry.name.slice(0, -1) : entry.name)
+      : /^[A-Za-z0-9_.\/-]+$/.test(entry.name) && !entry.name.startsWith("/") &&
+        !entry.name.split("/").some(part => !part || part === "." || part === "..");
+    if (!validName || (isDirectory && entry.bytes.length !== 0) || names.has(entry.name.toLowerCase())) throw new Error("Invalid or duplicate package path.");
+    names.add(entry.name.toLowerCase());
+    const name = Buffer.from(entry.name), crc = crc32(entry.bytes);
+    const compressed = projectEntry && !isDirectory;
+    const payload = compressed ? deflateRawSync(entry.bytes) : entry.bytes;
+    const method = compressed ? 8 : 0;
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50,0);
+    local.writeUInt16LE(20,4);
+    local.writeUInt16LE(0x800,6);
+    local.writeUInt16LE(method,8);
+    local.writeUInt16LE(0x21,12);
+    local.writeUInt32LE(crc,14);
+    local.writeUInt32LE(payload.length,18);
+    local.writeUInt32LE(entry.bytes.length,22);
+    local.writeUInt16LE(name.length,26);
+    const central = Buffer.alloc(46);
+    central.writeUInt32LE(0x02014b50,0);
+    central.writeUInt16LE(20,4);
+    central.writeUInt16LE(20,6);
+    central.writeUInt16LE(0x800,8);
+    central.writeUInt16LE(method,10);
+    central.writeUInt16LE(0x21,14);
+    central.writeUInt32LE(crc,16);
+    central.writeUInt32LE(payload.length,20);
+    central.writeUInt32LE(entry.bytes.length,24);
+    central.writeUInt16LE(name.length,28);
+    central.writeUInt32LE(offset,42);
+    files.push(local,name,payload);
+    directory.push(central,name);
+    offset += local.length + name.length + payload.length;
+  }
+  const end = Buffer.alloc(22), central = Buffer.concat(directory);
+  end.writeUInt32LE(0x06054b50,0);
+  end.writeUInt16LE(entries.length,8);
+  end.writeUInt16LE(entries.length,10);
+  end.writeUInt32LE(central.length,12);
+  end.writeUInt32LE(offset,16);
   return Buffer.concat([...files,central,end]);
 }
 export async function houdiniPackageEntries(json: Buffer, tools: { name: string; bytes: Buffer }[]): Promise<PackageEntry[]> {

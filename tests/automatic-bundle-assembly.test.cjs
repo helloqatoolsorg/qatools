@@ -35,7 +35,7 @@ function projectForm(entries=[{name:'scene.hip',bytes:Buffer.from('test scene')}
 test('project assembly validates project resources and commits their fingerprint with the selected private tools',async()=>{
  const s=setup({project:true}),response=await s.post(projectForm());assert.equal(response.status,200);assert.equal(response.headers.get('Cache-Control'),'no-store');
  const saved=s.calls.find(c=>c.name);assert.equal(saved.name,'set_prepared_project_download');assert.match(saved.args.p_project_sha256,/^[a-f0-9]{64}$/);assert.deepEqual(Array.from(saved.args.p_sources,x=>x.tool_id),[1,2]);
- const zip=s.calls.find(c=>c.upload).bytes;assert.ok(zip.includes(Buffer.from('project/bundle.zip')));assert.ok(zip.includes(Buffer.from('PROJECT-README.txt')));assert.equal(zip.readUInt16LE(zip.length-12),10);
+ const zip=s.calls.find(c=>c.upload).bytes;assert.ok(zip.includes(Buffer.from('Project/Bundle/scene.hip')));assert.ok(zip.includes(Buffer.from('PROJECT-README.txt')));assert.equal(zip.readUInt16LE(zip.length-12),10);
  for(const option of ['public','missing','disabled','unavailable','corrupt','identity','upload','conflict']){const bad=setup({project:true,[option]:true});assert.equal((await bad.post(projectForm())).status,['upload','public','unavailable'].includes(option)?503:409,option);}
  for(const entries of [[{name:'readme.txt',bytes:Buffer.from('no scene')}],[{name:'scene.hip',bytes:Buffer.alloc(0)}],[{name:'QATools/otls/a.hda',bytes:hda},{name:'scene.hip',bytes:Buffer.from('scene')}]] ){
   const bad=setup({project:true});assert.equal((await bad.post(projectForm(entries))).status,400);assert.equal(bad.calls.length,0);

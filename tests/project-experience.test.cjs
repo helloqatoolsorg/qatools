@@ -69,7 +69,7 @@ function component(file, mocks) {
   let cursor = 0;
   const jsx = (type, props) => ({type, props});
   const exported = load(file, {
-    react: {useState(value) {const index = cursor++; if (!(index in slots)) slots[index] = value; return [slots[index], next => {slots[index] = next;}];}, useEffect(effect) {effects.push(effect);}},
+    react: {useState(value) {const index = cursor++; if (!(index in slots)) slots[index] = value; return [slots[index], next => {slots[index] = typeof next === 'function' ? next(slots[index]) : next;}];}, useEffect(effect) {effects.push(effect);}},
     'react/jsx-runtime': {jsx, jsxs: jsx},
     ...mocks,
   });
@@ -111,4 +111,32 @@ test('admin upload helper rejects missing tools before staging the project file'
   missing = [];
   assert.deepEqual(JSON.parse(JSON.stringify(await helper.inspectProjectFile(file))), {manifest, toolIds: [7], missing: []});
   assert.equal(calls[0].url, '/api/admin/products/project-inspect');
+});
+
+test('both installation streams use one extraction and named Project folders, with filtered browse links', () => {
+  for (const returning of [false,true]) for (const project of [false,true]) {
+    const guide=component('src/components/InstallationGuide.tsx', {
+      'next/link': {default:'a',__esModule:true}, './InstallationGuide.css': {},
+    });
+    const nodes=()=>descendants(guide.render());
+    const text=()=>nodes().filter(node=>typeof node==='string').join(' ');
+    const click=label=>{
+      const button=nodes().find(node=>node.type==='button' && descendants(node.props.children).filter(child=>typeof child==='string').join('')===label);
+      assert.ok(button,label+' in '+text());button.props.onClick();
+    };
+    click(returning?'I’ve already installed QATools →':'I’m installing QATools for the first time →');
+    click(project?'Project →':'Tool or Bundle →');
+    assert.equal(nodes().find(node=>node.type==='a').props.href,project?'/?type=project':'/?type=tool&type=bundle');
+    click(project?'I have downloaded the Project →':'I have downloaded the Tool →');
+    click('Houdini 21 →');
+    assert.match(text(),/QATools\.json and the QATools folder/);
+    if(project)assert.ok(text().includes('Project'));
+    click('The files are in the packages folder →');
+    if(project){
+      assert.match(text(),/Move the folder named after your Project/);
+      assert.doesNotMatch(text(),/Extract the ZIP inside/);
+      click('The Project is in my working folder →');
+    }
+    assert.match(text(),returning?/Your existing license/:/Does it show an active license/);
+  }
 });
