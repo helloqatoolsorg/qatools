@@ -1,6 +1,8 @@
 import { randomUUID, createHash } from "node:crypto";
 import { requireAdmin } from "@/lib/requireAdmin";
-import { privateJson } from "@/lib/activationHttp";
+import {parseReleaseRequest, type ReleaseRequest} from "@/lib/productRelease";
+import {publishProductRelease} from "@/lib/publishProductRelease";
+import { privateJson, readActivationBody } from "@/lib/activationHttp";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildHoudiniPackage, packageConfig } from "@/lib/houdiniPackage";
 import { bundleTools } from "@/lib/bundlePackage";
@@ -14,7 +16,12 @@ export async function POST(request: Request) {
   const id=Number(raw), product=await supabaseAdmin.from("products").select("id,name,slug,product_type,published").eq("id",id).maybeSingle();
   if(product.error)return privateJson({error:"Unable to load product."},503);
   if(!product.data || !["bundle","project"].includes(product.data.product_type))return privateJson({error:"Choose a bundle or project."},409);
+  const publication=params.get("publication")==="1";
+  if(publication&&!product.data.published)return privateJson({error:"Publish the first version before publishing an update."},409);
+  if(product.data.published&&!publication)return privateJson({error:"Use Publish update to release a new download."},409);
+  let release:ReleaseRequest|null=null;
   const isProject = product.data.product_type === "project";
+  let projectFileName:string|null=null;
   let projectBytes: Buffer | null = null;
   let manifest: ProjectManifest | null = null;
   if (isProject) {
@@ -25,11 +32,16 @@ export async function POST(request: Request) {
    try{while(true){const part=await reader.read();if(part.done)break;size+=part.value.length;if(size>PROJECT_UPLOAD_LIMIT+8192){await reader.cancel();return privateJson({error:"Project ZIP must be smaller than 4 MB."},413);}chunks.push(part.value);}}finally{reader.releaseLock();}
    let form:FormData;
    try{form=await new Request("http://localhost",{method:"POST",headers:{"Content-Type":contentType},body:Buffer.concat(chunks)}).formData();}catch{return privateJson({error:"Invalid project upload."},400);}
+   if(publication){try{release=parseReleaseRequest(JSON.parse(String(form.get("release"))));}catch{}if(!release)return privateJson({error:"Complete the release details."},400);}
    const file=form.get("tool");
-   if(!(file instanceof File) || !/\.zip$/i.test(file.name) || form.getAll("tool").length!==1 || [...form.keys()].some(k=>k!=="tool"))return privateJson({error:"Upload one project ZIP."},400);
+   if(!(file instanceof File) || !/\.zip$/i.test(file.name) || form.getAll("tool").length!==1 || [...form.keys()].some(k=>k!=="tool" && !(publication&&k==="release")))return privateJson({error:"Upload one project ZIP."},400);
+   projectFileName=file.name;
    projectBytes=Buffer.from(await file.arrayBuffer());
    try{manifest=validateProjectArchive(projectBytes);}catch(reason){return privateJson({error:reason instanceof Error ? reason.message:"Invalid project ZIP."},400);}
    if (manifest && manifest.slug !== product.data.slug) return privateJson({error:"This project ZIP belongs to " + manifest.label + "."},409);
+  } else if(publication) {
+   release=parseReleaseRequest(await readActivationBody(request,8192));
+   if(!release)return privateJson({error:"Complete the release details."},400);
   } else {
   // Servers may represent an empty POST as a non-null stream. Reject bytes,
   // not the presence of a stream; the selection comes only from saved metadata.
@@ -41,7 +53,8 @@ export async function POST(request: Request) {
   }
   const current=await supabaseAdmin.from("product_downloads").select("file_path,file_name").eq("product_id",id).maybeSingle();
   if(current.error)return privateJson({error:"Unable to verify current installer."},503);
-  if((current.data?.file_path ?? "")!==expected)return privateJson({error:"The download changed. Reload before building."},409);
+  if(publication&&isProject&&projectFileName!==current.data?.file_name)return privateJson({error:"Replacement filename must be exactly "+current.data?.file_name},409);
+  if(!publication && (current.data?.file_path ?? "")!==expected)return privateJson({error:"The download changed. Reload before building."},409);
   const bucket=await supabaseAdmin.storage.getBucket("qatools-downloads");
   if(bucket.error || bucket.data?.public!==false)return privateJson({error:"Private package storage is unavailable."},503);
   const members=await supabaseAdmin.from("product_members").select("tool_id").eq("product_id",id);
@@ -79,8 +92,9 @@ export async function POST(request: Request) {
   const upload=await supabaseAdmin.storage.from("qatools-downloads").upload(path,bytes,{contentType:"application/zip",upsert:false});
   if(upload.error)return privateJson({error:"Unable to save download. Existing installer retained."},503);
   const args={p_admin_id:auth.user.id,p_product_id:id,p_expected_path:expected || null,p_file_path:path,p_file_name:fileName,p_sources:sources};
-  const saved=isProject ? await supabaseAdmin.rpc("set_prepared_project_download",{...args,p_project_sha256:createHash("sha256").update(projectBytes!).digest("hex"),p_manifest:manifest}) : await supabaseAdmin.rpc("set_assembled_bundle_download",args);
+  const saved=release ? await publishProductRelease(auth.user.id,id,path,fileName,bytes,release,{sources,...(isProject?{projectSha:createHash("sha256").update(projectBytes!).digest("hex"),manifest}:{})}) : isProject ? await supabaseAdmin.rpc("set_prepared_project_download",{...args,p_project_sha256:createHash("sha256").update(projectBytes!).digest("hex"),p_manifest:manifest}) : await supabaseAdmin.rpc("set_assembled_bundle_download",args);
   if(saved.error || !saved.data || typeof saved.data !== "object" || !("ok" in saved.data) || saved.data.ok !== true)return privateJson({error:"The selection or a source installer changed during the build. Existing download retained. Reload and rebuild."},409);
+  if(release && saved.data && "version" in saved.data)return privateJson({message:"Published v"+saved.data.version+".",release:saved.data});
   return privateJson({message:isProject ? "Project download built. Extract it once, install QATools.json and the QATools folder, then move the named folder inside Project to your working location. Re-upload your source ZIP when rebuilding." : "Bundle installer built from the selected tools. It includes one QATools.json and shared licensing files. Rebuild to include future tool updates.",download:{file_name:fileName,file_path:path,enabled:true}});
  }catch{return privateJson({error:"Unable to assemble download. Existing installer retained."},503);}
 }

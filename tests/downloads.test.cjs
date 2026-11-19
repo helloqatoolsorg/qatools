@@ -1,11 +1,11 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
 function setup(o={}) {
  const calls=[],modules=new Map();
- const db={async rpc(name,args){calls.push({rpc:name,args});return {data:o.recordDenied?false:true,error:o.recordError?{message:'private diagnostic'}:null};},from(table){calls.push({table});const q={select(columns){calls.push({columns});return q;},eq(key,value){calls.push({key,value});return q;},async maybeSingle(){return table==='entitlements'?{data:o.unowned?null:{id:1},error:o.ownershipError?{message:'private diagnostic'}:null}:table==='products'?{data:{published:!o.draft,product_type:o.kind??'project'},error:null}:{data:o.missingFile?null:{file_path:'qanoise01/release.zip',file_name:'qanoise01.zip'},error:o.fileError?{}:null};}};return q;},storage:{async getBucket(id){calls.push({bucketCheck:id});return {data:o.missingBucket?null:{public:o.publicBucket?true:false},error:o.bucketError?{}:null};},from(bucket){calls.push({bucket});return {async createSignedUrl(path,seconds,options){calls.push({path,seconds,options});return {data:o.missingUrl?null:{signedUrl:'https://example.invalid/signed-file'},error:o.storageError?{message:'private diagnostic'}:null};}};}}};
+ const db={async rpc(name,args){calls.push({rpc:name,args});return {data:o.recordDenied?false:true,error:o.recordError?{message:'private diagnostic'}:null};},from(table){calls.push({table});const q={select(columns){calls.push({columns});return q;},eq(key,value){calls.push({key,value});return q;},async maybeSingle(){return table==='entitlements'?{data:o.unowned?null:{id:1},error:o.ownershipError?{message:'private diagnostic'}:null}:table==='product_releases'?{data:o.releaseMissing?null:o.released?{id:'00000000-0000-4000-8000-000000000001',file_path:'qanoise01/archive.zip',file_name:'qanoise01.zip',compatibility:'Houdini 21 and newer'}:null,error:o.releaseError?{}:null}:table==='products'?{data:{published:!o.draft,product_type:o.kind??'project'},error:null}:{data:o.missingFile?null:{file_path:'qanoise01/release.zip',file_name:'qanoise01.zip'},error:o.fileError?{}:null};}};return q;},storage:{async getBucket(id){calls.push({bucketCheck:id});return {data:o.missingBucket?null:{public:o.publicBucket?true:false},error:o.bucketError?{}:null};},from(bucket){calls.push({bucket});return {async createSignedUrl(path,seconds,options){calls.push({path,seconds,options});return {data:o.missingUrl?null:{signedUrl:'https://example.invalid/signed-file'},error:o.storageError?{message:'private diagnostic'}:null};}};}}};
  function load(file){if(modules.has(file))return modules.get(file);const mod={exports:{}};
  vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{
  exports:mod.exports,Buffer,process:{env:{NEXT_PUBLIC_SUPABASE_URL:'https://example.invalid',NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'test'}},
- require(name){if(name==='node:crypto')return require(name);if(name==='server-only')return {};if(name==='next/server')return {NextResponse:{json:Response.json}};
+ require(name){if(name==='@/lib/productRelease')return load('src/lib/productRelease.ts');if(name==='@/lib/releaseDelivery')return {releaseDelivery:async(id,release)=>{calls.push({delivery:release,product:id});if(o.deliveryError)throw Error('private diagnostic');return '1/releases/runtime/qanoise01.zip';}};if(name==='node:crypto')return require(name);if(name==='server-only')return {};if(name==='next/server')return {NextResponse:{json:Response.json}};
  if(name==='@/lib/supabaseAdmin')return {supabaseAdmin:db};if(name==='@/lib/requireAccount')return load('src/lib/requireAccount.ts');if(name==='@/lib/activationHttp')return load('src/lib/activationHttp.ts');
  if(name==='@supabase/supabase-js')return {createClient:()=>({auth:{getUser:async()=>({data:{user:o.invalidToken?null:{id:'verified-user',email_confirmed_at:o.unconfirmed?null:'2026-10-03'}},error:o.invalidToken?{}:null})}})};throw Error(name);}
  });modules.set(file,mod.exports);return mod.exports;}
@@ -55,4 +55,19 @@ test('download counts use verified ownership and fail closed if recording fails'
 test('confirmed nonowners can download published tools and bundles, never projects or drafts',async()=>{
  for(const kind of ['tool','bundle']) {const s=setup({unowned:true,kind});assert.equal((await s.post()).status,200);assert.ok(s.calls.some(c=>c.rpc==='record_product_download'));}
  for(const o of [{unowned:true,kind:'project'},{unowned:true,kind:'tool',draft:true}]) assert.equal((await setup(o).post()).status,403);
+});
+const releaseId='00000000-0000-4000-8000-000000000001';
+test('selected historical download uses server-verified release and compatible delivery; counts refer to archive',async()=>{
+ const s=setup({released:true}),r=await s.post({productId:1,releaseId});assert.equal(r.status,200);
+ assert.ok(s.calls.some(c=>c.key==='id'&&c.value===releaseId));assert.ok(s.calls.some(c=>c.key==='available'&&c.value===true));
+ assert.equal(s.calls.find(c=>c.path).path,'1/releases/runtime/qanoise01.zip');assert.equal(s.calls.find(c=>c.rpc)?.args.p_file_path,'qanoise01/archive.zip');assert.equal(s.calls.find(c=>c.delivery).product,1);
+});
+test('missing, withdrawn, malformed and unavailable historical downloads cannot expose URLs',async()=>{
+ for(const [o,status] of [[{released:true,releaseMissing:true},404],[{released:true,releaseError:true},503],[{released:true,deliveryError:true},503],[{released:true,unowned:true},403]]){
+  const s=setup(o),r=await s.post({productId:1,releaseId});assert.equal(r.status,status);const b=await r.text();assert.ok(!b.includes('signed-file')&&!b.includes('private diagnostic'));assert.ok(!s.calls.some(c=>c.path));
+ }
+ const bad=setup();assert.equal((await bad.post({productId:1,releaseId:'../private'})).status,400);assert.equal(bad.calls.length,0);
+});
+test('latest downloads also receive current licensing files when a release record exists',async()=>{
+ const s=setup({released:true}),r=await s.post();assert.equal(r.status,200);assert.equal(s.calls.find(c=>c.path).path,'1/releases/runtime/qanoise01.zip');
 });

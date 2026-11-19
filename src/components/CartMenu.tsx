@@ -29,6 +29,7 @@ export default function CartMenu() {
     products,
     total,
     loading,
+    error: cartError,
   } = useCartProducts();
 
   const [open, setOpen] =
@@ -167,6 +168,8 @@ export default function CartMenu() {
           </div>
         )}
 
+        {!loading && cartError && <p role="alert" style={{color:"#e86565",padding:"12px 16px",font:"12px monospace"}}>{cartError}</p>}
+
         {!loading &&
           products.length > 0 && (
             <div className="cart-items">
@@ -276,7 +279,7 @@ export default function CartMenu() {
             </div>
           )}
 
-        {!loading &&
+        {!loading && !cartError &&
           products.length ===
             0 && (
             <div className="cart-empty show">
@@ -304,7 +307,7 @@ export default function CartMenu() {
             onClick={() => { setOpen(false); window.location.assign("/cart"); }}
             type="button"
             disabled={
-              products.length ===
+              loading || !!cartError || products.length ===
               0
             }
           >

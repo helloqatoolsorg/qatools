@@ -7,6 +7,8 @@ import IncludedTools from "@/components/IncludedTools";
 import ProjectDetails from "@/components/ProjectDetails";
 import ProductGallery from "@/components/ProductGallery";
 import ProductDownload from "@/components/ProductDownload";
+import {useProductReleases} from "@/hooks/useProductReleases";
+import "./releases.css";
 import ProductDescription from "@/components/ProductDescription";
 import {productKind, productKindLabel} from "@/lib/productKind";
 import AccountName from "@/components/AccountName";
@@ -185,6 +187,11 @@ export default function ProductPage() {
 
     loadProduct();
   }, []);
+
+  const releaseState=useProductReleases(product?.id ?? null);
+  const selectedRelease=releaseState.selectedRelease;
+  const releaseCompatibility=selectedRelease?.compatibility ?? product?.compatibility ?? "";
+  const releaseDate=selectedRelease?.published_at.slice(0,10) ?? product?.release_date;
 
   if (loading) {
     return (
@@ -468,7 +475,7 @@ export default function ProductPage() {
             </div>
 
             <IncludedTools key={product.id} productId={product.id}/>
-            {product.product_type === "project" && <ProjectDetails key={product.id} productId={product.id} />}
+            {product.product_type === "project" && <ProjectDetails key={product.id} productId={product.id} release={selectedRelease ? selectedRelease.project ?? null : undefined} />}
             <div className="buy-row">
               <strong>
                 {formatPrice(
@@ -477,7 +484,7 @@ export default function ProductPage() {
               </strong>
 
               <div className="tool-purchase-actions">
-              {(product.product_type === "tool" || product.product_type === "bundle" || purchased) && <ProductDownload key={product.id} productId={product.id} label={purchased ? "DOWNLOAD" : Number(product.price_eur) === 0 ? "FREE DOWNLOAD" : "TRY FOR FREE"} buttonClassName="buy-button try-button"/>}
+              {(product.product_type === "tool" || product.product_type === "bundle" || purchased) && <ProductDownload key={product.id} productId={product.id} releaseId={selectedRelease?.id} label={purchased ? "DOWNLOAD" : Number(product.price_eur) === 0 ? "FREE DOWNLOAD" : "TRY FOR FREE"} buttonClassName="buy-button try-button"/>}
               <button
                 id="toolAddToCart"
                 className={`buy-button ${purchased ? "purchased" : ""} ${
@@ -521,9 +528,9 @@ export default function ProductPage() {
                 </span>
 
                 <strong className="product-compatibility">
-                  {/^Houdini \d+ and newer$/i.test(product.compatibility) ? (
-                    <><b>{product.compatibility.slice(0, -" and newer".length)}</b>{" "}<em>and newer</em></>
-                  ) : product.compatibility}
+                  {/^Houdini \d+ and newer$/i.test(releaseCompatibility) ? (
+                    <><b>{releaseCompatibility.slice(0, -" and newer".length)}</b>{" "}<em>and newer</em></>
+                  ) : releaseCompatibility}
                 </strong>
               </div>
 
@@ -532,14 +539,12 @@ export default function ProductPage() {
                   version
                 </span>
 
-                <strong>
-                  {
-                    product.current_version
-                  }
-                </strong>
+                {releaseState.releases.length ? <select className="product-release-select" aria-label="Download version" value={selectedRelease?.id ?? ""} onChange={e=>releaseState.selectRelease(e.target.value)}>
+                  {releaseState.releases.map(release=><option key={release.id} value={release.id}>v{release.version}{release.latest ? " · Latest" : ""}</option>)}
+                </select> : <strong>v{product.current_version.replace(/^v/i,"")}</strong>}
               </div>
 
-              {product.release_date && (
+              {releaseDate && (
                 <div>
                   <span>
                     release date
@@ -547,12 +552,15 @@ export default function ProductPage() {
 
                   <strong>
                     {
-                      product.release_date
+                      releaseDate
                     }
                   </strong>
                 </div>
               )}
             </div>
+
+            {releaseState.error && <p className="product-release-message" role="status">{releaseState.error}</p>}
+            {selectedRelease?.notes && <p className="product-release-notes">{selectedRelease.notes}</p>}
 
             {product.also_included_in_text && (
               <div

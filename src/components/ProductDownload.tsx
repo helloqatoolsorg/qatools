@@ -5,8 +5,9 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { useQAToolsState } from "@/context/QAToolsState";
 
-export default function ProductDownload({ productId, label = "DOWNLOAD", buttonClassName, onDownloaded }: {
+export default function ProductDownload({ productId, releaseId, label = "DOWNLOAD", buttonClassName, onDownloaded }: {
   productId: number;
+  releaseId?: string;
   label?: string;
   buttonClassName?: string;
   onDownloaded?: () => void;
@@ -40,7 +41,7 @@ export default function ProductDownload({ productId, label = "DOWNLOAD", buttonC
       const response = await fetch("/api/account/download", {
         method: "POST", cache: "no-store",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.data.session.access_token },
-        body: JSON.stringify({ productId }),
+        body: JSON.stringify({ productId, ...(releaseId ? {releaseId} : {}) }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Unable to prepare this download.");
@@ -53,7 +54,7 @@ export default function ProductDownload({ productId, label = "DOWNLOAD", buttonC
       onDownloaded?.();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to prepare this download."); }
     finally { inFlight.current = false; setBusy(false); }
-  }, [productId, markDownloaded, onDownloaded]);
+  }, [productId, releaseId, markDownloaded, onDownloaded]);
   useEffect(() => {
     if (user && pendingLogin.current) {
       pendingLogin.current = false;

@@ -12,6 +12,7 @@ import {
 
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { normalizeCartSlugs, reconcileCartItems } from "@/lib/cartReconciliation";
 
 const LIKE_KEY = "qatools_likes";
 const CART_KEY = "qatools_cart";
@@ -36,6 +37,7 @@ type QAToolsStateContextType = {
   addToCart: (id: string) => void;
   cartReady: boolean;
   removeFromCart: (id: string) => void;
+  reconcileCart: (checked: readonly string[], available: readonly string[]) => void;
   refreshPurchases: () => void;
   isDownloaded: (id: number) => boolean;
   markDownloaded: (id: number) => void;
@@ -56,6 +58,10 @@ const QAToolsStateContext =
   createContext<QAToolsStateContextType | null>(
     null
   );
+
+function readStoredCart() {
+  return normalizeCartSlugs(readStoredArray(CART_KEY));
+}
 
 function readStoredArray(
   key: string
@@ -150,9 +156,7 @@ export function QAToolsStateProvider({
     );
 
     setCartItems(
-      readStoredArray(
-        CART_KEY
-      )
+      readStoredCart()
     );
 
     setReady(true);
@@ -225,9 +229,7 @@ export function QAToolsStateProvider({
         CART_KEY
       ) {
         setCartItems(
-          readStoredArray(
-            CART_KEY
-          )
+          readStoredCart()
         );
       }
     }
@@ -516,6 +518,10 @@ export function QAToolsStateProvider({
     );
   }
 
+  const reconcileCart = useCallback((checked: readonly string[], available: readonly string[]) => {
+    setCartItems(current => reconcileCartItems(current, checked, available));
+  }, []);
+
   const addToCart = useCallback((id: string) => {
     setCartItems(items => items.includes(id) ? items : [...items, id]);
   }, []);
@@ -564,6 +570,7 @@ export function QAToolsStateProvider({
         addToCart,
         cartReady: ready,
         removeFromCart,
+        reconcileCart,
         refreshPurchases,
         isDownloaded,
         markDownloaded,
@@ -575,6 +582,7 @@ export function QAToolsStateProvider({
         purchasedLoading,
         refreshPurchases,
         addToCart,
+        reconcileCart,
         ready,
         isDownloaded,
         markDownloaded,

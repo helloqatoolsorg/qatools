@@ -86,7 +86,7 @@ export function formatCartPrice(
 }
 
 export function useCartProducts() {
-  const { cartItems } =
+  const { cartItems, reconcileCart } =
     useQAToolsState();
 
   const [
@@ -100,80 +100,53 @@ export function useCartProducts() {
     setLoading,
   ] = useState(false);
 
+  const [error, setError] = useState<string | null>(null);
+  const [refreshRevision, setRefreshRevision] = useState(0);
   useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState !== "hidden") setRefreshRevision(value => value + 1);
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
     async function loadCart() {
-      if (
-        cartItems.length === 0
-      ) {
-        setProducts([]);
-        setLoading(false);
+      if (cartItems.length === 0) {
+        setProducts([]); setLoading(false); setError(null);
         return;
       }
-
-      setLoading(true);
-
-      const { data, error } =
-        await supabase
-          .from("products")
-          .select(`
-            id,
-            name,
-            slug,
-            subtitle,
-            price_eur,
-            category (
-              name
-            ),
-            complexity (
-              name
-            ),
-            product_media (
-              id,
-              file_path,
-              role,
-              sort_order
-            )
-          `)
-          .in("slug", cartItems);
-
-      if (error) {
-        console.error(
-          "Could not load cart products:",
-          error
-        );
-
-        setProducts([]);
-        setLoading(false);
-        return;
+      setLoading(true); setError(null);
+      try {
+        const {data, error: queryError, count} = await supabase.from("products")
+          .select("id,name,slug,subtitle,price_eur,category(name),complexity(name),product_media(id,file_path,role,sort_order)", {count:"exact"})
+          .in("slug", cartItems).eq("published", true);
+        if (cancelled) return;
+        if (queryError || !data || count !== data.length) throw new Error("Cart lookup failed");
+        const loaded = data.filter((p): p is typeof p & {price_eur:number} => p.price_eur !== null);
+        loaded.sort((a,b) => cartItems.indexOf(a.slug) - cartItems.indexOf(b.slug));
+        setProducts(loaded);
+        reconcileCart(cartItems, loaded.map(product => product.slug));
+      } catch {
+        if (!cancelled) setError("Unable to load your cart. Refresh to try again.");
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      const loaded =
-        (data ?? []).filter((p): p is typeof p & {price_eur:number} => p.price_eur !== null);
-
-      /*
-        Keep the same order as
-        the shared cart state.
-      */
-      loaded.sort(
-        (a, b) =>
-          cartItems.indexOf(
-            a.slug
-          ) -
-          cartItems.indexOf(
-            b.slug
-          )
-      );
-
-      setProducts(loaded);
-      setLoading(false);
     }
+    void loadCart();
+    return () => { cancelled = true; };
+  }, [cartItems, reconcileCart, refreshRevision]);
 
-    loadCart();
-  }, [cartItems]);
+  const visibleProducts = useMemo(() => products.filter(product => cartItems.includes(product.slug)), [products, cartItems]);
 
   const total = useMemo(
     () =>
-      products.reduce(
+      visibleProducts.reduce(
         (sum, product) =>
           sum +
           Number(
@@ -181,12 +154,13 @@ export function useCartProducts() {
           ),
         0
       ),
-    [products]
+    [visibleProducts]
   );
 
   return {
-    products,
+    products: visibleProducts,
     total,
     loading,
+    error,
   };
 }

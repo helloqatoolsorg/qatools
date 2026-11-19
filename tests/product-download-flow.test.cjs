@@ -1,6 +1,6 @@
 const {test}=require('node:test'), assert=require('node:assert/strict'), fs=require('node:fs'), vm=require('node:vm'), ts=require('typescript');
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
-function setup({loggedIn=false,denied=false}={}) {
+function setup({loggedIn=false,denied=false,releaseId}={}) {
  const slots=[],effects=[],events=[],requests=[],links=[],listeners=new Map();let cursor=0,user=loggedIn?{id:'buyer'}:null,session=loggedIn?{access_token:'synthetic'}:null,downloaded=false;
  const react={useRef(value){const i=cursor++;return slots[i]??=( {current:value} );},useState(value){const i=cursor++;if(!(i in slots))slots[i]=value;return [slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v;}];},useCallback:fn=>fn,useEffect:fn=>effects.push(fn)};
  const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/components/ProductDownload.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText,{
@@ -9,7 +9,7 @@ function setup({loggedIn=false,denied=false}={}) {
  fetch:async(url,options)=>{requests.push({url,options});return {ok:!denied,json:async()=>denied?{error:'Confirm your email first.'}:{url:'https://example.invalid/signed-download'}};},
  require(name){if(name==='react')return react;if(name==='react/jsx-runtime')return {jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})};if(name==='@/context/QAToolsState')return {useQAToolsState:()=>({isDownloaded:()=>downloaded,markDownloaded:()=>{downloaded=true;}})};if(name==='@/context/AuthContext')return {useAuth:()=>({user,loading:false})};if(name==='@/lib/supabase')return {supabase:{auth:{getSession:async()=>({data:{session},error:null})}}};throw Error(name);}
  });
- function render(){cursor=0;effects.length=0;const tree=exports.default({productId:42});for(const effect of effects)effect();return tree;}
+ function render(){cursor=0;effects.length=0;const tree=exports.default({productId:42,releaseId});for(const effect of effects)effect();return tree;}
  return {render,events,requests,links,deny(){denied=true;},cancel(){listeners.get('qatools:login-cancelled')?.();},login(){user={id:'buyer'};session={access_token:'synthetic'};},click(tree){tree.props.children[0].props.onClick();}};
 }
 test('logged-out download opens login and resumes exactly once after authentication',async()=>{
@@ -33,4 +33,8 @@ test('a failed repeat download never repeats success feedback or erases earlier 
  s.deny();s.click(s.render());await tick();const tree=s.render(),button=tree.props.children[0];
  assert.ok(!button.props.className.includes('download-confirmed'));assert.match(button.props.className,/downloaded/);
  assert.equal(button.props['aria-busy'],false);assert.equal(tree.props.children[1].props.role,'alert');assert.equal(s.links.length,1);
+});
+
+test('selected version survives the login flow and is passed without a customer-controlled file path',async()=>{
+ const releaseId='00000000-0000-4000-8000-000000000001',s=setup({releaseId});s.click(s.render());await tick();s.login();s.render();await tick();assert.deepEqual(JSON.parse(s.requests[0].options.body),{productId:42,releaseId});assert.equal(s.links.length,1);
 });

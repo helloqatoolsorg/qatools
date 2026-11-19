@@ -2,12 +2,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-type Details = {scene: string; houdini: string; dependencies: string[]};
+import type {ReleaseProjectDetails} from "@/lib/productRelease";
+type Details = ReleaseProjectDetails;
 
-export default function ProjectDetails({productId}: {productId: number}) {
+export default function ProjectDetails({productId,release}: {productId: number;release?: Details|null}) {
   const [details, setDetails] = useState<Details | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
+    if(release!==undefined)return;
     let cancelled = false;
     (async () => {
       const result = await supabase.rpc("project_product_details", {p_product_id: productId});
@@ -21,13 +23,14 @@ export default function ProjectDetails({productId}: {productId: number}) {
       }
     })().catch(() => {if (!cancelled) setFailed(true);});
     return () => {cancelled = true;};
-  }, [productId]);
+  }, [productId,release]);
+  const shown=release===undefined?details:release;
 
   return <section className="product-project-details">
     <p>Includes the project scene and the tools listed above.</p>
-    {details && <p>{details.scene} · Created in Houdini {details.houdini}</p>}
-    {details?.dependencies.length ? <p role="note">Requires a separate installation of {details.dependencies.join(", ")}.</p> : null}
-    {failed && <p role="status">Project requirements could not be loaded. Refresh to try again.</p>}
+    {shown && <p>{shown.scene} · Created in Houdini {shown.houdini}</p>}
+    {shown?.dependencies.length ? <p role="note">Requires a separate installation of {shown.dependencies.join(", ")}.</p> : null}
+    {release===undefined && failed && <p role="status">Project requirements could not be loaded. Refresh to try again.</p>}
     <details><summary className="menu-trigger">Project installation</summary>
       <ol>
         <li>Extract the download and copy QATools.json and the QATools folder into your Houdini packages folder.</li>

@@ -10,9 +10,10 @@ export async function POST(request:Request){
   const auth=await requireAdmin(request);if(auth.response){auth.response.headers.set("Cache-Control","no-store");return auth.response;}
   const params=new URL(request.url).searchParams,raw=params.get("productId")??"",id=Number(raw),expected=params.get("expectedPath");
   if(!/^[1-9][0-9]*$/.test(raw)||!Number.isSafeInteger(id)||expected===null||expected.length>512)return privateJson({error:"Choose a saved tool."},400);
-  const product=await supabaseAdmin.from("products").select("id,slug,product_type,prepared_identity").eq("id",id).maybeSingle();
+  const product=await supabaseAdmin.from("products").select("id,slug,product_type,published,prepared_identity").eq("id",id).maybeSingle();
   const current=await supabaseAdmin.from("product_downloads").select("file_path,file_name,enabled").eq("product_id",id).maybeSingle();
   if(product.error||current.error)return privateJson({error:"Unable to verify tool ZIP."},503);
+  if(product.data?.published)return privateJson({error:"Use Publish update to release a new installer."},409);
   if(product.data?.product_type!=="tool"||!current.data)return privateJson({error:"Upload this tool's ZIP before preparing its download."},409);
   if(current.data.file_path!==expected)return privateJson({error:"ZIP changed. Reload before updating."},409);
   if(!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,149}\.zip$/.test(current.data.file_name))return privateJson({error:"Check the current ZIP filename."},409);

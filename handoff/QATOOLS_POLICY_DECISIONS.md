@@ -332,3 +332,9 @@ Owner explicitly accepts up to almost 24 additional hours of trial use to minimi
 
 - Owner approved QATools/ and QATools.json for new customer installers before final tools are created. Builders, validators, authoring defaults, runtime updater and instructions change together; existing test downloads require rebuilding.
 - The internal package variable, Python imports, licensing protocol, keys/cache, product identities and authoring installation paths stay unchanged. No hosted records or installed customer files are automatically deleted or migrated. Use a clean test installation with one finished tool.
+
+## Product versions and archived delivery — owner approval, 2026-11-19
+
+Owner approved a separate Publish update action for real downloadable releases, automatic v1.00/v1.01 numbering, version selection on the product page and availability control for older releases. Ordinary Update product saves presentation only. Preserve product/HDA identities and filenames for compatible fixes; incompatible behavior still needs native saved-scene checks.
+
+Owner explicitly approved keeping the selected release's original Tool/Shelf Tool/Project bytes while packaging downloads with the current compatible shared licensing files. Original archives remain private and unchanged; derived delivery ZIPs are cached. Version selection does not change prices, ownership, refund origins, keys or trial deadlines. Implementation is local pending the release-history migration, production build/deployment and owner acceptance. See QATOOLS_PRODUCT_RELEASES.md.

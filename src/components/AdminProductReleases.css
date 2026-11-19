@@ -1,0 +1,6 @@
+.admin-product-releases { margin-top: 24px; padding-top: 18px; border-top: 1px solid #292929; }
+.admin-product-releases fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 14px; min-width: 0; }
+.admin-product-releases label { display: grid; gap: 8px; }
+.admin-products .admin-product-releases .admin-release-publish { padding: 13px 18px; background: #153a28; color: #9be3b5; border: 0; }
+.admin-product-releases ul { padding-left: 18px; }
+.admin-product-releases li { margin: 12px 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }

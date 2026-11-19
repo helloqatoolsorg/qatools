@@ -4,6 +4,7 @@ import { PriceEditor } from "@/components/AdminPrices";
 import ProductPublication from "@/components/ProductPublication";
 
 import AdminProductCatalog from "./AdminProductCatalog";
+import AdminProductReleases from "@/components/AdminProductReleases";
 import { readDraftRecovery, writeDraftRecovery, clearDraftRecovery, type DraftRecovery } from "@/lib/adminDraftRecovery";
 import AdminGallery, {saveArtwork, type PendingMedia} from "@/components/AdminGallery";
 import AdminToolPackage, {savePendingInstaller, inspectProjectFile} from "@/components/AdminToolPackage";
@@ -68,7 +69,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
       subtitle: value.subtitle || "Lorem ipsum dolor sit amet.",
       description: value.description || "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
       compatibility: value.compatibility || houdiniCompatibilityOptions[0],
-      current_version: value.current_version || "1.0",
+      current_version: value.current_version || "1.00",
       category_id: value.category_id || pick(catalog?.categories ?? []),
       complexity_id: value.complexity_id || pick(catalog?.complexities ?? []),
     };
@@ -149,7 +150,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
       const result=await response.json();
       if(result.draft){
         setNewToolChoice(result.draft.prepared_identity?.schema === 2 ? "shelf_tool" : "tool");
-        const imported:DraftInput={name:result.draft.name,slug:result.draft.slug,product_type:"tool",subtitle:"",description:"",price_eur:null,compatibility:"",current_version:"",release_date:null,category_id:0,complexity_id:0,tool_ids:[]};
+        const imported:DraftInput={name:result.draft.name,slug:result.draft.slug,product_type:"tool",subtitle:"",description:"",price_eur:null,compatibility:"",current_version:"1.00",release_date:null,category_id:0,complexity_id:0,tool_ids:[]};
         setId(result.draft.id);setUpdatedAt(result.draft.updated_at);setDraft(useTestData ? testDefaults(imported) : imported);setPriceText("");setDirty(true);
         setCatalog(c=>c?{...c,products:[...c.products.filter(p=>p.id!==result.draft.id),{...imported,id:result.draft.id,slug:result.draft.slug,updated_at:result.draft.updated_at,published:false,prepared_identity:result.draft.prepared_identity,has_installer:response.ok,product_media:[]}]}:c);
       }
@@ -163,7 +164,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
     const storedKind:ProductType = kind === "shelf_tool" ? "tool" : kind;
     requestId.current=crypto.randomUUID();setProjectInspection(null);setPendingTools([]);setImportFile(null);setImportPending(false);
     setPriceText("0");
-    const empty: DraftInput = { name: "", product_type: storedKind, subtitle: "", description: "", price_eur: 0, compatibility: "", current_version: "", release_date: null, category_id: 0, complexity_id: 0, tool_ids: [] };
+    const empty: DraftInput = { name: "", product_type: storedKind, subtitle: "", description: "", price_eur: 0, compatibility: "", current_version: "1.00", release_date: null, category_id: 0, complexity_id: 0, tool_ids: [] };
     setDraft(useTestData ? testDefaults(empty) : empty); setDirty(true);
   }
   function change<K extends keyof DraftInput>(key: K, value: DraftInput[K]) { setDraft(d => d ? { ...d, [key]: value } : d); setDirty(true); setMessage(null); }
@@ -220,7 +221,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
         setCatalog(c=>c?{...c,products:c.products.map(p=>p.id===result.id?{...p,...(content ?? {}),updated_at:result.updated_at,product_media:result.media}:p)}:c);
         setMessage("Product updated.");
       }
-      if(draft && (pendingTool || draft.product_type === "tool" || draft.product_type === "bundle" && draft.tool_ids.length>0)){await savePendingInstaller(target.id,draft.product_type,pendingTool);setPendingTool(null);setMessage("Product and download updated.");}
+      if(!readOnly && draft && (pendingTool || draft.product_type === "tool" || draft.product_type === "bundle" && draft.tool_ids.length>0)){await savePendingInstaller(target.id,draft.product_type,pendingTool);setPendingTool(null);setMessage("Product and download updated.");}
       setRevision(v=>v+1);return target.id;
     } catch(reason){setMessage(null);setError(reason instanceof Error?reason.message:"Unable to update product.");throw reason;}
     finally {uploading.current=false;setBusy(false);}
@@ -280,7 +281,7 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
             <span className="admin-artwork-overlay">{busy ? "Uploading..." : pendingArtwork || (selected && artwork(selected)) ? "Click to change media" : "WebM · PNG · JPG · WebP · GIF"}</span>
           </button>
           {pendingArtwork && <p>Media selected. Click Update product to apply it.</p>}
-          <h2>Gallery</h2><AdminGallery media={[...(editedMedia ?? selected?.product_media ?? []),...pendingGallery.map((file,index)=>({id:-1000-index,file,file_path:null,role:"gallery",sort_order:1000+index}))]} disabled={busy || packageBusy} onChange={media=>{setEditedMedia(media);setPendingGallery([]);}} /></section><AdminToolPackage key={String(id)+":"+revision} prepared={!!selected?.prepared_identity} kind={draft.product_type} productId={id} disabled={busy} tool={pendingTool} onToolChange={setPendingTool} ensureDraft={ensureToolDraft} onBusyChange={setPackageBusy} onProjectInspection={inspectProject} projectInspection={projectInspection} /></div><div className="product-info admin-product-info"><form onSubmit={save} onKeyDown={event => { if(event.key === "Enter" && !event.nativeEvent.isComposing && event.target instanceof HTMLInputElement && ["text","search","email","url","tel","password","number"].includes(event.target.type)){event.preventDefault();event.target.blur();} }}><fieldset disabled={busy || packageBusy}><div className="admin-product-fields">
+          <h2>Gallery</h2><AdminGallery media={[...(editedMedia ?? selected?.product_media ?? []),...pendingGallery.map((file,index)=>({id:-1000-index,file,file_path:null,role:"gallery",sort_order:1000+index}))]} disabled={busy || packageBusy} onChange={media=>{setEditedMedia(media);setPendingGallery([]);}} /></section>{readOnly && id ? <AdminProductReleases key={String(id)+":"+revision} productId={id} kind={draft.product_type} compatibility={draft.compatibility} disabled={busy || packageBusy || dirty || !!pendingArtwork || pendingGallery.length>0 || !!editedMedia} onBusyChange={setPackageBusy} onPublished={()=>setRevision(v=>v+1)} /> : <AdminToolPackage key={String(id)+":"+revision} prepared={!!selected?.prepared_identity} kind={draft.product_type} productId={id} disabled={busy} tool={pendingTool} onToolChange={setPendingTool} ensureDraft={ensureToolDraft} onBusyChange={setPackageBusy} onProjectInspection={inspectProject} projectInspection={projectInspection} />}</div><div className="product-info admin-product-info"><form onSubmit={save} onKeyDown={event => { if(event.key === "Enter" && !event.nativeEvent.isComposing && event.target instanceof HTMLInputElement && ["text","search","email","url","tel","password","number"].includes(event.target.type)){event.preventDefault();event.target.blur();} }}><fieldset disabled={busy || packageBusy}><div className="admin-product-fields">
         <label>Title<input required readOnly={readOnly || draft.product_type==="tool" || draft.product_type==="project" && !!pendingTool} maxLength={80} value={draft.name} onChange={e => change("name",e.target.value)} placeholder="qatool01" /><small>{draft.product_type==="tool" ? "From the Houdini Asset Label. Tool identity is locked." : "Letters, numbers, spaces, underscores or hyphens. The slug is generated automatically."}</small></label>
         <label>Slug<input value={draft.slug ?? productSlug(draft.name)} readOnly /></label><label>Type<input value={productKindLabel({product_type:draft.product_type,prepared_identity:selected?.prepared_identity})} readOnly /></label>
         <label className="admin-product-wide">Subtitle<input maxLength={200} value={draft.subtitle} onChange={e => change("subtitle",e.target.value)} /></label>
@@ -290,10 +291,10 @@ export default function AdminProducts({ editor = false }: { editor?: boolean }) 
           <div className="filter-label">TOOLS</div>{tools.map(t => <button key={t.id} type="button" className={"filter-option " + (pendingTools.includes(t.id) ? "selected" : "")} aria-pressed={pendingTools.includes(t.id)} onClick={() => setPendingTools(v => v.includes(t.id) ? v.filter(id => id !== t.id) : [...v,t.id])}>{t.name.toUpperCase()}</button>)}
           <button className="admin-bundle-add" type="button" onClick={event => { change("tool_ids",pendingTools); event.currentTarget.closest("details")?.removeAttribute("open"); }}>ADD</button></div>
         </details>}<div className="tags">{draft.tool_ids.map(id => <button key={id} type="button" className="filter-chip admin-included-tool" disabled={readOnly} aria-label={"Remove " + catalog.products.find(t => t.id === id)?.name} onClick={() => { change("tool_ids",draft.tool_ids.filter(v => v !== id)); setPendingTools(v => v.filter(x => x !== id)); }}>{catalog.products.find(t => t.id === id)?.name} <span aria-hidden="true">×</span></button>)}</div>
-        <p>Fixed product price; already-owned tools do not reduce it. Select published tools with ready installers. Update product prepares the download.</p>
+        <p>Fixed product price; already-owned tools do not reduce it. Select published tools with ready installers. {readOnly ? "Use Publish update to release a rebuilt download." : "Update product prepares the draft download."}</p>
       </section>}
         <label>Price · EUR including tax<input readOnly={readOnly} type="text" inputMode="decimal" maxLength={9} value={priceText} onChange={e => {setPriceText(e.target.value);setDirty(true);setMessage(null);}} placeholder="0.00" /></label>
-        <label>Version<input readOnly={readOnly} maxLength={40} value={draft.current_version} onChange={e => change("current_version",e.target.value)} /></label>
+        <label>Version<input readOnly value={"v"+(draft.current_version || "1.00").replace(/^v/i,"")} /><small>Assigned automatically when published.</small></label>
         <p>Release date is recorded when first published.</p>
         <label className="admin-product-wide">
           Compatibility

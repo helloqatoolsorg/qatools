@@ -103,17 +103,17 @@ export function makePackageZip(entries: PackageEntry[], projectRoot?: string): B
   end.writeUInt32LE(offset,16);
   return Buffer.concat([...files,central,end]);
 }
+export async function sharedHoudiniRuntimeEntries(json:Buffer):Promise<PackageEntry[]> {
+  if(!validPackageJson(json))throw Error("Invalid package configuration.");
+  const runtime=await Promise.all(runtimeFiles.map(async name=>({name:"QATools/python3.13libs/qatools_licensing/"+name,bytes:await readFile(join(process.cwd(),"houdini/python/qatools_licensing",name))})));
+  const common=runtime.map((entry,index)=>({name:"QATools/scripts/python/qatools_licensing/"+runtimeFiles[index],bytes:entry.bytes}));
+  const startup=await readFile(join(process.cwd(),"houdini/scripts/pythonrc.py"));
+  return [{name:"QATools.json",bytes:json},...runtime,...common,{name:"QATools/scripts/pythonrc.py",bytes:startup}];
+}
 export async function houdiniPackageEntries(json: Buffer, tools: { name: string; bytes: Buffer }[]): Promise<PackageEntry[]> {
-  if (!validPackageJson(json) || !tools.length || tools.length > 100 || tools.some(t => !validHda(t.name,t.bytes) && !validShelfTool(t.name,t.bytes))) throw new Error("Invalid installer inputs.");
-  const runtime = await Promise.all(runtimeFiles.map(async name => ({ name: "QATools/python3.13libs/qatools_licensing/" + name, bytes: await readFile(join(process.cwd(),"houdini/python/qatools_licensing",name)) })));
-  const startup = await readFile(join(process.cwd(),"houdini/scripts/pythonrc.py"));
-  const hasShelf = tools.some(tool => tool.name.endsWith(".shelf"));
-  const commonRuntime = hasShelf ? runtime.map((entry, index) => ({
-    name: "QATools/scripts/python/qatools_licensing/" + runtimeFiles[index], bytes: entry.bytes,
-  })) : [];
-  return [{ name: "QATools.json", bytes: json }, ...tools.map(tool => ({
-    name: "QATools/" + (tool.name.endsWith(".shelf") ? "toolbar/" : "otls/") + tool.name, bytes: tool.bytes,
-  })), ...runtime, ...commonRuntime, { name: "QATools/scripts/pythonrc.py", bytes: startup }];
+  if (!tools.length || tools.length > 100 || tools.some(t => !validHda(t.name,t.bytes) && !validShelfTool(t.name,t.bytes))) throw new Error("Invalid installer inputs.");
+  const runtime=await sharedHoudiniRuntimeEntries(json);
+  return [...runtime,...tools.map(tool=>({name:"QATools/"+(tool.name.endsWith(".shelf")?"toolbar/":"otls/")+tool.name,bytes:tool.bytes}))];
 }
 
 export async function buildHoudiniPackage(json: Buffer, tools: PackageEntry[]): Promise<Buffer> {

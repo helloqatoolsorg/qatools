@@ -7,6 +7,7 @@ import type { FinanceReport } from "./adminFinance";
 export type Database = {
   public: {
     Tables: {
+      product_releases: {Row: {id:string;product_id:number;version_number:number;version:string;file_path:string;file_name:string;compatibility:string;notes:string;published_at:string;available:boolean;request_id:string|null;request_fingerprint:string|null;prepared_identity:import("./preparedTool").ToolIdentity|null;sources:{tool_id:number;file_path:string}[]|null;project_manifest:import("./projectArchive").ProjectManifest|null;created_by:string|null}; Insert: never; Update: never; Relationships: []};
       bundle_releases: {
         Row: {product_id: number; file_path: string; tool_ids: number[]; project_sha256: string | null; project_manifest: Json | null};
         Insert: {product_id: number; file_path: string; tool_ids: number[]; project_sha256?: string | null; project_manifest?: Json | null};
@@ -484,6 +485,9 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      publish_product_update: {Args:{p_admin_id:string;p_product_id:number;p_expected_release_id:string;p_request_id:string;p_fingerprint:string;p_file_path:string;p_file_name:string;p_compatibility:string;p_notes:string;p_identity:import("./preparedTool").ToolIdentity|null;p_sources:{tool_id:number;file_path:string}[]|null;p_project_sha256:string|null;p_manifest:import("./projectArchive").ProjectManifest|null};Returns:{ok:boolean;id:string;version:string;file_path:string;duplicate:boolean}};
+      set_product_release_available: {Args:{p_admin_id:string;p_release_id:string;p_available:boolean};Returns:boolean};
+
       read_admin_finance: { Args: { p_admin_id: string; p_environment: string; p_period: string }; Returns: FinanceReport };
       consume_licensing_request: { Args:{p_scope:string;p_subject_hash:string}; Returns:{allowed:boolean;retryAfter:number} };
       read_account_purchases: { Args:{p_user_id:string}; Returns:AccountPurchases };

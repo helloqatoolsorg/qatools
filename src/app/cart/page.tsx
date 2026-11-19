@@ -31,6 +31,7 @@ export default function CartPage() {
     products,
     total,
     loading,
+    error: cartError,
   } = useCartProducts();
 
   const [acquiring, setAcquiring] = useState(false);
@@ -178,6 +179,8 @@ export default function CartPage() {
               </div>
             )}
 
+            {!loading && cartError && <p role="alert" style={{color:"#e86565",padding:"12px 16px",font:"12px monospace"}}>{cartError}</p>}
+
             {!loading && (
               <div className="cart-page-list">
                 {products.map(
@@ -294,7 +297,7 @@ export default function CartPage() {
               </div>
             )}
 
-            {!loading &&
+            {!loading && !cartError &&
               products.length ===
                 0 && (
                 <div className="cart-page-empty show">
@@ -365,14 +368,14 @@ export default function CartPage() {
               className="cart-page-checkout"
               type="button"
               onClick={acquireFreeItems}
-              disabled={loading || purchasedLoading || acquiring || freeItems.length === 0}
+              disabled={loading || !!cartError || purchasedLoading || acquiring || freeItems.length === 0}
             >
               {acquiring ? "ADDING ITEMS..." : freeItems.length ? "GET FREE ITEMS" : "CHECKOUT"}
             </button>}
 
             {acquisitionError && <p role="alert" style={{ color: "#e86565", font: "10px monospace" }}>{acquisitionError} <a href="/user">Account</a></p>}
             {acquisitionMessage && <p role="status" style={{ color: "#55b86d", font: "10px monospace" }}>{acquisitionMessage} <a href="/user?section=purchased">Your items</a></p>}
-            <SandboxCheckout products={products} disabled={loading || purchasedLoading || acquiring} />
+            <SandboxCheckout products={products} disabled={loading || !!cartError || purchasedLoading || acquiring} />
             <div className="cart-page-notes">
               <div>
                 <span>
