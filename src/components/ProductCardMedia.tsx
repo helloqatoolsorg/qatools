@@ -29,7 +29,7 @@ function CardPreview({ src, name, eager }: Props) {
     {isWebmSource(src) ? <LoopingProductVideo ref={inspectVideo} src={src} aria-label={`${name} preview`} lazy={!eager}
       onLoadedData={() => setStatus("ready")} onError={() => setStatus("error")} /> :
     <Image ref={inspectImage} src={src} alt={`${name} preview`} fill unoptimized
-      loading={eager ? "eager" : "lazy"} sizes="(max-width: 580px) 100vw, (max-width: 1000px) 50vw, 33vw"
+      loading={eager ? "eager" : "lazy"} sizes="(max-width: 580px) 100vw, (max-width: 900px) 50vw, (max-width: 2632px) 33vw, (max-width: 3495px) 25vw, 854px"
       onLoad={() => setStatus("ready")} onError={() => setStatus("error")} />}
   </div>;
 }

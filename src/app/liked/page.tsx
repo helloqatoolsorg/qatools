@@ -919,6 +919,7 @@ const [
         {!loading &&
           visibleProducts.length >
             0 && (
+            <div className="product-grid-container">
             <section className="product-grid" ref={productGridRef}>
               {visibleProducts.map(
                 (product, index) => {
@@ -1127,6 +1128,7 @@ const [
                 }
               )}
             </section>
+            </div>
           )}
       </main>
 

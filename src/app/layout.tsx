@@ -4,6 +4,7 @@ import "./globals.css";
 import "./compact-nav.css";
 import "./interactions.css";
 import "./customer-polish.css";
+import "./media-sizing.css";
 
 import { SiteBrandingProvider } from "@/context/SiteBranding";
 

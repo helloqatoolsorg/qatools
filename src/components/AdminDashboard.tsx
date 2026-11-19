@@ -97,7 +97,7 @@ export default function AdminDashboard({ userId }: { userId: string }) {
 
     <section className="admin-recent admin-products" aria-labelledby="recent-products-heading">
       <h2 id="recent-products-heading">Recent products</h2>
-      {recent?.products?.length ? <div className="product-grid admin-product-grid">
+      {recent?.products?.length ? <div className="product-grid-container"><div className="product-grid admin-product-grid">
         {recent.products.map(product => renderAdminProductCard(product, product.labels, event => {
           try {
             const recovery = readDraftRecoveryMetadata(userId);
@@ -107,7 +107,7 @@ export default function AdminDashboard({ userId }: { userId: string }) {
             event.preventDefault();
           }
         }))}
-      </div> : <p role={recent?.products === null ? "alert" : "status"}>
+      </div></div> : <p role={recent?.products === null ? "alert" : "status"}>
         {recent?.products === null ? "Unable to load recent products." : recent ? "No products yet." : "Loading recent products…"}
       </p>}
     </section>

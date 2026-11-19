@@ -1513,6 +1513,7 @@ const [loading, setLoading] =
 
         {!loading &&
           !error && (
+            <div className="product-grid-container">
             <section
               className="product-grid"
               id="productGrid"
@@ -1741,6 +1742,7 @@ const [loading, setLoading] =
                 }
               )}
             </section>
+            </div>
           )}
       </main>
 
