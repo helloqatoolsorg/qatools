@@ -14,7 +14,7 @@ function gallery(images=[1,2,3].map(id=>({id,src:`/preview-${id}.gif` })),releas
  const react={useRef:v=>{const n=cursor++;return slots[n]??={current:v};},useState:v=>{const n=cursor++;if(!(n in slots))slots[n]=v;return [slots[n],next=>{slots[n]=typeof next==='function'?next(slots[n]):next;}];}};
  const element=(type,props,key)=>typeof type==='function'?{...type(props),key}:{type,props,key};
  const jsx={jsx:element,jsxs:element};
- const video=load('src/components/LoopingProductVideo.tsx',{'react/jsx-runtime':jsx});
+ const video={default:props=>({type:'video',props})};
  const component=load('src/components/ProductGallery.tsx',{'react':react,'./ProductGallery.css':{},'@/components/ProductReleaseBadge':{default:props=>({type:'release-badge',props})},'@/lib/galleryGesture':gesture,'@/lib/productMediaInput':load('src/lib/productMediaInput.ts',{}),'@/components/LoopingProductVideo':video,'react/jsx-runtime':jsx}).default;
  return {render(){cursor=0;return component({images,name:'Test tool',...release});},pointer(x,y,options={}){return {pointerType:'touch',isPrimary:true,pointerId:1,clientX:x,clientY:y,target:{closest:()=>null},currentTarget:{setPointerCapture(){}},...options};}};
 }
@@ -36,7 +36,7 @@ test('gallery touch cancellation, multiple fingers and arrow taps never produce 
  pane.onPointerDown(s.pointer(180,100));pane.onPointerDown(s.pointer(170,100,{pointerId:2,isPrimary:false}));pane.onPointerUp(s.pointer(60,110));assert.equal(selected(s.render()),'/preview-2.gif');
  pane.onPointerDown(s.pointer(180,100,{target:{closest:()=>({})}}));pane.onPointerUp(s.pointer(60,110));assert.equal(selected(s.render()),'/preview-2.gif');
 });
-test("a WebM opens as the active preview and its thumbnail loops inline", () => {
+test("a WebM opens as the active preview while its thumbnail requests deferred loading", () => {
  const galleryView=gallery([{id:1,src:"/preview.gif"},{id:2,src:"/clip.webm"}]);
  const initial=galleryView.render();
  assert.equal(selected(initial), "/preview.gif");
@@ -45,7 +45,8 @@ test("a WebM opens as the active preview and its thumbnail loops inline", () => 
  const active=walk(galleryView.render()).find(node=>node.props?.id==="productImage");
  assert.equal(active.type,"video");
  assert.equal(active.props.src,"/clip.webm");
- for(const attribute of ["autoPlay","loop","muted","playsInline"]) assert.equal(active.props[attribute],true);
+ assert.equal(walk(initial).find(node=>node.type==="video").props.lazy,true);
+ assert.equal(active.props.lazy,undefined);
 });
 function gridHarness(reduced=false){
  const slots=[],layouts=[],effects=[],listeners=new Map(),calls=[];let cursor=0,mounted=false,cleanup;

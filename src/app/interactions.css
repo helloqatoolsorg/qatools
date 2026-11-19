@@ -63,8 +63,7 @@ body .compact-nav-menu {border-radius:var(--radius-surface);transition:opacity 2
   body :is(.icon-nav .icon-link,.icon-nav button,.search-toggle):hover {translate:0 -1px;scale:1.05;}
   body :is(.heart,.hero-heart):hover {rotate:-3deg;scale:1.07;}
   body :is(.sort-menu button,.filter-option,.compact-nav-menu a):hover {translate:2px 0;}
-  body .admin-new-product:hover {box-shadow:inset 2px 0 0 #777;}
-  body .admin-new-product:hover {translate:0 -2px;}
+  body .admin-new-product:not(:disabled):hover {translate:0 -2px;}
 }
 body :is(button:not(:disabled),summary,.icon-link,.user-nav,.admin-card-action,.check-cart-button):active {
   scale:.975;translate:0 1px;rotate:0deg;transition-duration:110ms;

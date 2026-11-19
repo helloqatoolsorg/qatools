@@ -116,7 +116,7 @@ test('admin upload helper rejects missing tools before staging the project file'
 test('both installation streams use one extraction and named Project folders, with filtered browse links', () => {
   for (const returning of [false,true]) for (const project of [false,true]) {
     const guide=component('src/components/InstallationGuide.tsx', {
-      'next/link': {default:'a',__esModule:true}, './InstallationGuide.css': {},
+      'next/link': {default:'a',__esModule:true}, './InstallationGuide.css': {}, '@/components/InstallationLicenseKey': {default:'license-key-popup',__esModule:true},
     });
     const nodes=()=>descendants(guide.render());
     const text=()=>nodes().filter(node=>typeof node==='string').join(' ');
@@ -142,7 +142,7 @@ test('both installation streams use one extraction and named Project folders, wi
 });
 
 test('Shelf Tool guide filters its downloads and opens licensing through Shift-click',()=>{
- const guide=component('src/components/InstallationGuide.tsx',{'next/link':{default:'a',__esModule:true},'./InstallationGuide.css':{}});
+ const guide=component('src/components/InstallationGuide.tsx',{'next/link':{default:'a',__esModule:true},'./InstallationGuide.css':{},'@/components/InstallationLicenseKey':{default:'license-key-popup',__esModule:true}});
  const nodes=()=>descendants(guide.render());const text=()=>nodes().filter(n=>typeof n==='string').join(' ');
  const click=label=>{const button=nodes().find(n=>n.type==='button'&&descendants(n.props.children).filter(c=>typeof c==='string').join('')===label);assert.ok(button,label);button.props.onClick();};
  click('I’m installing QATools for the first time →');click('Shelf Tool →');

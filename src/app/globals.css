@@ -823,9 +823,10 @@ footer{
   transition:background .15s,color .15s,border-color .15s
 }
 
+.product-page .product-meta .meta-filter,
 .product-page .product-included-tools .card-tag{
-  padding:7px 10px;
-  font-size:18px
+  padding:5px 8px;
+  font-size:14px
 }
 
 .product-meta .meta-filter:hover{

@@ -1,0 +1,13 @@
+.install-license-dialog {
+  width: min(440px, calc(100% - 32px)); max-height: calc(100svh - 32px);
+  box-sizing: border-box; margin: auto; padding: 22px; overflow: auto;
+  border: 1px solid #373737; border-radius: var(--radius-surface, 4px);
+  background: #161616; color: #ddd; font: 13px/1.6 monospace;
+}
+.install-license-dialog::backdrop { background: #0009; }
+.install-license-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.install-license-dialog-heading h2 { margin: 0; font: 18px monospace; color: #e5e5e1; }
+.install-license-dialog .install-license-close { padding: 4px 10px; background: #242424; color: #ddd; font: 20px monospace; }
+body .install-license-dialog .license-key-value { padding: 12px; font-size: 13px; }
+.install-license-dialog .account-license-key p { margin: 12px 0 0; overflow-wrap: anywhere; }
+.install-license-dialog .password-success { color: #80d5a0; }

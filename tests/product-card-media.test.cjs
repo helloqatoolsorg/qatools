@@ -15,7 +15,7 @@ function setup(){
  const input = load('src/lib/productMediaInput.ts',{});
  const badges = load('src/lib/productReleaseBadge.ts',{});
  const Badge = load('src/components/ProductReleaseBadge.tsx',{'react':react,'./ProductReleaseBadge.css':{},'@/lib/productReleaseBadge':badges,'@/lib/orderedStagger':stagger,'react/jsx-runtime':jsx});
- const video = load('src/components/LoopingProductVideo.tsx',{'react/jsx-runtime':jsx});
+ const video = load('src/components/LoopingProductVideo.tsx',{'react':react,'./productVideoVisibility':{},'react/jsx-runtime':jsx});
  const Media=load('src/components/ProductCardMedia.tsx',{'react':react,'next/image':{__esModule:true,default:props=>({type:'img',props})},'./ProductCardMedia.css':{},'@/lib/productMediaInput':input,'@/components/ProductReleaseBadge':Badge,'@/components/LoopingProductVideo':video,'react/jsx-runtime':{jsx:render,jsxs:render}}).default;
  return {render:(props={})=>render(Media,{src:'/tool.gif',name:'Test tool',...props},'root')};
 }
@@ -48,11 +48,11 @@ test('unready card images never launch a broken flying-cart preview',()=>{
  const animate=load('src/lib/cartAnimation.ts',{}, {window:{matchMedia:()=>({matches:false})},document:{getElementById:()=>({})}}).animateToCart;
  for(const image of [null,{complete:false,naturalWidth:640},{complete:true,naturalWidth:0}])assert.doesNotThrow(()=>animate(image));
 });
-test("WebM cards autoplay muted and inline, loop, and report a failed video", () => {
+test("WebM cards retain looping/inline playback settings, defer sources and report file errors", () => {
  const card = setup();
  const initial = walk(card.render({src: "/tool.WEBM?revision=1", eager: true}));
  const video = initial.find(node => node.type === "video");
- for (const attribute of ["autoPlay", "muted", "playsInline", "loop"]) assert.equal(video.props[attribute], true);
+ for (const attribute of ["muted", "playsInline", "loop"]) assert.equal(video.props[attribute], true);
  assert.equal(video.props.controls, undefined);
  assert.ok(!initial.some(node => node.type === "img"));
  video.props.onLoadedData();
@@ -60,7 +60,9 @@ test("WebM cards autoplay muted and inline, loop, and report a failed video", ()
  video.props.onError();
  assert.ok(walk(card.render({src: "/tool.WEBM?revision=1"})).some(node => node.props?.role === "img"));
  const lazy = walk(setup().render({src: "/tool.webm"})).find(node => node.type === "video");
- assert.equal(lazy.props.loading, "lazy");
+ assert.equal(lazy.props.src, undefined);
+ assert.equal(lazy.props.preload, "none");
+ assert.equal(lazy.props.autoPlay, false);
 });
 
 test('NEW badges wait for page load and paint, then receive an ordered stagger with cleanup',()=>{

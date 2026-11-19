@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import InstallationLicenseKey from "@/components/InstallationLicenseKey";
 import "./InstallationGuide.css";
 
 type Step = "version" | "welcome" | "product-type" | "download" | "copy" | "project" | "restart" | "automatic" | "key" | "activate" | "ready";
@@ -162,7 +163,7 @@ export default function InstallationGuide() {
       {step === "key" && <>
         <ol className="install-guide-instructions">
           <li>Click <span className="install-guide-control">Get license key</span> here or in {isShelf ? "the Shelf Tool’s" : "the Tool’s"} <span className="install-guide-control">License</span> {isShelf ? "window" : "tab"}.
-            <div className="install-guide-inline-link"><Link href="/user?section=license&highlight=key" target="_blank" rel="noopener noreferrer">Get license key ↗</Link></div>
+            <div className="install-guide-inline-link"><InstallationLicenseKey /></div>
           </li>
           <li>Copy your license key.</li>
         </ol>
